@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from quant.data.ingest_spy import prune_unreferenced_snapshots
 from quant.data.manifest import load_manifest
+from quant.data.symbols import as_symbol_list
 from services.api.models import Backtest, DataSnapshot
 
 
@@ -46,7 +47,7 @@ def upsert_snapshot_from_ingest(db: Session, result: dict[str, Any]) -> DataSnap
 
     row = DataSnapshot(
         snapshot_key=snapshot_key,
-        symbols=manifest.get("symbol") or ["SPY"],
+        symbols=as_symbol_list(manifest.get("symbols") or manifest.get("symbol") or ["SPY"]),
         resolution=str(manifest.get("resolution") or "daily"),
         provider=str(manifest.get("source") or "unknown"),
         date_range_start=_parse_ts(manifest.get("start")),

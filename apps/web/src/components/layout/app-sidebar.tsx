@@ -62,6 +62,10 @@ export function AppSidebar() {
   const apiOk = health.isSuccess;
   const dockerOk = Boolean(data.data?.lean_engine?.docker_available);
   const dataOk = Boolean(data.data?.ready);
+  const symbols = data.data?.symbols?.length
+    ? data.data.symbols.join(", ")
+    : null;
+  const dockerNote = data.data?.lean_engine?.note;
 
   return (
     <aside
@@ -135,7 +139,11 @@ export function AppSidebar() {
               label="系统状态"
               detail={apiOk ? "API 运行正常" : "API 未连接（端口 8000）"}
             />
-            <StatusRow ok={dataOk} label="行情数据" detail={dataOk ? "SPY 已就绪" : "尚未拉取 SPY"} />
+            <StatusRow
+              ok={dataOk}
+              label="行情数据"
+              detail={dataOk ? `${symbols || "行情"} 已就绪` : "尚未拉取行情"}
+            />
             <StatusRow
               ok={dockerOk}
               warn={!dockerOk}
@@ -145,7 +153,7 @@ export function AppSidebar() {
                   "LEAN / Docker 可用"
                 ) : (
                   <Link href="/settings" className="text-aq-primary">
-                    未检测到 Docker / Colima
+                    {dockerNote || "Worker 尚未上报 Docker 状态"}
                   </Link>
                 )
               }

@@ -70,8 +70,8 @@ def test_stooq_ingest_convert_raises(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(
         ingest_mod,
-        "fetch_spy_daily",
-        lambda **_kwargs: FetchResult(frame, "stooq", STOOQ_CAPABILITIES),
+        "fetch_daily",
+        lambda *_a, **_k: FetchResult(frame, "stooq", STOOQ_CAPABILITIES),
     )
     with pytest.raises(ProviderCapabilityError, match="不提供分红"):
         ingest_mod.ingest_spy(data_root=tmp_path, convert_lean=True)

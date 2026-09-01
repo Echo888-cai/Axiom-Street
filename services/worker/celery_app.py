@@ -29,13 +29,19 @@ celery_app.conf.update(
         "reconcile-orphan-backtests": {
             "task": "backtests.reconcile_orphans",
             "schedule": 300.0,
-        }
+        },
+        "publish-worker-health": {
+            "task": "worker.publish_health",
+            "schedule": 15.0,
+        },
     },
 )
 
 
 @worker_ready.connect
 def _on_worker_ready(**_kwargs) -> None:
+    from services.worker.health import publish_worker_health
     from services.worker.tasks import reconcile_orphan_backtests
 
+    publish_worker_health()
     reconcile_orphan_backtests(worker_restart=True)

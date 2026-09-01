@@ -15,6 +15,7 @@ from typing import Optional
 
 import pandas as pd
 
+from quant.data.symbols import normalize_symbols
 from quant.data.types import (
     CAPABILITIES_BY_SOURCE,
     STOOQ_CAPABILITIES,
@@ -104,19 +105,21 @@ def fetch_stooq(
     return out.reset_index(drop=True)
 
 
-def fetch_spy_daily(
+def fetch_daily(
+    symbol: str,
     *,
     provider: str = "auto",
     start: str = "2010-01-01",
     end: Optional[str] = None,
 ) -> FetchResult:
     """Return bars plus the provider's declared capabilities. auto = yfinance then stooq."""
+    symbol = normalize_symbols([symbol])[0]
     provider = (provider or "auto").lower()
     errors = []
 
     if provider in {"auto", "yfinance", "yahoo"}:
         try:
-            frame = fetch_yfinance("SPY", start=start, end=end)
+            frame = fetch_yfinance(symbol, start=start, end=end)
             return FetchResult(frame, "yfinance", YFINANCE_CAPABILITIES)
         except Exception as exc:
             errors.append(f"yfinance: {exc}")
@@ -125,14 +128,23 @@ def fetch_spy_daily(
 
     if provider in {"auto", "stooq"}:
         try:
-            frame = fetch_stooq("SPY", start=start, end=end)
+            frame = fetch_stooq(symbol, start=start, end=end)
             return FetchResult(frame, "stooq", STOOQ_CAPABILITIES)
         except Exception as exc:
             errors.append(f"stooq: {exc}")
             if provider != "auto":
                 raise
 
-    raise RuntimeError("All data providers failed: " + " | ".join(errors))
+    raise RuntimeError(f"All data providers failed for {symbol}: " + " | ".join(errors))
+
+
+def fetch_spy_daily(
+    *,
+    provider: str = "auto",
+    start: str = "2010-01-01",
+    end: Optional[str] = None,
+) -> FetchResult:
+    return fetch_daily("SPY", provider=provider, start=start, end=end)
 
 
 def capabilities_for(source: str) -> ProviderCapabilities:

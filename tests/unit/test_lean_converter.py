@@ -10,6 +10,7 @@ from quant.data.lean_converter import (
     bars_to_lean_daily_csv,
     build_factor_file,
     convert_spy_to_lean,
+    convert_to_lean,
     ensure_lean_spy_data,
 )
 from quant.data.manifest import save_manifest
@@ -139,6 +140,21 @@ def test_connect_market_with_parquet(tmp_path: Path):
     n = con.execute("select count(*) from spy_daily").fetchone()[0]
     assert n == 1
     con.close()
+
+
+def test_convert_to_lean_writes_qqq_zip(tmp_path: Path):
+    qqq = _spy_df().copy()
+    qqq["symbol"] = "QQQ"
+    parquet = tmp_path / "market" / "equities" / "US" / "daily" / "QQQ.parquet"
+    parquet.parent.mkdir(parents=True)
+    qqq.to_parquet(parquet, index=False)
+    save_manifest(tmp_path, {"corporate_actions_verified": True, "source": "yfinance"})
+    lean = convert_to_lean(tmp_path, symbols=["QQQ"], require_corporate_actions=False)
+    assert (lean / "equity" / "usa" / "daily" / "qqq.zip").exists()
+    assert (lean / "equity" / "usa" / "factor_files" / "qqq.csv").exists()
+    props = (lean / "symbol-properties" / "symbol-properties-database.csv").read_text()
+    assert "QQQ," in props
+    assert (lean / "equity" / "usa" / "map_files" / "qqq.csv").exists()
 
 
 def test_fetch_stooq_parses_csv(monkeypatch):

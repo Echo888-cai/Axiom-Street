@@ -2,28 +2,39 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
+import { useState } from "react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const qc = useQueryClient();
+  const [tickers, setTickers] = useState("SPY");
   const status = useQuery({ queryKey: ["data-status"], queryFn: api.dataStatus });
   const ingest = useMutation({
-    mutationFn: () => api.ingestSpy({ provider: "auto", start: "2010-01-01" }),
-    onSuccess: () => {
+    mutationFn: () => {
+      const symbols = tickers
+        .split(/[,;\s]+/)
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean);
+      return api.ingest({ provider: "auto", start: "2010-01-01", symbols });
+    },
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["data-status"] });
-      toast("SPY 行情已更新", "ok");
+      const names = (result.symbols || []).join(", ") || tickers.toUpperCase();
+      toast(`${names} 行情已更新`, "ok");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
 
   const m = status.data?.manifest || {};
   const lean = status.data?.lean_engine;
+  const symbolsLabel = (status.data?.symbols || []).join(", ") || String(m.symbol || "—");
 
   return (
     <div className="space-y-6 aq-enter">
@@ -50,6 +61,7 @@ export default function SettingsPage() {
             }
           />
           <dl className="space-y-3 text-sm">
+            <Row label="标的" value={symbolsLabel} />
             <Row label="数据源" value={String(m.source || "—")} />
             <Row label="K 线数量" value={String(m.rows ?? "—")} />
             <Row
@@ -105,13 +117,30 @@ export default function SettingsPage() {
           ) : status.data?.ready ? (
             <p className="mt-4 text-xs text-aq-muted">质量校验通过，无阻断问题。</p>
           ) : null}
-          <div className="mt-5">
-            <Button size="sm" onClick={() => ingest.mutate()} disabled={ingest.isPending}>
-              {ingest.isPending ? "正在拉取 SPY…" : "拉取 SPY 行情"}
-            </Button>
+          <div className="mt-5 space-y-2">
+            <label className="block text-xs text-aq-muted" htmlFor="ingest-symbols">
+              标的（逗号分隔）
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                id="ingest-symbols"
+                value={tickers}
+                onChange={(e) => setTickers(e.target.value)}
+                placeholder="SPY, QQQ"
+                aria-label="要拉取的标的代码"
+                className="max-w-[220px]"
+              />
+              <Button size="sm" onClick={() => ingest.mutate()} disabled={ingest.isPending}>
+                {ingest.isPending ? "正在拉取…" : "拉取行情"}
+              </Button>
+            </div>
             {ingest.isPending ? (
-              <p className="mt-2 text-[11px] text-aq-muted">正在下载并转换日线数据，通常需要几秒到几十秒。</p>
-            ) : null}
+              <p className="text-[11px] text-aq-muted">正在下载并转换日线数据，通常需要几秒到几十秒。</p>
+            ) : (
+              <p className="text-[11px] text-aq-muted">
+                每次拉取写入新的不可变快照，不会覆盖旧数据。多标的请一次填齐，例如 SPY, QQQ。
+              </p>
+            )}
           </div>
         </Card>
 
@@ -119,6 +148,10 @@ export default function SettingsPage() {
           <CardHeader title="LEAN / Docker" />
           <dl className="space-y-3 text-sm">
             <Row label="镜像" value={String(lean?.image || "—")} />
+            <Row
+              label="探活来源"
+              value={lean?.source === "worker" ? "Worker" : lean?.source === "api" ? "API 本地" : "—"}
+            />
             <div className="flex items-center justify-between gap-4">
               <dt className="text-aq-muted">Docker</dt>
               <dd className="flex items-center gap-2">
@@ -131,27 +164,26 @@ export default function SettingsPage() {
                 {lean?.docker_available ? (
                   <Badge tone="green">可用</Badge>
                 ) : (
-                  <Badge tone="red">未检测到</Badge>
+                  <Badge tone="red">未就绪</Badge>
                 )}
               </dd>
             </div>
           </dl>
           <p className="mt-4 text-xs leading-relaxed text-aq-muted">
-            真实回测需要 Docker。本机已用 Colima 替代 Docker Desktop。若不可用，请执行{" "}
-            <code className="rounded bg-aq-secondary px-1 py-0.5 text-aq-text">colima start</code>
-            ，并重启 API。
+            {lean?.note ||
+              "真实回测由 worker 通过 Docker 运行 LEAN。本机可用 Colima 替代 Docker Desktop。"}
           </p>
         </Card>
 
         <Card>
           <CardHeader title="API Key（可选，后续）" />
           <p className="text-sm leading-relaxed text-aq-muted">
-            第一阶段不需要 Key。以后要接机构级行情或模拟交易时，写入{" "}
+            当前不需要 Key。Polygon 双源对账与模拟交易会在后续阶段接入，届时写入{" "}
             <code className="text-aq-text">.env</code>。
           </p>
           <ul className="mt-4 space-y-2 text-xs text-aq-muted">
             <li>
-              <span className="text-aq-text">POLYGON_API_KEY</span> — Polygon 美股
+              <span className="text-aq-text">POLYGON_API_KEY</span> — Polygon 美股（Phase 2）
             </li>
             <li>
               <span className="text-aq-text">ALPACA_API_KEY</span> +{" "}

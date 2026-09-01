@@ -19,6 +19,7 @@ class BacktestRequest:
     benchmark: str
     initial_capital: float
     parameters: dict[str, Any] = field(default_factory=dict)
+    universe: list[str] = field(default_factory=lambda: ["SPY"])
     data_root: Path | None = None
     jobs_root: Path | None = None
     timeout_seconds: int = 1800

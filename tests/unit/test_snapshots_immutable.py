@@ -32,8 +32,8 @@ def _spy_frame() -> pd.DataFrame:
 def test_ingest_is_immutable_and_content_addressed(monkeypatch, tmp_path: Path):
     frame = _spy_frame()
     monkeypatch.setattr(
-        "quant.data.ingest_spy.fetch_spy_daily",
-        lambda **_k: FetchResult(frame.copy(), "yfinance", YFINANCE_CAPABILITIES),
+        "quant.data.ingest_spy.fetch_daily",
+        lambda *_a, **_k: FetchResult(frame.copy(), "yfinance", YFINANCE_CAPABILITIES),
     )
     first = ingest_spy(data_root=tmp_path, convert_lean=False)
     second = ingest_spy(data_root=tmp_path, convert_lean=False)
@@ -47,7 +47,7 @@ def test_ingest_is_immutable_and_content_addressed(monkeypatch, tmp_path: Path):
 def test_second_ingest_keeps_prior_snapshot(monkeypatch, tmp_path: Path):
     frame = _spy_frame()
 
-    def fetch(**_k):
+    def fetch(*_a, **_k):
         out = frame.copy()
         new_close = float(out.loc[out.index[-1], "close"]) + 1.0
         out.loc[out.index[-1], "close"] = new_close
@@ -58,7 +58,7 @@ def test_second_ingest_keeps_prior_snapshot(monkeypatch, tmp_path: Path):
         )
         return FetchResult(out, "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_spy_daily", fetch)
+    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fetch)
     a = ingest_spy(data_root=tmp_path, convert_lean=False)
     b = ingest_spy(data_root=tmp_path, convert_lean=False)
     assert a["snapshot_key"] != b["snapshot_key"]

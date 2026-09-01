@@ -43,7 +43,7 @@
 | API ↛ Docker | 只有 worker 持有 `docker.sock` | API 进程内起容器无法编排、重启即孤儿 |
 | quant/ ↛ web framework | `quant/` 包不 import FastAPI / Celery | 无法在 notebook 或 CLI 中独立使用 |
 
-**当前状态**：前四条中，`API ↛ Docker` 被违反（API 用 `threading.Thread` 直接跑回测），`Risk ⊥ everything` 的风控引擎是未被引用的 stub。见 `docs/PHASE-1.5.md` WP-6。
+**当前状态**：`API ↛ Docker` 已在 Phase 1.5 落地（Celery worker 持有 `docker.sock`）。`Risk ⊥ everything` 的风控引擎仍是未被引用的 stub，要到 Phase 6 才实体化。
 
 ---
 
@@ -158,7 +158,7 @@ DRAFT ──回测完成──▶ BACKTESTED ──验证通过──▶ VALIDAT
 - `LIVE` 需要人工显式确认 + 风控配置就绪
 - `PATCH /strategies/{id}` 必须校验转换合法性
 
-**当前状态**：`StrategyStatus` 枚举已定义全部状态，但**没有任何守卫逻辑**——客户端可以直接把策略 `PATCH` 成 `LIVE`。见 `docs/PHASE-1.5.md` WP-7。
+**当前状态**：`PATCH /strategies/{id}` 已有合法转换表；`VALIDATED` 及以上不能由客户端直接写入。真正把策略推入 `VALIDATED` 的验证流水线属于 Phase 3。
 
 ### 回测生命周期
 
@@ -202,7 +202,7 @@ QUEUED ─▶ STARTING ─▶ RUNNING ─▶ COMPLETED
 - 数据快照内容寻址且不可变
 - `tests/golden/` 作为哨兵：跑两次断言 `final_equity` 一致（1e-6），并断言快照与引擎版本匹配预期
 
-**当前漏洞**：golden test 没有断言 `data_snapshot_id` 与 `engine_version`；而 `ingest` 会覆盖数据，使历史回测不可复现。这两项在 `docs/PHASE-1.5.md` WP-0 / WP-4 修复。
+**当前状态**：golden test 断言快照指纹与引擎版本；ingest 写入不可变 `data/snapshots/{key}/`。Phase 2 要把这套契约从单标的 SPY 推广到任意 universe。
 
 ---
 
@@ -212,4 +212,4 @@ QUEUED ─▶ STARTING ─▶ RUNNING ─▶ COMPLETED
 
 **现有隔离**：`--network none` · `--memory 2g` · `--cpus 2` · `--pids-limit 256` · 数据目录只读挂载。
 
-**待补**（Phase 1.5 之后）：seccomp profile · 只读根文件系统 · 非 root 用户 · 危险 import 的静态检查 · 认证与多用户隔离（当前**零认证**，所有接口公开，含可触发网络+磁盘 DoS 的 `POST /data/ingest/spy`）。
+**待补**（Phase 2 之后）：seccomp profile · 只读根文件系统 · 非 root 用户 · 危险 import 的静态检查 · 认证与多用户隔离（当前**零认证**，所有接口公开，含可触发网络+磁盘负载的 `POST /data/ingest`）。

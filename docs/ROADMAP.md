@@ -253,7 +253,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 ## 4. Phase 2 — 数据平台化与多资产
 
 **目标：从"只能跑 SPY"到"能跑任意标的池"，并具备机构级数据血缘。**
-**预估：4–5 周。**
+**预估：4–5 周 / 4 个工作包。可执行清单见 `docs/PHASE-2.md`。**
 
 ### 4.1 解除 SPY 硬编码
 

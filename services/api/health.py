@@ -8,6 +8,7 @@ from sqlalchemy import text
 from quant.engine.lean import LeanQuantEngine
 from services.api.db import engine
 from services.api.settings import get_settings
+from services.worker.health import read_worker_health
 
 
 def _postgres() -> dict[str, Any]:
@@ -30,19 +31,41 @@ def _redis() -> dict[str, Any]:
         return {"ok": False, "error": str(exc)}
 
 
-def _docker() -> dict[str, Any]:
+def docker_status() -> dict[str, Any]:
+    """Docker is owned by the worker. Prefer its heartbeat; fall back to a local probe."""
     settings = get_settings()
-    lean = LeanQuantEngine(
+    local = LeanQuantEngine(
         lean_image=settings.lean_image,
         data_root=Path(settings.data_root),
         jobs_root=Path(settings.jobs_root),
     ).health_check()
+    reported = read_worker_health()
+    if reported is not None:
+        available = bool(reported.get("docker_available"))
+        return {
+            "ok": available,
+            "image": reported.get("image") or local.get("image"),
+            "source": "worker",
+            "reported_at": reported.get("reported_at"),
+            "note": None
+            if available
+            else "Worker 上报 Docker 不可用。请确认 Colima/Docker 已启动，然后重启 worker。",
+        }
+    available = bool(local.get("docker_available"))
+    if available:
+        return {
+            "ok": True,
+            "image": local.get("image"),
+            "source": "api",
+            "reported_at": None,
+            "note": None,
+        }
     return {
-        "ok": bool(lean.get("docker_available")),
-        "image": lean.get("image"),
-        "note": None
-        if lean.get("docker_available")
-        else "API 进程看不到 Docker 是 compose 下的预期行为；worker 负责跑 LEAN。",
+        "ok": False,
+        "image": local.get("image"),
+        "source": "api",
+        "reported_at": None,
+        "note": "Worker 尚未上报 Docker 状态。compose 下 API 看不到 docker.sock 是预期行为；回测由 worker 执行。",
     }
 
 
@@ -51,7 +74,7 @@ def collect_health() -> dict[str, Any]:
     checks = {
         "postgres": _postgres(),
         "redis": _redis(),
-        "docker": _docker(),
+        "docker": docker_status(),
     }
     if not checks["postgres"]["ok"]:
         overall = "down"

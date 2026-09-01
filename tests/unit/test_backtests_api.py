@@ -100,7 +100,7 @@ def test_quality_gate_returns_422(client, monkeypatch):
         lambda *_a, **_k: {"ready": True, "corporate_actions_verified": True, "manifest": {}},
     )
 
-    def boom(_root):
+    def boom(_root, symbols=None):
         raise HTTPException(
             status_code=422,
             detail={"code": "data_quality", "message": "行情数据质量校验未通过，拒绝开跑回测。"},

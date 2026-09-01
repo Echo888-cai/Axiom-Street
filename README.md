@@ -14,7 +14,8 @@
 |------|------|
 | [`docs/VISION.md`](docs/VISION.md) | 产品愿景与六条核心信念。**与路线图冲突时以愿景为准** |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | 代码审查结论、P0 缺陷清单、全阶段施工蓝图 |
-| [`docs/PHASE-1.5.md`](docs/PHASE-1.5.md) | **当前阶段**的可执行任务清单（WP-0 → WP-8） |
+| [`docs/PHASE-1.5.md`](docs/PHASE-1.5.md) | Phase 1.5 可信性加固（已完成） |
+| [`docs/PHASE-2.md`](docs/PHASE-2.md) | **当前阶段**的可执行任务清单（WP-1 → WP-4） |
 | [`docs/architecture.md`](docs/architecture.md) | 目标架构、不可违反的边界、可复现性契约 |
 | [`docs/data-sources.md`](docs/data-sources.md) | 数据源与摄取 |
 | [`design-system/axiom-quant/MASTER.md`](design-system/axiom-quant/MASTER.md) | 设计令牌与反模式 |
@@ -22,19 +23,9 @@
 
 ## 当前状态
 
-**Phase 0 + Phase 1 已完成**：SPY 200DMA 策略通过 LEAN Docker 产生真实订单与成交，输出净值/回撤/月度收益，并由 golden backtest 锁定复现性。
+**Phase 0 + Phase 1 + Phase 1.5 已完成**：SPY 200DMA 经 LEAN Docker 产出真实订单；指标由 Axiom 自算；数据快照不可变；回测走 Celery；取消会杀掉容器。
 
-**Phase 1.5 进行中 — 可信性加固**。诚实地说明当前的已知问题（详见 `docs/ROADMAP.md` 附录 A）：
-
-- 手续费因解析缺陷永远显示为 0
-- `alpha` 字段实为超额收益，缺 β 与 information ratio
-- 数据源降级到 Stooq 时会静默产生未调整价格的错误回测
-- 无数据质量校验；摄取会覆盖旧数据，历史回测暂不可复现
-- 回测由 API 进程内的线程执行而非 Celery，`docker compose` 下点击回测会失败
-- 取消功能只改数据库状态，不会真正终止 LEAN 容器
-- 无认证、无 CI、9 个测试
-
-这些在 Phase 1.5 全部关闭后才会进入 Phase 2。**在此期间，请不要把本项目的回测数字用于真实投资决策。**
+**Phase 2 进行中 — 数据平台化。** 摄取与引擎已按 `symbols` 参数化。标的池时点正确、Polygon 对账、增量摄取尚未交付。在此之前不要把回测数字用于真实投资决策。
 
 ## 技术栈
 
@@ -68,12 +59,13 @@ pip install -e ".[dev]"
 uvicorn services.api.main:app --reload --port 8000
 ```
 
-### 摄取 SPY 数据
+### 摄取行情
 
 ```bash
-python -m quant.data.ingest_spy
-# 或 POST /api/v1/data/ingest/spy
-# 或在 Settings 页面点击「摄取 SPY」
+python -m quant.data.ingest_spy SPY
+python -m quant.data.ingest_spy SPY QQQ
+# 或 POST /api/v1/data/ingest
+# 或在 Settings 填写标的后点「拉取行情」
 ```
 
 ### 测试

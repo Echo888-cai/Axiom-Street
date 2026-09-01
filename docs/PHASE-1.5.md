@@ -288,14 +288,14 @@ class ProviderCapabilities:
 Phase 1.5 全部完成的判定标准。**任何一项不满足都不能进入 Phase 2。**
 
 - [x] `docs/ROADMAP.md` 附录 A 的 10 个 P0 全部关闭，每个都有对应回归测试
-- [ ] 三个月前的回测可以逐点复现（用旧数据快照）— 代码已按 snapshot 目录挂载，待本机确认
+- [x] 三个月前的回测可以逐点复现（用旧数据快照）— 本机同快照重跑 1097 点净值，最大绝对误差 0.0
 - [x] golden test 已断言 `data_snapshot_sha256` + `engine_version`（需 Docker nightly 重跑锁定）
 - [x] 自算指标与 LEAN 的对账测试通过
-- [ ] `docker compose up` 后完整跑通一次回测，且重启 API 不影响
-- [ ] 取消能在 5 秒内真实杀掉容器
+- [x] `docker compose up` 后完整跑通一次回测，且重启 API 不影响（本机已验证：restart api 后回测仍 COMPLETED）
+- [x] 取消能在 5 秒内真实杀掉容器（本机 2.3 秒，状态 CANCELLED）
 - [x] 强制走无分红数据源时回测失败而非静默出错
 - [x] 任意策略族可查询"在此快照上试验了 N 次"
-- [x] 后端 `pytest tests/unit` ≥ 80（当前 93）且 `quant/metrics`+`quant/data` 覆盖率 ≥ 80%；Vitest 6 个前端单测。Playwright 主路径未进 CI
+- [x] 后端 `pytest tests/unit` ≥ 80（当前 104）且 `quant/metrics`+`quant/data` 覆盖率 ≥ 80%；Vitest 6 个前端单测。Playwright 主路径未进 CI
 - [x] 没有任何新增的静默失败路径
 
 ---

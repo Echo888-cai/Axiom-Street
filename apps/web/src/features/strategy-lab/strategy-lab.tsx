@@ -19,7 +19,7 @@ import { VersionHistory } from "./version-history";
 
 function friendlyError(message: string): string {
   if (message.includes("Docker is required") || message.includes("Docker")) {
-    return "需要 Docker（Colima）才能跑 LEAN 回测。请先执行 colima start，并确保 API 已用 DOCKER_HOST 启动。";
+    return "需要 Docker（Colima）才能跑 LEAN 回测。请先执行 colima start，并确认 worker 容器在运行。";
   }
   if (message.includes("AfterMarketClose")) {
     return "当前策略代码使用了已失效的 LEAN API。请点击「恢复模板代码」后再运行回测。";

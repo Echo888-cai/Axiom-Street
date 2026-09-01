@@ -191,6 +191,8 @@ export const api = {
     end_date: string;
     benchmark?: string;
     initial_capital?: number;
+    data_snapshot_id?: string;
+    universe?: string[];
   }) =>
     request<Backtest>("/api/v1/backtests", {
       method: "POST",
@@ -205,11 +207,22 @@ export const api = {
     request<MonthlyReturn[]>(`/api/v1/backtests/${id}/monthly-returns`),
   eventsUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/events`,
   dataStatus: () => request<DataStatus>("/api/v1/data/status"),
+  ingest: (body?: { symbols?: string[]; start?: string; provider?: string }) =>
+    request<{ ok: boolean; status: DataStatus; symbols?: string[] }>("/api/v1/data/ingest", {
+      method: "POST",
+      body: JSON.stringify({
+        symbols: body?.symbols?.length ? body.symbols : ["SPY"],
+        provider: body?.provider || "auto",
+        start: body?.start || "2010-01-01",
+      }),
+    }),
   ingestSpy: (body?: { start?: string; provider?: string }) =>
     request<{ ok: boolean; status: DataStatus }>("/api/v1/data/ingest/spy", {
       method: "POST",
       body: JSON.stringify(body || { provider: "auto", start: "2010-01-01" }),
     }),
+  listSnapshots: () =>
+    request<{ total: number; items: DataSnapshot[] }>("/api/v1/data/snapshots"),
 };
 
 export type TrialStats = {
@@ -227,6 +240,18 @@ export type TrialStats = {
   }>;
 };
 
+export type DataSnapshot = {
+  id: string;
+  snapshot_key: string;
+  symbols: string[] | string;
+  provider: string;
+  row_count: number;
+  content_sha256: string;
+  corporate_actions_verified: boolean;
+  superseded_by: string | null;
+  created_at: string | null;
+};
+
 export type DataStatus = {
   ready: boolean;
   lean_ready: boolean;
@@ -237,6 +262,7 @@ export type DataStatus = {
   docker_required_for_backtest: boolean;
   snapshot_key?: string | null;
   corporate_actions_verified?: boolean | null;
+  symbols?: string[];
   quality_report?: {
     has_blocking_issues?: boolean;
     issues?: Array<{ rule: string; severity: string; message: string; count?: number }>;
@@ -245,6 +271,9 @@ export type DataStatus = {
     engine: string;
     image: string;
     docker_available: boolean;
+    source?: string;
+    reported_at?: string | null;
+    note?: string | null;
   };
 };
 

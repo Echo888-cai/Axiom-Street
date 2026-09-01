@@ -5,14 +5,14 @@ alwaysApply: true
 
 # Axiom Quant Rules
 
-Product vision: `docs/VISION.md` · Roadmap: `docs/ROADMAP.md` · Current tasks: `docs/PHASE-1.5.md`
+Product vision: `docs/VISION.md` · Roadmap: `docs/ROADMAP.md` · Current tasks: `docs/PHASE-2.md`
 
 When a rule below conflicts with a feature request, the rule wins. When the vision conflicts with the roadmap, the vision wins.
 
 ## Current scope
 
-- **Active phase: Phase 1.5 — Trust Hardening.** Fix all P0 defects (`docs/ROADMAP.md` appendix A), then immutable data snapshots, trial ledger, Celery convergence, engineering baseline.
-- Do not start Phase 2 (data platform) until Phase 1.5 is fully delivered with tests. One phase at a time.
+- **Active phase: Phase 2 — Data platform.** Lift remaining SPY assumptions, point-in-time universes, dual-source reconciliation, incremental ingest. See `docs/PHASE-2.md`.
+- Do not start Phase 3 (validation) until Phase 2 is fully delivered with tests. One phase at a time.
 - Phase order is **deliberately re-sequenced** from the original PRD: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
 - **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.
 - Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.

@@ -87,12 +87,35 @@ def _default_equity_session() -> list[dict]:
     ]
 
 
-def ensure_lean_support_files(lean_root: Path) -> None:
-    """Ensure market-hours / symbol-properties / map files for SPY.
+_SYMBOL_PROPS_HEADER = (
+    "#SYM,SYM,securityType,market,quoteCurrency,contractMultiplier,"
+    "minimumPriceVariation,lotSize,marketTicker,minimumOrderSize,"
+    "priceMagnifier,strikeMultiplier\n"
+)
+
+
+def _ensure_symbol_property_row(path: Path, symbol: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists() or path.stat().st_size < 50:
+        path.write_text(_SYMBOL_PROPS_HEADER, encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    needle = f"{symbol},"
+    for line in text.splitlines():
+        if line.startswith(needle) or line.startswith(f"{symbol.lower()},"):
+            return
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(f"{symbol},{symbol},Equity,usa,USD,1,0.01,1,{symbol},1,1,1\n")
+
+
+def ensure_lean_support_files(lean_root: Path, symbols: list[str] | None = None) -> None:
+    """Ensure market-hours / symbol-properties / map files for the requested symbols.
 
     Prefer the official LEAN market-hours DB (copied from the Docker image).
     Only write a minimal stub when the official file is missing.
     """
+    from quant.data.symbols import normalize_symbols
+
+    tickers = normalize_symbols(symbols or ["SPY"])
     market_hours = lean_root / "market-hours" / "market-hours-database.json"
     market_hours.parent.mkdir(parents=True, exist_ok=True)
     # Never overwrite a large official file with a stub
@@ -117,65 +140,85 @@ def ensure_lean_support_files(lean_root: Path) -> None:
         market_hours.write_text(json.dumps(stub, indent=2), encoding="utf-8")
 
     symbol_props = lean_root / "symbol-properties" / "symbol-properties-database.csv"
-    symbol_props.parent.mkdir(parents=True, exist_ok=True)
-    if not symbol_props.exists() or symbol_props.stat().st_size < 50:
-        symbol_props.write_text(
-            "#SYM,SYM,securityType,market,quoteCurrency,contractMultiplier,minimumPriceVariation,lotSize,marketTicker,minimumOrderSize,priceMagnifier,strikeMultiplier\n"
-            "SPY,SPY,Equity,usa,USD,1,0.01,1,SPY,1,1,1\n",
-            encoding="utf-8",
-        )
-
-    map_file = lean_root / "equity" / "usa" / "map_files" / "spy.csv"
-    map_file.parent.mkdir(parents=True, exist_ok=True)
-    if not map_file.exists():
-        map_file.write_text("20000101,spy\n20501231,spy\n", encoding="utf-8")
+    for symbol in tickers:
+        _ensure_symbol_property_row(symbol_props, symbol)
+        map_file = lean_root / "equity" / "usa" / "map_files" / f"{symbol.lower()}.csv"
+        map_file.parent.mkdir(parents=True, exist_ok=True)
+        if not map_file.exists():
+            lower = symbol.lower()
+            map_file.write_text(f"20000101,{lower}\n20501231,{lower}\n", encoding="utf-8")
 
 
-def convert_spy_to_lean(data_root: Path, *, require_corporate_actions: bool | None = None) -> Path:
+def convert_to_lean(
+    data_root: Path,
+    *,
+    symbols: list[str] | None = None,
+    require_corporate_actions: bool | None = None,
+) -> Path:
+    from quant.data.symbols import list_market_symbols, normalize_symbols
+
     root = Path(data_root)
-    parquet = root / "market" / "equities" / "US" / "daily" / "SPY.parquet"
-    if not parquet.exists():
-        raise FileNotFoundError(f"Missing SPY parquet at {parquet}")
-    df = pd.read_parquet(parquet)
+    tickers = normalize_symbols(symbols or list_market_symbols(root) or ["SPY"])
     lean_root = root / "lean"
-    ensure_lean_support_files(lean_root)
+    ensure_lean_support_files(lean_root, tickers)
 
     if require_corporate_actions is None:
         manifest = load_manifest(root)
         require_corporate_actions = not bool(manifest.get("corporate_actions_verified", False))
 
-    daily_zip = lean_root / "equity" / "usa" / "daily" / "spy.zip"
-    csv = bars_to_lean_daily_csv(df)
-    _write_zip_csv(daily_zip, "spy.csv", csv)
+    for symbol in tickers:
+        parquet = root / "market" / "equities" / "US" / "daily" / f"{symbol}.parquet"
+        if not parquet.exists():
+            raise FileNotFoundError(f"Missing {symbol} parquet at {parquet}")
+        df = pd.read_parquet(parquet)
+        lower = symbol.lower()
+        daily_zip = lean_root / "equity" / "usa" / "daily" / f"{lower}.zip"
+        _write_zip_csv(daily_zip, f"{lower}.csv", bars_to_lean_daily_csv(df))
+        factor_path = lean_root / "equity" / "usa" / "factor_files" / f"{lower}.csv"
+        factor_path.parent.mkdir(parents=True, exist_ok=True)
+        factor_path.write_text(
+            build_factor_file(df, require_corporate_actions=require_corporate_actions),
+            encoding="utf-8",
+        )
+    return lean_root
 
-    factor_path = lean_root / "equity" / "usa" / "factor_files" / "spy.csv"
-    factor_path.parent.mkdir(parents=True, exist_ok=True)
-    factor_path.write_text(
-        build_factor_file(df, require_corporate_actions=require_corporate_actions),
-        encoding="utf-8",
+
+def convert_spy_to_lean(data_root: Path, *, require_corporate_actions: bool | None = None) -> Path:
+    return convert_to_lean(
+        data_root, symbols=["SPY"], require_corporate_actions=require_corporate_actions
     )
 
+
+def ensure_lean_data(data_root: Path, symbols: list[str] | None = None) -> Path:
+    from quant.data.symbols import list_market_symbols, normalize_symbols
+    from quant.data.types import ProviderCapabilityError
+
+    root = Path(data_root)
+    tickers = normalize_symbols(symbols or list_market_symbols(root) or ["SPY"])
+    lean_root = root / "lean"
+    daily = root / "market" / "equities" / "US" / "daily"
+    manifest = load_manifest(root)
+    if manifest.get("corporate_actions_verified") is False:
+        source = manifest.get("source") or "unknown"
+        raise ProviderCapabilityError(f"数据源 {source} 不提供分红数据，无法进行调整价回测。")
+    for symbol in tickers:
+        parquet = daily / f"{symbol}.parquet"
+        if not parquet.exists():
+            raise FileNotFoundError(
+                f"Missing {symbol} parquet at {parquet}. Ingest data before running a backtest."
+            )
+    need_convert = not bool(manifest)
+    for symbol in tickers:
+        parquet = daily / f"{symbol}.parquet"
+        zip_path = lean_root / "equity" / "usa" / "daily" / f"{symbol.lower()}.zip"
+        if not zip_path.exists() or parquet.stat().st_mtime > zip_path.stat().st_mtime:
+            need_convert = True
+            break
+    if need_convert:
+        return convert_to_lean(root, symbols=tickers)
+    ensure_lean_support_files(lean_root, tickers)
     return lean_root
 
 
 def ensure_lean_spy_data(data_root: Path) -> Path:
-    root = Path(data_root)
-    lean_root = root / "lean"
-    daily_zip = lean_root / "equity" / "usa" / "daily" / "spy.zip"
-    parquet = root / "market" / "equities" / "US" / "daily" / "SPY.parquet"
-    manifest = load_manifest(root)
-    if manifest.get("corporate_actions_verified") is False:
-        from quant.data.types import ProviderCapabilityError
-
-        source = manifest.get("source") or "unknown"
-        raise ProviderCapabilityError(f"数据源 {source} 不提供分红数据，无法进行调整价回测。")
-    if not parquet.exists():
-        raise FileNotFoundError(
-            f"Missing SPY parquet at {parquet}. Ingest data before running a backtest."
-        )
-    if not daily_zip.exists() or not manifest:
-        return convert_spy_to_lean(root)
-    if parquet.stat().st_mtime > daily_zip.stat().st_mtime:
-        return convert_spy_to_lean(root)
-    ensure_lean_support_files(lean_root)
-    return lean_root
+    return ensure_lean_data(data_root, symbols=["SPY"])

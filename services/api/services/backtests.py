@@ -8,8 +8,9 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from quant.data.ingest_spy import data_status, load_spy_parquet
+from quant.data.ingest_spy import data_status, load_symbol_parquet
 from quant.data.quality import validate_ohlcv
+from quant.data.symbols import as_symbol_list, normalize_symbols
 from services.api.hashing import canonical_hash
 from services.api.models import (
     AuditLog,
@@ -96,24 +97,28 @@ def to_out(db: Session, backtest: Backtest) -> BacktestOut:
     )
 
 
-def _quality_gate(data_root: Path) -> None:
-    try:
-        frame = load_spy_parquet(data_root)
-    except FileNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="还没有 SPY 行情数据。请打开「设置」点击「拉取 SPY 行情」。",
-        ) from exc
-    report = validate_ohlcv(frame)
-    if report.has_blocking_issues:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
-                "code": "data_quality",
-                "message": "行情数据质量校验未通过，拒绝开跑回测。",
-                "report": report.to_dict(),
-            },
-        )
+def _quality_gate(data_root: Path, symbols: list[str] | None = None) -> None:
+    tickers = symbols or ["SPY"]
+    for symbol in tickers:
+        try:
+            frame = load_symbol_parquet(data_root, symbol)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"还没有 {symbol} 行情数据。请打开「设置」拉取对应标的。",
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        report = validate_ohlcv(frame)
+        if report.has_blocking_issues:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": "data_quality",
+                    "message": f"{symbol} 行情数据质量校验未通过，拒绝开跑回测。",
+                    "report": report.to_dict(),
+                },
+            )
 
 
 def _enqueue(backtest_id: str) -> None:
@@ -137,15 +142,51 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
         )
 
     settings = get_settings()
-    data_root = Path(settings.data_root)
+    host_root = Path(settings.data_root)
+    data_root = host_root
+    snapshot = None
+
+    if payload.data_snapshot_id is not None:
+        snapshot = snapshot_service.get_snapshot(db, payload.data_snapshot_id)
+        if snapshot is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="数据快照不存在")
+        candidate = host_root / "snapshots" / snapshot.snapshot_key
+        if not candidate.exists():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="快照文件已不在磁盘上，无法复现该回测。",
+            )
+        data_root = candidate
+    else:
+        market_latest = data_status(host_root)
+        if not market_latest.get("ready"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="还没有行情数据。请打开「设置」拉取标的。",
+            )
+        snapshot = snapshot_service.ensure_snapshot_row(db, host_root)
+        if snapshot is not None:
+            candidate = host_root / "snapshots" / snapshot.snapshot_key
+            if candidate.exists():
+                data_root = candidate
+
     market = data_status(data_root)
     if not market.get("ready"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="还没有 SPY 行情数据。请打开「设置」点击「拉取 SPY 行情」。",
+            detail="还没有行情数据。请打开「设置」拉取标的。",
         )
 
-    _quality_gate(data_root)
+    try:
+        universe = (
+            normalize_symbols(payload.universe)
+            if payload.universe
+            else as_symbol_list(market.get("symbols") or (snapshot.symbols if snapshot else None))
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    _quality_gate(data_root, symbols=universe)
 
     if market.get("corporate_actions_verified") is False:
         source = (market.get("manifest") or {}).get("source") or "unknown"
@@ -167,7 +208,8 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
             detail="并发回测已达上限，请等待正在运行的任务完成后再提交。",
         )
 
-    snapshot = snapshot_service.ensure_snapshot_row(db, data_root)
+    if snapshot is None:
+        snapshot = snapshot_service.ensure_snapshot_row(db, data_root)
     strategy = db.get(Strategy, version.strategy_id)
     params = payload.parameters or {}
     backtest = Backtest(
@@ -190,7 +232,7 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
             backtest_id=backtest.id,
             data_snapshot_id=snapshot.id if snapshot else None,
             strategy_id=strategy.id if strategy else None,
-            universe_key="SPY",
+            universe_key=",".join(universe),
             strategy_family=strategy.family_id if strategy else None,
             parameters=params,
             parameter_hash=canonical_hash(
@@ -200,6 +242,7 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
                     "end_date": str(payload.end_date),
                     "benchmark": payload.benchmark,
                     "initial_capital": payload.initial_capital,
+                    "universe": universe,
                     "parameters": params,
                 }
             ),

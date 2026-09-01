@@ -68,6 +68,8 @@ class BacktestCreate(BaseModel):
     benchmark: str = "SPY"
     initial_capital: float = 100_000.0
     parameters: Dict[str, Any] = Field(default_factory=dict)
+    data_snapshot_id: Optional[UUID] = None
+    universe: Optional[list[str]] = None
 
 
 class BacktestOut(ORMModel):

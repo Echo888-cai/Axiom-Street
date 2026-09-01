@@ -128,12 +128,22 @@ def execute_backtest(backtest_id: str) -> dict:
         _set_progress(db, backtest, BacktestStatus.STARTING, "Preparing environment")
 
         data_root = Path(settings.data_root)
+        universe = ["SPY"]
         if backtest.data_snapshot_id:
             snap = db.get(DataSnapshot, backtest.data_snapshot_id)
             if snap:
+                from quant.data.symbols import as_symbol_list
+
+                universe = as_symbol_list(snap.symbols)
                 candidate = Path(settings.data_root) / "snapshots" / snap.snapshot_key
                 if candidate.exists():
                     data_root = candidate
+        if isinstance(version.config, dict):
+            configured = (version.config.get("universe") or {}).get("symbols")
+            if configured:
+                from quant.data.symbols import as_symbol_list as _as_list
+
+                universe = _as_list(configured)
 
         engine = LeanQuantEngine(
             lean_image=settings.lean_image,
@@ -166,6 +176,7 @@ def execute_backtest(backtest_id: str) -> dict:
             benchmark=backtest.benchmark,
             initial_capital=backtest.initial_capital,
             parameters=backtest.parameters or {},
+            universe=universe,
             data_root=data_root,
             timeout_seconds=settings.lean_timeout_seconds,
             cancel_check=_cancelled,
@@ -322,3 +333,10 @@ def run_backtest_task(backtest_id: str) -> dict:
 @celery_app.task(name="backtests.reconcile_orphans")
 def reconcile_orphan_backtests_task() -> int:
     return reconcile_orphan_backtests()
+
+
+@celery_app.task(name="worker.publish_health")
+def publish_health_task() -> dict:
+    from services.worker.health import publish_worker_health
+
+    return publish_worker_health()

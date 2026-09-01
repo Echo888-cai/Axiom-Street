@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from quant.data.lean_converter import ensure_lean_spy_data
+from quant.data.lean_converter import ensure_lean_data
 from quant.data.manifest import load_manifest
 from quant.engine.base import BacktestEngineResult, BacktestRequest, ProgressCallback, QuantEngine
 from quant.engine.errors import BacktestCancelled, EngineTimeout
@@ -111,7 +111,7 @@ class LeanQuantEngine(QuantEngine):
 
         progress("Loading data")
         data_root = request.data_root or self.data_root
-        lean_data = ensure_lean_spy_data(data_root)
+        lean_data = ensure_lean_data(data_root, symbols=request.universe)
         manifest = load_manifest(data_root)
         data_version = manifest.get("sha256", "unknown")
 
