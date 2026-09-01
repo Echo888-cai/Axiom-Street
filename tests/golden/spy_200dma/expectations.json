@@ -1,0 +1,13 @@
+{
+  "start_date": "2018-01-01",
+  "end_date": "2020-12-31",
+  "trade_count": 43,
+  "final_equity": 103979.2029,
+  "max_drawdown": -0.221,
+  "sharpe": 0.052,
+  "cagr": 0.01308,
+  "equity_tol": 1.0,
+  "dd_tol": 0.002,
+  "sharpe_tol": 0.02,
+  "notes": "Frozen from Colima + quantconnect/lean:16355 smoke run on local SPY parquet (yfinance). Signal at close, fill next bar, 5 bps slippage."
+}

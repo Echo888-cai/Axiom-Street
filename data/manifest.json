@@ -1,0 +1,46 @@
+{
+  "corporate_actions": "corporate_actions/SPY.parquet",
+  "end": "2026-08-27 04:00:00+00:00",
+  "exchange_timezone": "America/New_York",
+  "market": "US",
+  "parquet": "market/equities/US/daily/SPY.parquet",
+  "providers": {
+    "active": "auto (yfinance \u2192 stooq)",
+    "as_of": "2026-08-28T07:41:28.270832+00:00",
+    "optional_providers": {
+      "alpaca": {
+        "env": [
+          "ALPACA_API_KEY",
+          "ALPACA_API_SECRET"
+        ],
+        "note": "Also used later for Paper Trading",
+        "wired": false
+      },
+      "alpha_vantage": {
+        "env": [
+          "ALPHA_VANTAGE_API_KEY"
+        ],
+        "wired": false
+      },
+      "polygon": {
+        "env": [
+          "POLYGON_API_KEY"
+        ],
+        "wired": false
+      },
+      "tiingo": {
+        "env": [
+          "TIINGO_API_KEY"
+        ],
+        "wired": false
+      }
+    },
+    "requires_api_key": false
+  },
+  "resolution": "daily",
+  "rows": 4188,
+  "sha256": "688782bea82662b5429da2118cbd19098635eb111dc340367b322819aaabd7d7",
+  "source": "yfinance",
+  "start": "2010-01-04 05:00:00+00:00",
+  "symbol": "SPY"
+}

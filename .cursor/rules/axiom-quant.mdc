@@ -1,0 +1,79 @@
+---
+description: Axiom Quant phase discipline, quant correctness, and architecture rules
+alwaysApply: true
+---
+
+# Axiom Quant Rules
+
+Product vision: `docs/VISION.md` · Roadmap: `docs/ROADMAP.md` · Current tasks: `docs/PHASE-1.5.md`
+
+When a rule below conflicts with a feature request, the rule wins. When the vision conflicts with the roadmap, the vision wins.
+
+## Current scope
+
+- **Active phase: Phase 1.5 — Trust Hardening.** Fix all P0 defects (`docs/ROADMAP.md` appendix A), then immutable data snapshots, trial ledger, Celery convergence, engineering baseline.
+- Do not start Phase 2 (data platform) until Phase 1.5 is fully delivered with tests. One phase at a time.
+- Phase order is **deliberately re-sequenced** from the original PRD: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
+- **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.
+- Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.
+
+## Fail loud, never degrade silently
+
+This is the highest-priority correctness rule. A wrong number is worse than no number.
+
+- Never substitute an approximation for missing capability. If a data provider lacks corporate actions, **fail the backtest** with an explicit error — do not fall back to unadjusted prices.
+- Never let a parse failure become a default value. Unparseable fees/statistics must raise, not silently become `None` or `0`.
+- Data quality validation is fail-closed: a failing report blocks the backtest.
+- Every `except` that swallows an error needs a written justification, or it is a bug.
+
+## Quant correctness
+
+- All quant calculations need tests, including boundary cases and known-value cases from literature.
+- **Metrics are always computed by Axiom from the return series.** LEAN's own statistics go into `extras` for cross-check only. A reconciliation test must fail when Axiom and LEAN diverge beyond tolerance.
+- Do not name a metric something it is not. Excess return is not alpha; profit factor is not payoff ratio.
+- Engine, data, or metric changes require the Golden Backtest (`tests/golden`) to pass, including `data_snapshot_id` and `engine_version` assertions.
+- **Never widen a golden test tolerance to make it pass.** Investigate why the number moved.
+- Fill convention for SPY 200DMA: signal at close, fill next bar, 5 bps slippage, `$1` flat fee.
+- Results must be reproducible for the same strategy + data snapshot + engine version. Re-running a three-month-old backtest must produce a point-identical equity curve.
+
+## Data discipline
+
+- Data snapshots are **immutable and content-addressed**. Ingest never overwrites a prior snapshot; it writes a new one and sets `superseded_by`.
+- Every backtest records `data_snapshot_id` as a foreign key, not a loose string.
+- Every backtest writes a row to the **trial ledger** (`experiment_trials`). This is the denominator for Deflated Sharpe and PBO, and it cannot be reconstructed after the fact.
+- Multi-symbol universes must be point-in-time correct (`effective_from` / `effective_to`) to avoid survivorship bias.
+
+## Architecture
+
+- Controllers must not call LEAN internals. Use `QuantEngine` / `LeanQuantEngine`.
+- Strategies never know about Alpaca/IBKR. The live path is always `Strategy → Risk → Execution → Broker`.
+- Risk Engine stays independent and cannot be bypassed by strategy code or AI.
+- **Backtests run via Celery, never `threading.Thread` in the API process.** Only the worker gets `docker.sock`.
+- Every external process call needs a timeout. Cancellation must actually kill the container, not just update a DB row.
+- Schema changes require a real Alembic migration. `create_all` is not a migration strategy.
+- Prefer mature components: LEAN, Monaco, Lightweight Charts, Postgres, DuckDB, Celery.
+
+## AI boundaries (applies from Phase 5 onward)
+
+- AI must not modify system risk limits. Isolate the write path at the code level.
+- AI must not change a strategy's validation status. Only the validation pipeline can.
+- AI-generated strategies go through the full validation pipeline. There is no fast path.
+- Every AI-driven trial counts toward the multiple-testing penalty in the trial ledger.
+- No chat UI without real capability behind it.
+
+## UI
+
+- Follow Axiom design tokens (white, `#1677FF`, restrained green/red). See `design-system/axiom-quant/MASTER.md`.
+- No purple gradients, neon, glassmorphism, robot icons, or oversized chart walls.
+- Financial figures use `tabular-nums`. Empty states use honest copy and never fake portfolio P&L.
+- Split components; no 3000-line pages.
+- Deflated Sharpe and overfitting probability rank visually above raw Sharpe once Phase 3 lands.
+
+## Every PR
+
+- [ ] Quant calculations have tests covering boundaries
+- [ ] `ruff` + `mypy` + `tsc --noEmit` pass
+- [ ] Golden backtest passes (when engine / data / metrics touched)
+- [ ] No new silent-failure path
+- [ ] Alembic migration present for schema changes
+- [ ] Frontend follows design tokens with honest empty and error states

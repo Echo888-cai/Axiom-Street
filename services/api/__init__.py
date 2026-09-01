@@ -1,0 +1,1 @@
+"""Axiom Quant FastAPI application."""

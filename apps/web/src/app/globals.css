@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --aq-bg: #ffffff;
+  --aq-bg-secondary: #f6f7f9;
+  --aq-border: rgba(15, 23, 42, 0.08);
+  --aq-text: #111827;
+  --aq-text-secondary: #667085;
+  --aq-primary: #1677ff;
+  --aq-primary-soft: rgba(22, 119, 255, 0.08);
+  --aq-positive: #12b76a;
+  --aq-negative: #f04438;
+  --aq-radius: 12px;
+  --aq-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.03);
+  --aq-shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.08);
+  --background: var(--aq-bg);
+  --foreground: var(--aq-text);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  color: var(--aq-text);
+  background: var(--aq-bg-secondary);
+  font-family:
+    var(--font-inter),
+    -apple-system,
+    BlinkMacSystemFont,
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans SC",
+    "Microsoft YaHei",
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  border-color: var(--aq-border);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes aq-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes aq-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes aq-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes aq-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.aq-enter {
+  animation: aq-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.aq-fade {
+  animation: aq-fade 220ms ease both;
+}
+
+.aq-scale-in {
+  animation: aq-scale-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.aq-stagger > * {
+  animation: aq-enter 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.aq-stagger > *:nth-child(1) {
+  animation-delay: 20ms;
+}
+.aq-stagger > *:nth-child(2) {
+  animation-delay: 50ms;
+}
+.aq-stagger > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+.aq-stagger > *:nth-child(4) {
+  animation-delay: 110ms;
+}
+.aq-stagger > *:nth-child(5) {
+  animation-delay: 140ms;
+}
+.aq-stagger > *:nth-child(6) {
+  animation-delay: 170ms;
+}
+
+.aq-live-dot {
+  animation: aq-pulse-dot 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::selection {
+  background: rgba(22, 119, 255, 0.16);
+}

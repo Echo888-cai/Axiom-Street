@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Data / runtime
+data/cache/
+data/lean/
+data/market/**/*.parquet
+data/snapshots/
+!data/market/.gitkeep
+jobs/
+*.log
+*.db
+axiom-local.db
+coverage/
+htmlcov/
+
+# LEAN outputs
+Results/
+*.zip
+
+# OS
+Thumbs.db
+
+# Test artifacts
+.coverage
+.tox/

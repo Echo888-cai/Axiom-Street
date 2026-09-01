@@ -1,0 +1,12 @@
+Axiom Quant
+Copyright (c) 2026 Axiom Quant contributors
+
+This product includes software developed by third parties:
+
+- QuantConnect LEAN Engine (Apache License 2.0)
+  https://github.com/QuantConnect/Lean
+
+- TradingView Lightweight Charts (Apache License 2.0)
+  https://github.com/tradingview/lightweight-charts
+  Attribution required by the Lightweight Charts NOTICE / license terms.
+  Do not remove chart attribution strings in the UI.

@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: axiom
+      POSTGRES_PASSWORD: axiom
+      POSTGRES_DB: axiom
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U axiom -d axiom"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    environment:
+      AXIOM_DATABASE_URL: postgresql+psycopg://axiom:axiom@postgres:5432/axiom
+      AXIOM_REDIS_URL: redis://redis:6379/0
+      AXIOM_CELERY_BROKER_URL: redis://redis:6379/0
+      AXIOM_CELERY_RESULT_BACKEND: redis://redis:6379/1
+      AXIOM_DATA_ROOT: /data
+      AXIOM_JOBS_ROOT: /jobs
+      AXIOM_LEAN_IMAGE: quantconnect/lean:16355
+      AXIOM_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+      - ./jobs:/jobs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    command: celery -A services.worker.celery_app worker --loglevel=INFO --concurrency=1
+    environment:
+      AXIOM_DATABASE_URL: postgresql+psycopg://axiom:axiom@postgres:5432/axiom
+      AXIOM_REDIS_URL: redis://redis:6379/0
+      AXIOM_CELERY_BROKER_URL: redis://redis:6379/0
+      AXIOM_CELERY_RESULT_BACKEND: redis://redis:6379/1
+      AXIOM_DATA_ROOT: /data
+      AXIOM_JOBS_ROOT: /jobs
+      AXIOM_LEAN_IMAGE: quantconnect/lean:16355
+      AXIOM_DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - ./data:/data
+      - ./jobs:/jobs
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
