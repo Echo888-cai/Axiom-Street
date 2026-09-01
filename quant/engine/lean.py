@@ -10,6 +10,7 @@ from typing import Any
 
 from quant.data.lean_converter import ensure_lean_data
 from quant.data.manifest import load_manifest
+from quant.data.universe import write_lean_map_files
 from quant.engine.base import BacktestEngineResult, BacktestRequest, ProgressCallback, QuantEngine
 from quant.engine.errors import BacktestCancelled, EngineTimeout
 from quant.engine.result_parser import find_result_json, parse_lean_result
@@ -35,6 +36,33 @@ LEAN_CONFIG_TEMPLATE = {
     "symbol-tick-limit": 10000,
     "parameters": {},
 }
+
+
+def docker_volume_args(
+    *,
+    config_path: Path,
+    algo_dir: Path,
+    lean_data: Path,
+    results_dir: Path,
+    map_overlay: Path | None = None,
+) -> list[str]:
+    """Bind mounts for a LEAN container.
+
+    The PIT map overlay is mounted *after* ``/Data`` so it shadows snapshot
+    ``map_files`` without mutating the immutable snapshot tree.
+    """
+    args = [
+        "--mount",
+        f"type=bind,source={config_path.resolve()},target=/Lean/Launcher/config.json,readonly",
+        "-v",
+        f"{algo_dir.resolve()}:/Lean/Algorithm.Python:ro",
+        "-v",
+        f"{lean_data.resolve()}:/Data:ro",
+    ]
+    if map_overlay is not None:
+        args.extend(["-v", f"{map_overlay.resolve()}:/Data/equity/usa/map_files:ro"])
+    args.extend(["-v", f"{results_dir.resolve()}:/Results"])
+    return args
 
 
 class LeanQuantEngine(QuantEngine):
@@ -115,6 +143,11 @@ class LeanQuantEngine(QuantEngine):
         manifest = load_manifest(data_root)
         data_version = manifest.get("sha256", "unknown")
 
+        map_overlay: Path | None = None
+        if request.memberships:
+            map_overlay = job_dir / "map_files"
+            write_lean_map_files(map_overlay, request.memberships)
+
         strategy_path = algo_dir / "strategy.py"
         strategy_path.write_text(request.strategy_code, encoding="utf-8")
 
@@ -149,14 +182,13 @@ class LeanQuantEngine(QuantEngine):
             "2",
             "--pids-limit",
             "256",
-            "--mount",
-            f"type=bind,source={config_path.resolve()},target=/Lean/Launcher/config.json,readonly",
-            "-v",
-            f"{algo_dir.resolve()}:/Lean/Algorithm.Python:ro",
-            "-v",
-            f"{lean_data.resolve()}:/Data:ro",
-            "-v",
-            f"{results_dir.resolve()}:/Results",
+            *docker_volume_args(
+                config_path=config_path,
+                algo_dir=algo_dir,
+                lean_data=lean_data,
+                results_dir=results_dir,
+                map_overlay=map_overlay,
+            ),
             self.lean_image,
             "--data-folder",
             "/Data",

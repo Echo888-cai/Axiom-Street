@@ -41,11 +41,11 @@
 
 ### 任务
 
-- [ ] `universes` / `universe_members` 表 + Alembic migration
-- [ ] 成员必须带 `effective_from` / `effective_to`（退市标的 `effective_to` 非空）
-- [ ] 回测按 `[start, end]` 展开为时点正确的成分，而不是快照里的静态列表
-- [ ] API：CRUD universe；创建回测可引用 `universe_id`
-- [ ] 前端：标的池管理页（诚实空态，不用假成分）
+- [x] `universes` / `universe_members` 表 + Alembic migration
+- [x] 成员必须带 `effective_from` / `effective_to`（退市标的 `effective_to` 非空）
+- [x] 回测按 `[start, end]` 展开为时点正确的成分，而不是快照里的静态列表
+- [x] API：CRUD universe；创建回测可引用 `universe_id`
+- [x] 前端：标的池管理页（诚实空态，不用假成分）
 
 ### 验收
 

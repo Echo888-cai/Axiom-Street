@@ -23,3 +23,9 @@ def test_alembic_baseline_creates_tables():
     assert "experiment_trials" in text2
     assert "data_snapshots" in text2
     assert "backtest_rolling_windows" in text2
+    text3 = Path("services/api/alembic/versions/0003_universes.py").read_text(encoding="utf-8")
+    assert "universes" in text3
+    assert "universe_members" in text3
+    assert "effective_from" in text3
+    assert "effective_to" in text3
+    assert "universe_snapshot" in text3

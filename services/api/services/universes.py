@@ -1,0 +1,260 @@
+from __future__ import annotations
+
+from datetime import date
+from pathlib import Path
+from uuid import UUID
+
+from fastapi import HTTPException, status
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, selectinload
+
+from quant.data.ingest_spy import load_symbol_parquet
+from quant.data.symbols import normalize_symbols
+from quant.data.universe import (
+    Membership,
+    constituents_as_of,
+    constituents_overlapping,
+    infer_effective_to_from_bars,
+    memberships_overlapping,
+    validate_memberships,
+)
+from services.api.models import Universe, UniverseKind, UniverseMember
+from services.api.schemas import UniverseMemberCreate
+from services.api.settings import get_settings
+
+
+def _memberships_of(universe: Universe) -> list[Membership]:
+    return [
+        Membership(
+            symbol=row.symbol, effective_from=row.effective_from, effective_to=row.effective_to
+        )
+        for row in universe.members
+    ]
+
+
+def _commit_or_conflict(db: Session) -> None:
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="同一标的在同一开始日已有成分区间",
+        ) from exc
+
+
+def list_universes(db: Session, *, limit: int = 50, offset: int = 0) -> tuple[list[Universe], int]:
+    total = int(db.scalar(select(func.count()).select_from(Universe)) or 0)
+    rows = list(
+        db.scalars(
+            select(Universe)
+            .options(selectinload(Universe.members))
+            .order_by(Universe.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        ).all()
+    )
+    return rows, total
+
+
+def get_universe(db: Session, universe_id: UUID) -> Universe:
+    universe = db.scalars(
+        select(Universe).options(selectinload(Universe.members)).where(Universe.id == universe_id)
+    ).first()
+    if not universe:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="标的池不存在")
+    return universe
+
+
+def _to_member_row(
+    universe_id: UUID, payload: UniverseMemberCreate, data_root: Path
+) -> UniverseMember:
+    try:
+        symbol = normalize_symbols([payload.symbol])[0]
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    effective_to = payload.effective_to
+    if payload.infer_effective_to_from_data and payload.effective_to is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="不能同时指定 effective_to 和从数据推断退市日",
+        )
+    if payload.infer_effective_to_from_data:
+        try:
+            frame = load_symbol_parquet(data_root, symbol)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"没有 {symbol} 行情，无法从数据推断 effective_to。请先摄取该标的。",
+            ) from exc
+        last = frame["timestamp"].max()
+        last_day = last.date() if hasattr(last, "date") else date.fromisoformat(str(last)[:10])
+        effective_to = infer_effective_to_from_bars(last_day)
+    return UniverseMember(
+        universe_id=universe_id,
+        symbol=symbol,
+        effective_from=payload.effective_from,
+        effective_to=effective_to,
+    )
+
+
+def create_universe(
+    db: Session, name: str, description: str | None, members: list[UniverseMemberCreate]
+) -> Universe:
+    existing = db.scalars(select(Universe).where(Universe.name == name.strip())).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="已有同名标的池")
+    universe = Universe(
+        name=name.strip(),
+        description=description,
+        kind=UniverseKind.STATIC,
+    )
+    db.add(universe)
+    db.flush()
+    data_root = Path(get_settings().data_root)
+    rows = [_to_member_row(universe.id, item, data_root) for item in members]
+    try:
+        validate_memberships(
+            [
+                Membership(
+                    symbol=r.symbol, effective_from=r.effective_from, effective_to=r.effective_to
+                )
+                for r in rows
+            ]
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    db.add_all(rows)
+    _commit_or_conflict(db)
+    return get_universe(db, universe.id)
+
+
+def update_universe(
+    db: Session, universe_id: UUID, *, name: str | None, description: str | None
+) -> Universe:
+    universe = get_universe(db, universe_id)
+    if name is not None:
+        clash = db.scalars(
+            select(Universe).where(Universe.name == name.strip(), Universe.id != universe_id)
+        ).first()
+        if clash:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="已有同名标的池")
+        universe.name = name.strip()
+    if description is not None:
+        universe.description = description
+    db.commit()
+    return get_universe(db, universe_id)
+
+
+def delete_universe(db: Session, universe_id: UUID) -> None:
+    universe = get_universe(db, universe_id)
+    db.delete(universe)
+    db.commit()
+
+
+def add_member(db: Session, universe_id: UUID, payload: UniverseMemberCreate) -> UniverseMember:
+    universe = get_universe(db, universe_id)
+    data_root = Path(get_settings().data_root)
+    row = _to_member_row(universe.id, payload, data_root)
+    proposed = _memberships_of(universe) + [
+        Membership(
+            symbol=row.symbol, effective_from=row.effective_from, effective_to=row.effective_to
+        )
+    ]
+    try:
+        validate_memberships(proposed)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    db.add(row)
+    _commit_or_conflict(db)
+    db.refresh(row)
+    return row
+
+
+def update_member(
+    db: Session,
+    universe_id: UUID,
+    member_id: UUID,
+    *,
+    effective_from: date | None,
+    effective_to: date | None,
+    infer: bool,
+    to_provided: bool,
+) -> UniverseMember:
+    universe = get_universe(db, universe_id)
+    row = db.get(UniverseMember, member_id)
+    if row is None or row.universe_id != universe.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="成分不存在")
+    if infer and to_provided:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="不能同时指定 effective_to 和从数据推断退市日",
+        )
+    if effective_from is not None:
+        row.effective_from = effective_from
+    if infer:
+        data_root = Path(get_settings().data_root)
+        try:
+            frame = load_symbol_parquet(data_root, row.symbol)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"没有 {row.symbol} 行情，无法从数据推断 effective_to。",
+            ) from exc
+        last = frame["timestamp"].max()
+        last_day = last.date() if hasattr(last, "date") else date.fromisoformat(str(last)[:10])
+        row.effective_to = infer_effective_to_from_bars(last_day)
+    elif to_provided:
+        row.effective_to = effective_to
+    proposed = [
+        Membership(
+            symbol=item.symbol, effective_from=item.effective_from, effective_to=item.effective_to
+        )
+        for item in universe.members
+    ]
+    try:
+        validate_memberships(proposed)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    _commit_or_conflict(db)
+    db.refresh(row)
+    return row
+
+
+def delete_member(db: Session, universe_id: UUID, member_id: UUID) -> None:
+    universe = get_universe(db, universe_id)
+    row = db.get(UniverseMember, member_id)
+    if row is None or row.universe_id != universe.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="成分不存在")
+    db.delete(row)
+    db.commit()
+
+
+def resolve_for_range(universe: Universe, start: date, end: date) -> list[Membership]:
+    try:
+        members = _memberships_of(universe)
+        validate_memberships(members)
+        return memberships_overlapping(members, start, end)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+def preview_constituents(
+    universe: Universe, *, as_of: date | None, start: date | None, end: date | None
+) -> dict:
+    members = _memberships_of(universe)
+    if as_of is not None:
+        return {"as_of": as_of.isoformat(), "symbols": constituents_as_of(members, as_of)}
+    if start is not None and end is not None:
+        return {
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "symbols": constituents_overlapping(members, start, end),
+            "memberships": [m.to_dict() for m in memberships_overlapping(members, start, end)],
+        }
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="需要 as_of，或同时提供 start 与 end",
+    )

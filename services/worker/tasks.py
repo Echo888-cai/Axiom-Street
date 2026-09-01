@@ -7,6 +7,7 @@ from uuid import UUID
 import redis
 import structlog
 
+from quant.data.universe import Membership
 from quant.engine.base import BacktestRequest
 from quant.engine.errors import BacktestCancelled, EngineTimeout
 from quant.engine.lean import LeanQuantEngine
@@ -128,17 +129,25 @@ def execute_backtest(backtest_id: str) -> dict:
         _set_progress(db, backtest, BacktestStatus.STARTING, "Preparing environment")
 
         data_root = Path(settings.data_root)
+        memberships: list[Membership] = []
         universe = ["SPY"]
+        if backtest.universe_snapshot:
+            memberships = [Membership.from_dict(item) for item in backtest.universe_snapshot]
+            universe = []
+            for member in memberships:
+                if member.symbol not in universe:
+                    universe.append(member.symbol)
         if backtest.data_snapshot_id:
             snap = db.get(DataSnapshot, backtest.data_snapshot_id)
             if snap:
                 from quant.data.symbols import as_symbol_list
 
-                universe = as_symbol_list(snap.symbols)
+                if not memberships:
+                    universe = as_symbol_list(snap.symbols)
                 candidate = Path(settings.data_root) / "snapshots" / snap.snapshot_key
                 if candidate.exists():
                     data_root = candidate
-        if isinstance(version.config, dict):
+        if not memberships and isinstance(version.config, dict):
             configured = (version.config.get("universe") or {}).get("symbols")
             if configured:
                 from quant.data.symbols import as_symbol_list as _as_list
@@ -177,6 +186,7 @@ def execute_backtest(backtest_id: str) -> dict:
             initial_capital=backtest.initial_capital,
             parameters=backtest.parameters or {},
             universe=universe,
+            memberships=memberships,
             data_root=data_root,
             timeout_seconds=settings.lean_timeout_seconds,
             cancel_check=_cancelled,

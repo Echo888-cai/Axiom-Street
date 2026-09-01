@@ -70,6 +70,7 @@ class BacktestCreate(BaseModel):
     parameters: Dict[str, Any] = Field(default_factory=dict)
     data_snapshot_id: Optional[UUID] = None
     universe: Optional[list[str]] = None
+    universe_id: Optional[UUID] = None
 
 
 class BacktestOut(ORMModel):
@@ -97,6 +98,8 @@ class BacktestOut(ORMModel):
     trade_count: Optional[int] = None
     final_equity: Optional[float] = None
     data_snapshot_id: Optional[UUID] = None
+    universe_id: Optional[UUID] = None
+    universe_snapshot: Optional[list[Dict[str, Any]]] = None
 
 
 class BacktestMetricsOut(ORMModel):
@@ -261,3 +264,53 @@ class HealthOut(BaseModel):
     service: str
     version: str
     checks: Dict[str, Any] = Field(default_factory=dict)
+
+
+class UniverseMemberCreate(BaseModel):
+    symbol: str
+    effective_from: date
+    effective_to: Optional[date] = None
+    infer_effective_to_from_data: bool = False
+
+
+class UniverseMemberUpdate(BaseModel):
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    infer_effective_to_from_data: bool = False
+
+
+class UniverseMemberOut(ORMModel):
+    id: UUID
+    universe_id: UUID
+    symbol: str
+    effective_from: date
+    effective_to: Optional[date] = None
+
+
+class UniverseCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: Optional[str] = None
+    members: list[UniverseMemberCreate] = Field(default_factory=list)
+
+
+class UniverseUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = None
+
+
+class UniverseOut(ORMModel):
+    id: UUID
+    name: str
+    description: Optional[str]
+    kind: str
+    created_at: datetime
+    updated_at: datetime
+    member_count: int = 0
+    members: list[UniverseMemberOut] = Field(default_factory=list)
+
+
+class UniversePage(BaseModel):
+    items: list[UniverseOut]
+    total: int
+    limit: int
+    offset: int

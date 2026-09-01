@@ -6,6 +6,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
+from quant.data.universe import Membership
+
 ProgressCallback = Callable[[str], None]
 
 
@@ -20,6 +22,7 @@ class BacktestRequest:
     initial_capital: float
     parameters: dict[str, Any] = field(default_factory=dict)
     universe: list[str] = field(default_factory=lambda: ["SPY"])
+    memberships: list[Membership] = field(default_factory=list)
     data_root: Path | None = None
     jobs_root: Path | None = None
     timeout_seconds: int = 1800

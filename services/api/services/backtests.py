@@ -28,6 +28,7 @@ from services.api.models import (
 )
 from services.api.schemas import BacktestCreate, BacktestOut
 from services.api.services import snapshots as snapshot_service
+from services.api.services import universes as universe_service
 from services.api.services.strategies import get_version
 from services.api.settings import get_settings
 
@@ -93,6 +94,8 @@ def to_out(db: Session, backtest: Backtest) -> BacktestOut:
             else None,
             "final_equity": metrics.final_equity if metrics else None,
             "data_snapshot_id": backtest.data_snapshot_id,
+            "universe_id": backtest.universe_id,
+            "universe_snapshot": backtest.universe_snapshot,
         }
     )
 
@@ -177,12 +180,35 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
             detail="还没有行情数据。请打开「设置」拉取标的。",
         )
 
-    try:
-        universe = (
-            normalize_symbols(payload.universe)
-            if payload.universe
-            else as_symbol_list(market.get("symbols") or (snapshot.symbols if snapshot else None))
+    if payload.universe_id is not None and payload.universe:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="标的池与临时 symbols 不能同时指定",
         )
+
+    universe_snapshot: list[dict] | None = None
+    try:
+        if payload.universe_id is not None:
+            uni = universe_service.get_universe(db, payload.universe_id)
+            overlapping = universe_service.resolve_for_range(
+                uni, payload.start_date, payload.end_date
+            )
+            if not overlapping:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="该回测区间内标的池没有成分",
+                )
+            universe = []
+            for member in overlapping:
+                if member.symbol not in universe:
+                    universe.append(member.symbol)
+            universe_snapshot = [member.to_dict() for member in overlapping]
+        elif payload.universe:
+            universe = normalize_symbols(payload.universe)
+        else:
+            universe = as_symbol_list(
+                market.get("symbols") or (snapshot.symbols if snapshot else None)
+            )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -224,6 +250,8 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
         data_snapshot_id=snapshot.id if snapshot else None,
         data_version=(snapshot.content_sha256 if snapshot else None)
         or (market.get("manifest") or {}).get("sha256"),
+        universe_id=payload.universe_id,
+        universe_snapshot=universe_snapshot,
     )
     db.add(backtest)
     db.flush()
@@ -243,6 +271,7 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
                     "benchmark": payload.benchmark,
                     "initial_capital": payload.initial_capital,
                     "universe": universe,
+                    "universe_id": str(payload.universe_id) if payload.universe_id else None,
                     "parameters": params,
                 }
             ),

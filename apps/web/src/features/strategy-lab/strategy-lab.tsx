@@ -42,6 +42,10 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     queryKey: ["trial-stats", strategyId],
     queryFn: () => api.getTrialStats(strategyId),
   });
+  const universes = useQuery({
+    queryKey: ["universes"],
+    queryFn: api.listUniverses,
+  });
 
   const [code, setCode] = useState("");
   const [config, setConfig] = useState<Record<string, unknown>>({});
@@ -49,6 +53,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
   const [startDate, setStartDate] = useState("2018-01-01");
   const [endDate, setEndDate] = useState("2020-12-31");
   const [capital, setCapital] = useState("100000");
+  const [universeId, setUniverseId] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState("");
   const [confirmRestore, setConfirmRestore] = useState(false);
@@ -138,6 +143,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         end_date: endDate,
         benchmark: strategy?.benchmark || "SPY",
         initial_capital: Number(capital) || 100000,
+        ...(universeId ? { universe_id: universeId } : {}),
       });
     },
     onSuccess: (bt) => {
@@ -222,6 +228,22 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
               value={capital}
               onChange={(e) => setCapital(e.target.value)}
             />
+          </label>
+          <label className="flex items-center gap-1.5 text-[11px] text-aq-muted">
+            标的池
+            <select
+              className="h-9 rounded-lg border border-aq-border bg-aq-bg px-2 text-sm text-aq-text outline-none focus:border-aq-primary/40"
+              value={universeId}
+              onChange={(e) => setUniverseId(e.target.value)}
+            >
+              <option value="">快照全部标的</option>
+              {(universes.data || []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                  {item.member_count ? `（${item.member_count}）` : ""}
+                </option>
+              ))}
+            </select>
           </label>
           <Input
             className="w-44"

@@ -142,6 +142,10 @@ class Backtest(Base):
     data_snapshot_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         Uuid, ForeignKey("data_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    universe_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("universes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    universe_snapshot: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
 
 class BacktestMetrics(Base):
@@ -334,3 +338,43 @@ class BacktestTimeSeries(Base):
     value: Mapped[float] = mapped_column(Float, nullable=False)
 
     backtest: Mapped[Backtest] = relationship(back_populates="time_series")
+
+
+class UniverseKind(str, enum.Enum):
+    STATIC = "STATIC"
+
+
+class Universe(Base):
+    __tablename__ = "universes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    kind: Mapped[UniverseKind] = mapped_column(
+        _enum(UniverseKind, "universe_kind"), default=UniverseKind.STATIC, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    members: Mapped[List["UniverseMember"]] = relationship(
+        back_populates="universe", cascade="all, delete-orphan"
+    )
+
+
+class UniverseMember(Base):
+    __tablename__ = "universe_members"
+    __table_args__ = (
+        UniqueConstraint("universe_id", "symbol", "effective_from", name="uq_universe_member_span"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    universe_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("universes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    symbol: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+
+    universe: Mapped[Universe] = relationship(back_populates="members")

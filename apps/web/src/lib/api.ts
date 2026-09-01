@@ -79,6 +79,13 @@ export type Backtest = {
   max_drawdown?: number | null;
   trade_count?: number | null;
   final_equity?: number | null;
+  data_snapshot_id?: string | null;
+  universe_id?: string | null;
+  universe_snapshot?: Array<{
+    symbol: string;
+    effective_from: string;
+    effective_to: string | null;
+  }> | null;
 };
 
 export type BacktestMetrics = {
@@ -193,6 +200,7 @@ export const api = {
     initial_capital?: number;
     data_snapshot_id?: string;
     universe?: string[];
+    universe_id?: string;
   }) =>
     request<Backtest>("/api/v1/backtests", {
       method: "POST",
@@ -223,6 +231,58 @@ export const api = {
     }),
   listSnapshots: () =>
     request<{ total: number; items: DataSnapshot[] }>("/api/v1/data/snapshots"),
+  listUniverses: () =>
+    request<Page<Universe>>("/api/v1/universes").then(unwrapList),
+  getUniverse: (id: string) => request<Universe>(`/api/v1/universes/${id}`),
+  createUniverse: (body: { name: string; description?: string }) =>
+    request<Universe>("/api/v1/universes", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateUniverse: (id: string, body: { name?: string; description?: string }) =>
+    request<Universe>(`/api/v1/universes/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteUniverse: (id: string) =>
+    request<void>(`/api/v1/universes/${id}`, { method: "DELETE" }),
+  addUniverseMember: (
+    universeId: string,
+    body: {
+      symbol: string;
+      effective_from: string;
+      effective_to?: string | null;
+      infer_effective_to_from_data?: boolean;
+    },
+  ) =>
+    request<UniverseMember>(`/api/v1/universes/${universeId}/members`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  deleteUniverseMember: (universeId: string, memberId: string) =>
+    request<void>(`/api/v1/universes/${universeId}/members/${memberId}`, {
+      method: "DELETE",
+    }),
+  previewUniverse: (
+    universeId: string,
+    params: { as_of?: string; start?: string; end?: string },
+  ) => {
+    const search = new URLSearchParams();
+    if (params.as_of) search.set("as_of", params.as_of);
+    if (params.start) search.set("start", params.start);
+    if (params.end) search.set("end", params.end);
+    return request<{
+      as_of?: string;
+      start?: string;
+      end?: string;
+      symbols: string[];
+      memberships?: Array<{
+        symbol: string;
+        effective_from: string;
+        effective_to: string | null;
+      }>;
+    }>(`/api/v1/universes/${universeId}/constituents?${search.toString()}`);
+  },
 };
 
 export type TrialStats = {
@@ -238,6 +298,25 @@ export type TrialStats = {
     sharpe_max: number | null;
     duplicate_parameter_hashes: number;
   }>;
+};
+
+export type UniverseMember = {
+  id: string;
+  universe_id: string;
+  symbol: string;
+  effective_from: string;
+  effective_to: string | null;
+};
+
+export type Universe = {
+  id: string;
+  name: string;
+  description: string | null;
+  kind: string;
+  created_at: string;
+  updated_at: string;
+  member_count: number;
+  members: UniverseMember[];
 };
 
 export type DataSnapshot = {
