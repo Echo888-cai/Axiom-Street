@@ -21,6 +21,8 @@ class BacktestRequest:
     parameters: dict[str, Any] = field(default_factory=dict)
     data_root: Path | None = None
     jobs_root: Path | None = None
+    timeout_seconds: int = 1800
+    cancel_check: Callable[[], bool] | None = None
 
 
 @dataclass
@@ -32,6 +34,9 @@ class BacktestEngineResult:
     trades: list[dict[str, Any]]
     monthly_returns: list[dict[str, Any]]
     raw_path: str | None = None
+    rolling_windows: list[dict[str, Any]] = field(default_factory=list)
+    time_series: list[dict[str, Any]] = field(default_factory=list)
+    data_snapshot_id: str | None = None
 
 
 class QuantEngine(ABC):

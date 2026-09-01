@@ -19,6 +19,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       } else if (Array.isArray(parsed.detail) && parsed.detail[0] && typeof parsed.detail[0] === "object") {
         const first = parsed.detail[0] as { msg?: string };
         if (first.msg) message = first.msg;
+      } else if (parsed.detail && typeof parsed.detail === "object") {
+        const detail = parsed.detail as { message?: string; msg?: string };
+        message = detail.message || detail.msg || JSON.stringify(parsed.detail);
       }
     } catch {
       /* keep raw text */
@@ -129,9 +132,21 @@ export type MonthlyReturn = {
   return_pct: number;
 };
 
+export type Page<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+function unwrapList<T>(data: T[] | Page<T>): T[] {
+  return Array.isArray(data) ? data : data.items;
+}
+
 export const api = {
   health: () => request<{ status: string; version: string }>("/health"),
-  listStrategies: () => request<Strategy[]>("/api/v1/strategies"),
+  listStrategies: () =>
+    request<Page<Strategy> | Strategy[]>("/api/v1/strategies").then(unwrapList),
   getStrategy: (id: string) => request<Strategy>(`/api/v1/strategies/${id}`),
   updateStrategy: (
     id: string,
@@ -163,7 +178,10 @@ export const api = {
     request<StrategyVersion[]>(`/api/v1/strategies/${strategyId}/versions`),
   deleteStrategy: (id: string) =>
     request<void>(`/api/v1/strategies/${id}`, { method: "DELETE" }),
-  listBacktests: () => request<Backtest[]>("/api/v1/backtests"),
+  getTrialStats: (id: string) =>
+    request<TrialStats>(`/api/v1/strategies/${id}/trial-stats`),
+  listBacktests: () =>
+    request<Page<Backtest> | Backtest[]>("/api/v1/backtests").then(unwrapList),
   getBacktest: (id: string) => request<Backtest>(`/api/v1/backtests/${id}`),
   cancelBacktest: (id: string) =>
     request<Backtest>(`/api/v1/backtests/${id}/cancel`, { method: "POST" }),
@@ -179,8 +197,10 @@ export const api = {
       body: JSON.stringify(body),
     }),
   getMetrics: (id: string) => request<BacktestMetrics>(`/api/v1/backtests/${id}/metrics`),
-  getEquity: (id: string) => request<EquityPoint[]>(`/api/v1/backtests/${id}/equity`),
-  getTrades: (id: string) => request<Trade[]>(`/api/v1/backtests/${id}/trades`),
+  getEquity: (id: string) =>
+    request<Page<EquityPoint> | EquityPoint[]>(`/api/v1/backtests/${id}/equity`).then(unwrapList),
+  getTrades: (id: string) =>
+    request<Page<Trade> | Trade[]>(`/api/v1/backtests/${id}/trades`).then(unwrapList),
   getMonthlyReturns: (id: string) =>
     request<MonthlyReturn[]>(`/api/v1/backtests/${id}/monthly-returns`),
   eventsUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/events`,
@@ -192,6 +212,21 @@ export const api = {
     }),
 };
 
+export type TrialStats = {
+  strategy_id: string;
+  family_id: string | null;
+  total_trials: number;
+  by_snapshot: Array<{
+    data_snapshot_id: string | null;
+    snapshot_key: string | null;
+    count: number;
+    sharpe_mean: number | null;
+    sharpe_var: number | null;
+    sharpe_max: number | null;
+    duplicate_parameter_hashes: number;
+  }>;
+};
+
 export type DataStatus = {
   ready: boolean;
   lean_ready: boolean;
@@ -200,9 +235,17 @@ export type DataStatus = {
   manifest: Record<string, unknown>;
   providers: Record<string, unknown>;
   docker_required_for_backtest: boolean;
+  snapshot_key?: string | null;
+  corporate_actions_verified?: boolean | null;
+  quality_report?: {
+    has_blocking_issues?: boolean;
+    issues?: Array<{ rule: string; severity: string; message: string; count?: number }>;
+  };
   lean_engine?: {
     engine: string;
     image: string;
     docker_available: boolean;
   };
 };
+
+export { unwrapList };

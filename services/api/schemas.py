@@ -55,6 +55,7 @@ class StrategyOut(ORMModel):
     status: StrategyStatus
     asset_class: str
     benchmark: str
+    family_id: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
     latest_version: Optional[StrategyVersionOut] = None
@@ -93,6 +94,7 @@ class BacktestOut(ORMModel):
     max_drawdown: Optional[float] = None
     trade_count: Optional[int] = None
     final_equity: Optional[float] = None
+    data_snapshot_id: Optional[UUID] = None
 
 
 class BacktestMetricsOut(ORMModel):
@@ -168,7 +170,92 @@ class MonthlyReturnOut(BaseModel):
     return_pct: float
 
 
+class StrategyPage(BaseModel):
+    items: list[StrategyOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class BacktestPage(BaseModel):
+    items: list[BacktestOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class EquityPage(BaseModel):
+    items: list[EquityPoint]
+    total: int
+    limit: int
+    offset: int
+
+
+class TradePage(BaseModel):
+    items: list[TradeOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class RollingWindowOut(BaseModel):
+    window_key: str
+    period_end: Optional[datetime] = None
+    sharpe: Optional[float] = None
+    var_95: Optional[float] = None
+    var_99: Optional[float] = None
+    probabilistic_sharpe: Optional[float] = None
+    extras: Dict[str, Any] = Field(default_factory=dict)
+
+
+class TimeSeriesPointOut(BaseModel):
+    name: str
+    ts: datetime
+    value: float
+
+
+class TrialSnapshotStats(BaseModel):
+    data_snapshot_id: Optional[UUID] = None
+    snapshot_key: Optional[str] = None
+    count: int
+    sharpe_mean: Optional[float] = None
+    sharpe_var: Optional[float] = None
+    sharpe_max: Optional[float] = None
+    duplicate_parameter_hashes: int = 0
+
+
+class TrialStatsOut(BaseModel):
+    strategy_id: UUID
+    family_id: Optional[UUID] = None
+    total_trials: int
+    by_snapshot: list[TrialSnapshotStats] = Field(default_factory=list)
+
+
+class AuditLogOut(ORMModel):
+    id: int
+    actor: str
+    action: str
+    object_type: str
+    object_id: str
+    before: Optional[Dict[str, Any]] = None
+    after: Optional[Dict[str, Any]] = None
+    timestamp: datetime
+
+
+class AuditLogPage(BaseModel):
+    items: list[AuditLogOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class BacktestLogsOut(BaseModel):
+    stdout: str = ""
+    stderr: str = ""
+
+
 class HealthOut(BaseModel):
     status: str
     service: str
     version: str
+    checks: Dict[str, Any] = Field(default_factory=dict)

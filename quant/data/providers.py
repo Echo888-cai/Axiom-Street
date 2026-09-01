@@ -15,6 +15,14 @@ from typing import Optional
 
 import pandas as pd
 
+from quant.data.types import (
+    CAPABILITIES_BY_SOURCE,
+    STOOQ_CAPABILITIES,
+    YFINANCE_CAPABILITIES,
+    FetchResult,
+    ProviderCapabilities,
+)
+
 REQUIRED_COLS = [
     "timestamp",
     "open",
@@ -101,28 +109,34 @@ def fetch_spy_daily(
     provider: str = "auto",
     start: str = "2010-01-01",
     end: Optional[str] = None,
-) -> tuple[pd.DataFrame, str]:
-    """Return (frame, source_name). auto = yfinance then stooq."""
+) -> FetchResult:
+    """Return bars plus the provider's declared capabilities. auto = yfinance then stooq."""
     provider = (provider or "auto").lower()
     errors = []
 
     if provider in {"auto", "yfinance", "yahoo"}:
         try:
-            return fetch_yfinance("SPY", start=start, end=end), "yfinance"
-        except Exception as exc:  # noqa: BLE001
+            frame = fetch_yfinance("SPY", start=start, end=end)
+            return FetchResult(frame, "yfinance", YFINANCE_CAPABILITIES)
+        except Exception as exc:
             errors.append(f"yfinance: {exc}")
             if provider != "auto":
                 raise
 
     if provider in {"auto", "stooq"}:
         try:
-            return fetch_stooq("SPY", start=start, end=end), "stooq"
-        except Exception as exc:  # noqa: BLE001
+            frame = fetch_stooq("SPY", start=start, end=end)
+            return FetchResult(frame, "stooq", STOOQ_CAPABILITIES)
+        except Exception as exc:
             errors.append(f"stooq: {exc}")
             if provider != "auto":
                 raise
 
     raise RuntimeError("All data providers failed: " + " | ".join(errors))
+
+
+def capabilities_for(source: str) -> ProviderCapabilities:
+    return CAPABILITIES_BY_SOURCE.get(source, STOOQ_CAPABILITIES)
 
 
 def provider_status() -> dict:

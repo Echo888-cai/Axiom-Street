@@ -33,7 +33,7 @@ def bars_to_lean_daily_csv(df: pd.DataFrame) -> str:
     return "\n".join(rows) + "\n"
 
 
-def build_factor_file(df: pd.DataFrame) -> str:
+def build_factor_file(df: pd.DataFrame, *, require_corporate_actions: bool = False) -> str:
     """Build a minimal LEAN corporate factor file from dividends/splits.
 
     Format: date, price factor, split factor, reference price
@@ -43,7 +43,6 @@ def build_factor_file(df: pd.DataFrame) -> str:
     frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True)
     frame = frame.sort_values("timestamp")
 
-    # Work forward then reverse for LEAN's cumulative factors
     price_factor = 1.0
     split_factor = 1.0
     events: list[tuple[pd.Timestamp, float, float, float]] = []
@@ -54,7 +53,6 @@ def build_factor_file(df: pd.DataFrame) -> str:
         close = float(row["close"])
         changed = False
         if split and split != 0:
-            # yfinance stock_splits is ratio e.g. 2.0 for 2-for-1
             split_factor *= 1.0 / split
             changed = True
         if div and div != 0 and close > 0:
@@ -64,7 +62,13 @@ def build_factor_file(df: pd.DataFrame) -> str:
             ts = row["timestamp"].tz_convert("America/New_York")
             events.append((ts, price_factor, split_factor, close))
 
-    # Always include a terminal row far in the future
+    if require_corporate_actions and not events:
+        from quant.data.types import ProviderCapabilityError
+
+        raise ProviderCapabilityError(
+            "数据源不提供分红/拆分，无法生成调整因子文件，拒绝进行 Adjusted 模式回测。"
+        )
+
     lines = ["20501231,1,1,0"]
     for ts, pf, sf, ref in reversed(events):
         lines.append(f"{ts.strftime('%Y%m%d')},{pf:.8f},{sf:.8f},{ref:.2f}")
@@ -127,7 +131,7 @@ def ensure_lean_support_files(lean_root: Path) -> None:
         map_file.write_text("20000101,spy\n20501231,spy\n", encoding="utf-8")
 
 
-def convert_spy_to_lean(data_root: Path) -> Path:
+def convert_spy_to_lean(data_root: Path, *, require_corporate_actions: bool | None = None) -> Path:
     root = Path(data_root)
     parquet = root / "market" / "equities" / "US" / "daily" / "SPY.parquet"
     if not parquet.exists():
@@ -136,13 +140,20 @@ def convert_spy_to_lean(data_root: Path) -> Path:
     lean_root = root / "lean"
     ensure_lean_support_files(lean_root)
 
+    if require_corporate_actions is None:
+        manifest = load_manifest(root)
+        require_corporate_actions = not bool(manifest.get("corporate_actions_verified", False))
+
     daily_zip = lean_root / "equity" / "usa" / "daily" / "spy.zip"
     csv = bars_to_lean_daily_csv(df)
     _write_zip_csv(daily_zip, "spy.csv", csv)
 
     factor_path = lean_root / "equity" / "usa" / "factor_files" / "spy.csv"
     factor_path.parent.mkdir(parents=True, exist_ok=True)
-    factor_path.write_text(build_factor_file(df), encoding="utf-8")
+    factor_path.write_text(
+        build_factor_file(df, require_corporate_actions=require_corporate_actions),
+        encoding="utf-8",
+    )
 
     return lean_root
 
@@ -152,13 +163,18 @@ def ensure_lean_spy_data(data_root: Path) -> Path:
     lean_root = root / "lean"
     daily_zip = lean_root / "equity" / "usa" / "daily" / "spy.zip"
     parquet = root / "market" / "equities" / "US" / "daily" / "SPY.parquet"
-    if not parquet.exists():
-        from quant.data.ingest_spy import ingest_spy
+    manifest = load_manifest(root)
+    if manifest.get("corporate_actions_verified") is False:
+        from quant.data.types import ProviderCapabilityError
 
-        ingest_spy(data_root=root)
-    if not daily_zip.exists() or not load_manifest(root):
+        source = manifest.get("source") or "unknown"
+        raise ProviderCapabilityError(f"数据源 {source} 不提供分红数据，无法进行调整价回测。")
+    if not parquet.exists():
+        raise FileNotFoundError(
+            f"Missing SPY parquet at {parquet}. Ingest data before running a backtest."
+        )
+    if not daily_zip.exists() or not manifest:
         return convert_spy_to_lean(root)
-    # Rebuild if parquet newer than zip
     if parquet.stat().st_mtime > daily_zip.stat().st_mtime:
         return convert_spy_to_lean(root)
     ensure_lean_support_files(lean_root)

@@ -1,14 +1,24 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from statistics import mean, pvariance
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from quant.strategy_sdk.spy_200dma import DEFAULT_STRATEGY_CODE, default_builder_config
-from services.api.models import AuditLog, Strategy, StrategyStatus, StrategyVersion
+from services.api.models import (
+    AuditLog,
+    DataSnapshot,
+    ExperimentTrial,
+    Strategy,
+    StrategyStatus,
+    StrategyVersion,
+)
 from services.api.schemas import StrategyCreate, StrategyUpdate, StrategyVersionCreate
+from services.api.status_machine import assert_client_status_transition
 
 
 def _audit(
@@ -33,8 +43,16 @@ def _audit(
     )
 
 
-def list_strategies(db: Session) -> list[Strategy]:
-    return list(db.scalars(select(Strategy).order_by(Strategy.updated_at.desc())).all())
+def list_strategies(
+    db: Session, *, limit: int = 100, offset: int = 0
+) -> tuple[list[Strategy], int]:
+    total = int(db.scalar(select(func.count()).select_from(Strategy)) or 0)
+    rows = list(
+        db.scalars(
+            select(Strategy).order_by(Strategy.updated_at.desc()).offset(offset).limit(limit)
+        ).all()
+    )
+    return rows, total
 
 
 def get_strategy(db: Session, strategy_id: UUID) -> Strategy:
@@ -63,6 +81,8 @@ def create_strategy(db: Session, payload: StrategyCreate) -> Strategy:
     )
     db.add(strategy)
     db.flush()
+    if strategy.family_id is None:
+        strategy.family_id = strategy.id
 
     code = payload.code or DEFAULT_STRATEGY_CODE
     config = payload.config or default_builder_config()
@@ -92,6 +112,8 @@ def update_strategy(db: Session, strategy_id: UUID, payload: StrategyUpdate) -> 
     strategy = get_strategy(db, strategy_id)
     before = {"name": strategy.name, "status": strategy.status.value}
     data = payload.model_dump(exclude_unset=True)
+    if "status" in data and data["status"] is not None:
+        assert_client_status_transition(strategy.status, data["status"])
     for key, value in data.items():
         setattr(strategy, key, value)
     _audit(
@@ -167,3 +189,43 @@ def get_version(db: Session, version_id: UUID) -> StrategyVersion:
     if not version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="策略版本不存在")
     return version
+
+
+def trial_stats(db: Session, strategy_id: UUID) -> dict:
+    strategy = get_strategy(db, strategy_id)
+    family_id = strategy.family_id or strategy.id
+    trials = list(
+        db.scalars(
+            select(ExperimentTrial).where(ExperimentTrial.strategy_family == family_id)
+        ).all()
+    )
+    grouped: dict[UUID | None, list[ExperimentTrial]] = defaultdict(list)
+    for trial in trials:
+        grouped[trial.data_snapshot_id].append(trial)
+
+    by_snapshot = []
+    for snapshot_id, rows in grouped.items():
+        sharpes = [t.observed_sharpe for t in rows if t.observed_sharpe is not None]
+        hashes = [t.parameter_hash for t in rows if t.parameter_hash]
+        dup = len(hashes) - len(set(hashes))
+        snap = db.get(DataSnapshot, snapshot_id) if snapshot_id else None
+        by_snapshot.append(
+            {
+                "data_snapshot_id": snapshot_id,
+                "snapshot_key": snap.snapshot_key if snap else None,
+                "count": len(rows),
+                "sharpe_mean": mean(sharpes) if sharpes else None,
+                "sharpe_var": pvariance(sharpes)
+                if len(sharpes) >= 2
+                else (0.0 if sharpes else None),
+                "sharpe_max": max(sharpes) if sharpes else None,
+                "duplicate_parameter_hashes": dup,
+            }
+        )
+    by_snapshot.sort(key=lambda row: int(row["count"] or 0), reverse=True)
+    return {
+        "strategy_id": strategy.id,
+        "family_id": family_id,
+        "total_trials": len(trials),
+        "by_snapshot": by_snapshot,
+    }

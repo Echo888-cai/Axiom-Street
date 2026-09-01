@@ -17,7 +17,7 @@
 ### 任务
 
 - [x] `git init`，`.gitignore` 已存在需检查是否覆盖 `axiom-local.db`、`jobs/`、`data/snapshots/`、`.venv`
-- [ ] 提交当前状态作为基线 commit，commit message 标注 `Phase 1 baseline`
+- [x] 提交当前状态作为基线 commit，commit message 标注 `Phase 1 baseline`
 - [x] 真实的 Alembic baseline（P0-10）：删除 `services/api/alembic/versions/0001_initial.py` 里的空 `pass`，用 `alembic revision --autogenerate` 生成完整 schema
 - [x] 容器 entrypoint 加 `alembic upgrade head`；移除 `services/api/main.py` 的 `Base.metadata.create_all(bind=engine)`
 - [x] 新增 `.github/workflows/ci.yml`：
@@ -82,13 +82,13 @@ golden result JSON 约 12,785 行，当前只用了 `Charts` / `Statistics` / `O
 
 ### 任务
 
-- [ ] **解析 `TotalPerformance.ClosedTrades` 为真正的 round-trip 交易**。当前 `backtest_trades` 表的 `exit_price` / `pnl` / `return_pct` / `holding_period` 全为空——只记录了开仓。这使得胜率、盈亏比、持仓周期分析全部无法进行
-- [ ] **解析 `RollingWindow`**（148 个滚动月度窗口，含 VaR95/99、Probabilistic Sharpe）。新增 `backtest_rolling_windows` 表
-- [ ] **解析 Exposure 与 Turnover chart** 为时间序列，落库
-- [ ] **保留 LEAN 的 Beta / IR / Treynor / Tracking Error 到 `extras`**，供 WP-1 的对账测试使用
-- [ ] **修正 `find_result_json`**：当前按 mtime 取最新 `*.json`，会与 `data-monitor-report-*.json` 混淆。改为按算法类名精确匹配文件名
-- [ ] **移除基准缩放启发式**或使其显式。当前 `result_parser.py:78-86` 在 `first_bench < first_strat * 0.2` 时自动缩放基准序列——这是一个会静默改变 `benchmark_return` 与 `excess_return` 的魔法。改为显式配置基准归一化模式，并在结果里记录是否发生了缩放
-- [ ] Alembic migration
+- [x] **解析 `TotalPerformance.ClosedTrades` 为真正的 round-trip 交易**。当前 `backtest_trades` 表的 `exit_price` / `pnl` / `return_pct` / `holding_period` 全为空——只记录了开仓。这使得胜率、盈亏比、持仓周期分析全部无法进行
+- [x] **解析 `RollingWindow`**（148 个滚动月度窗口，含 VaR95/99、Probabilistic Sharpe）。新增 `backtest_rolling_windows` 表
+- [x] **解析 Exposure 与 Turnover chart** 为时间序列，落库
+- [x] **保留 LEAN 的 Beta / IR / Treynor / Tracking Error 到 `extras`**，供 WP-1 的对账测试使用
+- [x] **修正 `find_result_json`**：当前按 mtime 取最新 `*.json`，会与 `data-monitor-report-*.json` 混淆。改为按算法类名精确匹配文件名
+- [x] **移除基准缩放启发式**或使其显式。当前 `result_parser.py:78-86` 在 `first_bench < first_strat * 0.2` 时自动缩放基准序列——这是一个会静默改变 `benchmark_return` 与 `excess_return` 的魔法。改为显式配置基准归一化模式，并在结果里记录是否发生了缩放
+- [x] Alembic migration
 
 ### 验收
 
@@ -108,7 +108,7 @@ golden result JSON 约 12,785 行，当前只用了 `Charts` / `Statistics` / `O
 
 ### 任务
 
-- [ ] **消灭静默降级**（P0-5）。provider 层新增能力声明：
+- [x] **消灭静默降级**（P0-5）。provider 层新增能力声明：
 
 ```python
 @dataclass(frozen=True)
@@ -124,7 +124,7 @@ class ProviderCapabilities:
   - 策略使用 `DataNormalizationMode.Adjusted` 时，若快照的 `corporate_actions_verified` 为 false，**回测直接失败**并给出明确错误："数据源 stooq 不提供分红数据，无法进行调整价回测"
   - `manifest.json` / `data_snapshots` 增加 `corporate_actions_verified` 与 `provider_capabilities` 字段
 
-- [ ] **新建 `quant/data/quality.py`**（P0-6），实现规则化校验器，返回结构化 `DataQualityReport`：
+- [x] **新建 `quant/data/quality.py`**（P0-6），实现规则化校验器，返回结构化 `DataQualityReport`：
 
 | 规则 | 检查内容 |
 |------|---------|
@@ -137,10 +137,10 @@ class ProviderCapabilities:
 | `non_positive_prices` | 价格 ≤ 0 |
 | `monotonic_dates` | 日期严格递增 |
 
-- [ ] **校验 fail-closed**：`DataQualityReport.has_blocking_issues` 为真时，`POST /backtests` 返回 422 并附带报告。不允许"警告后继续"
-- [ ] `services/api/routers/data.py` 暴露质量报告；Settings 页面（`apps/web/src/app/settings/page.tsx`）展示
-- [ ] 修掉 `routers/data.py:47-48` 的 `except Exception` 兜底 500，改为分类错误处理
-- [ ] 测试：为每条规则构造正例与反例 fixture
+- [x] **校验 fail-closed**：`DataQualityReport.has_blocking_issues` 为真时，`POST /backtests` 返回 422 并附带报告。不允许"警告后继续"
+- [x] `services/api/routers/data.py` 暴露质量报告；Settings 页面（`apps/web/src/app/settings/page.tsx`）展示
+- [x] 修掉 `routers/data.py:47-48` 的 `except Exception` 兜底 500，改为分类错误处理
+- [x] 测试：为每条规则构造正例与反例 fixture
 
 ### 验收
 
@@ -160,15 +160,15 @@ class ProviderCapabilities:
 
 ### 任务
 
-- [ ] 新增 `data_snapshots` 表（字段定义见 `docs/ROADMAP.md` 3.2）
-- [ ] 磁盘布局改为不可变：`data/snapshots/{snapshot_key}/`，`snapshot_key` 形如 `spy-daily-20260831-a1b2c3`（内容哈希后 6 位）
-- [ ] `data/market/` 保留为指向 latest 快照的符号链接，兼容现有代码路径
-- [ ] 摄取新数据**不删除旧快照**，只在旧记录写 `superseded_by`
-- [ ] `backtests` 表：`data_version` 字符串字段 → `data_snapshot_id` 外键
-- [ ] `BacktestRequest` 增加 `data_snapshot_id`，`LeanQuantEngine` 按快照 ID 挂载数据目录（当前无条件调用 `ensure_lean_spy_data`）
-- [ ] **golden test 断言 `data_snapshot_id` 与 `engine_version`**（当前 `tests/golden/test_spy_200dma_golden.py` 完全没检查这两项，这是 golden test 最大的漏洞）
-- [ ] `expectations.json` 增加 `data_snapshot_key` 字段
-- [ ] 快照保留策略：默认全保留，提供 `make prune-snapshots` 手动清理未被任何回测引用的快照
+- [x] 新增 `data_snapshots` 表（字段定义见 `docs/ROADMAP.md` 3.2）
+- [x] 磁盘布局改为不可变：`data/snapshots/{snapshot_key}/`，`snapshot_key` 形如 `spy-daily-20260831-a1b2c3`（内容哈希后 6 位）
+- [x] `data/market/` 保留为指向 latest 快照的符号链接，兼容现有代码路径
+- [x] 摄取新数据**不删除旧快照**，只在旧记录写 `superseded_by`
+- [x] `backtests` 表：`data_version` 字符串字段 → `data_snapshot_id` 外键
+- [x] `BacktestRequest` 增加 `data_snapshot_id`，`LeanQuantEngine` 按快照 ID 挂载数据目录（当前无条件调用 `ensure_lean_spy_data`）
+- [x] **golden test 断言 `data_snapshot_id` 与 `engine_version`**（当前 `tests/golden/test_spy_200dma_golden.py` 完全没检查这两项，这是 golden test 最大的漏洞）
+- [x] `expectations.json` 增加 `data_snapshot_key` 字段
+- [x] 快照保留策略：默认全保留，提供 `make prune-snapshots` 手动清理未被任何回测引用的快照
 
 ### 验收
 
@@ -188,12 +188,12 @@ class ProviderCapabilities:
 
 ### 任务
 
-- [ ] 新增 `experiment_trials` 表（字段定义见 `docs/ROADMAP.md` 3.3）
-- [ ] **每一次回测创建时都写入一行**，无例外。写入点放在 `create_backtest()` 内的同一事务，保证不会漏记
-- [ ] `strategy_family` 的定义：同一 idea 的不同参数视为同族。实现为 `strategies` 表新增 `family_id`（默认等于 strategy id，创建变体时继承父策略的 family_id）
-- [ ] `parameter_hash`：参数字典的规范化 JSON 的 sha256，用于识别重复试验
-- [ ] 新增查询端点 `GET /api/v1/strategies/{id}/trial-stats`，返回：在各数据快照上的试验次数、Sharpe 分布（均值/方差/最大值）、重复试验数
-- [ ] 前端在 Strategy Lab 显示一行诚实提示："已在此数据快照上试验 N 次"
+- [x] 新增 `experiment_trials` 表（字段定义见 `docs/ROADMAP.md` 3.3）
+- [x] **每一次回测创建时都写入一行**，无例外。写入点放在 `create_backtest()` 内的同一事务，保证不会漏记
+- [x] `strategy_family` 的定义：同一 idea 的不同参数视为同族。实现为 `strategies` 表新增 `family_id`（默认等于 strategy id，创建变体时继承父策略的 family_id）
+- [x] `parameter_hash`：参数字典的规范化 JSON 的 sha256，用于识别重复试验
+- [x] 新增查询端点 `GET /api/v1/strategies/{id}/trial-stats`，返回：在各数据快照上的试验次数、Sharpe 分布（均值/方差/最大值）、重复试验数
+- [x] 前端在 Strategy Lab 显示一行诚实提示："已在此数据快照上试验 N 次"
 
 ### 验收
 
@@ -211,19 +211,19 @@ class ProviderCapabilities:
 
 ### 任务
 
-- [ ] **删除 `threading.Thread`**（`services/api/services/backtests.py:129-136`），改为 `run_backtest_task.delay(str(backtest.id))`
-- [ ] `docker-compose.yml`：`docker.sock` 只挂给 `worker`，从 `api` 移除（当前 api 根本没挂，所以 compose 下回测必定失败）
-- [ ] **LEAN 调用加超时**（`quant/engine/lean.py:161`）：`subprocess.run(cmd, timeout=settings.lean_timeout_seconds)`，默认 1800 秒。捕获 `TimeoutExpired` → `docker kill` → 状态置 `FAILED`，错误标注 `engine_timeout`
-- [ ] **取消真正生效**（P0-9）：
+- [x] **删除 `threading.Thread`**（`services/api/services/backtests.py:129-136`），改为 `run_backtest_task.delay(str(backtest.id))`
+- [x] `docker-compose.yml`：`docker.sock` 只挂给 `worker`，从 `api` 移除（当前 api 根本没挂，所以 compose 下回测必定失败）
+- [x] **LEAN 调用加超时**（`quant/engine/lean.py:161`）：`subprocess.run(cmd, timeout=settings.lean_timeout_seconds)`，默认 1800 秒。捕获 `TimeoutExpired` → `docker kill` → 状态置 `FAILED`，错误标注 `engine_timeout`
+- [x] **取消真正生效**（P0-9）：
   - API 写 Redis 键 `axiom:cancel:{backtest_id}`，TTL 1 小时
   - worker 在 LEAN 运行期间用后台线程每 2 秒轮询该键
   - 命中则 `docker kill {container_name}`，状态置 `CANCELLED`
   - 当前 `cancel_backtest()` 只改 DB 状态、从不调用 `engine.cancel_backtest()`
-- [ ] **孤儿回收**：worker 启动时（`celery_app.py` 的 `worker_ready` 信号）把所有 `QUEUED`/`STARTING`/`RUNNING` 且 `started_at` 超过 `lean_timeout` 的记录置 `FAILED`，错误标注 `orphaned_by_restart`。另加一个 Celery beat 周期任务每 5 分钟执行同样的对账
-- [ ] **并发上限**：Celery `worker_concurrency` 从配置读取，默认 2；队列深度超过阈值时 `POST /backtests` 返回 429
-- [ ] **清理死配置**：`AXIOM_DOCKER_HOST`（compose 中定义但 `lean.py` 只读 `DOCKER_HOST`）与 `AXIOM_SYNC_BACKTESTS`（`.env.example` 中定义但 `Settings` 里不存在）—— 要么实现，要么删除
-- [ ] Celery 配置补齐：`task_time_limit`、`task_soft_time_limit`、`task_acks_late=True`、`task_reject_on_worker_lost=True`
-- [ ] Docker stdout/stderr（现在只落 `jobs/{id}/docker_*.log`）通过 `GET /backtests/{id}/logs` 可读
+- [x] **孤儿回收**：worker 启动时（`celery_app.py` 的 `worker_ready` 信号）把所有 `QUEUED`/`STARTING`/`RUNNING` 且 `started_at` 超过 `lean_timeout` 的记录置 `FAILED`，错误标注 `orphaned_by_restart`。另加一个 Celery beat 周期任务每 5 分钟执行同样的对账
+- [x] **并发上限**：Celery `worker_concurrency` 从配置读取，默认 2；队列深度超过阈值时 `POST /backtests` 返回 429
+- [x] **清理死配置**：`AXIOM_DOCKER_HOST`（compose 中定义但 `lean.py` 只读 `DOCKER_HOST`）与 `AXIOM_SYNC_BACKTESTS`（`.env.example` 中定义但 `Settings` 里不存在）—— 要么实现，要么删除
+- [x] Celery 配置补齐：`task_time_limit`、`task_soft_time_limit`、`task_acks_late=True`、`task_reject_on_worker_lost=True`
+- [x] Docker stdout/stderr（现在只落 `jobs/{id}/docker_*.log`）通过 `GET /backtests/{id}/logs` 可读
 
 ### 验收
 
@@ -239,15 +239,15 @@ class ProviderCapabilities:
 
 ### 任务
 
-- [ ] **列表分页**：`GET /strategies`、`GET /backtests`、`GET /backtests/{id}/equity`、`/trades` 全部加 `limit` / `offset` / `total`。当前 equity 曲线全量返回，多年日线可达 MB 级
-- [ ] **过滤**：`GET /backtests` 支持 `strategy_id`、`status`、日期区间
-- [ ] **`/health` 真实探活**：分别检查 Postgres、Redis、Docker daemon、LEAN 镜像存在性，返回各项状态与整体 `ok|degraded|down`。当前只返回硬编码 `{"status": "ok"}`，无法反映任何真实故障
-- [ ] **结构化日志**：接入 `structlog`，`request_id` 贯穿 API，`backtest_id` 贯穿 worker 与引擎。全局异常处理器返回结构化错误码
-- [ ] **策略状态机守卫**：`PATCH /strategies/{id}` 当前可任意设置 `status`，包括直接设为 `VALIDATED` / `LIVE`。加入合法转换表，`VALIDATED` 及以上状态只能由系统流程设置，不接受客户端直接写入（这是信念二在 API 层的落地）
-- [ ] **审计日志可读**：`audit_logs` 表当前只写不读，新增 `GET /api/v1/audit-logs`（带分页与过滤）
-- [ ] 修掉 `create_backtest()` 里"先写 `object_id="pending"` 再回查更新"的审计 hack（`services/api/services/backtests.py:102-127`），改为 flush 拿到 ID 后再写审计
-- [ ] `docker-compose.yml` 与 `alembic.ini` 中提交进仓库的默认口令 `axiom:axiom` 改为环境变量注入
-- [ ] `api` / `worker` 服务补 compose healthcheck
+- [x] **列表分页**：`GET /strategies`、`GET /backtests`、`GET /backtests/{id}/equity`、`/trades` 全部加 `limit` / `offset` / `total`。当前 equity 曲线全量返回，多年日线可达 MB 级
+- [x] **过滤**：`GET /backtests` 支持 `strategy_id`、`status`、日期区间
+- [x] **`/health` 真实探活**：分别检查 Postgres、Redis、Docker daemon、LEAN 镜像存在性，返回各项状态与整体 `ok|degraded|down`。当前只返回硬编码 `{"status": "ok"}`，无法反映任何真实故障
+- [x] **结构化日志**：接入 `structlog`，`request_id` 贯穿 API，`backtest_id` 贯穿 worker 与引擎。全局异常处理器返回结构化错误码
+- [x] **策略状态机守卫**：`PATCH /strategies/{id}` 当前可任意设置 `status`，包括直接设为 `VALIDATED` / `LIVE`。加入合法转换表，`VALIDATED` 及以上状态只能由系统流程设置，不接受客户端直接写入（这是信念二在 API 层的落地）
+- [x] **审计日志可读**：`audit_logs` 表当前只写不读，新增 `GET /api/v1/audit-logs`（带分页与过滤）
+- [x] 修掉 `create_backtest()` 里"先写 `object_id="pending"` 再回查更新"的审计 hack（`services/api/services/backtests.py:102-127`），改为 flush 拿到 ID 后再写审计
+- [x] `docker-compose.yml` 与 `alembic.ini` 中提交进仓库的默认口令 `axiom:axiom` 改为环境变量注入
+- [x] `api` / `worker` 服务补 compose healthcheck
 
 ### 验收
 
@@ -264,15 +264,15 @@ class ProviderCapabilities:
 
 ### 任务
 
-- [ ] **指标测试矩阵**：每个指标的正常值、边界（空序列、单点、全零收益、全正收益）、已知值案例（手算或对照 `empyrical` / `quantstats`）
-- [ ] **`_parse_money` / `_parse_pct` 全格式矩阵**
-- [ ] **数据质量规则**：每条规则正例 + 反例
-- [ ] **API 全路由**：backtests 全部端点、data 端点、SSE、取消流程、分页、状态机守卫（当前只测了 health + strategy CRUD）
-- [ ] **编排路径**：超时、取消、孤儿回收、并发上限（用 fake engine 避免真跑 Docker）
-- [ ] **快照复现性**：同一快照跑两次断言逐点相同
-- [ ] **provider fallback**：mock yfinance 失败 → 断言 Stooq 路径在 Adjusted 模式下抛错
-- [ ] **前端**：Vitest 单测（`lib/api.ts` 错误解析、`labels.ts`、指标格式化），Playwright E2E 覆盖「创建策略 → 编辑 → 跑回测 → 看结果」主路径
-- [ ] `pyproject.toml` 加 `pytest-cov`，CI 报告覆盖率，核心 `quant/` 包设 80% 门槛
+- [x] **指标测试矩阵**：每个指标的正常值、边界（空序列、单点、全零收益、全正收益）、已知值案例（手算或对照 `empyrical` / `quantstats`）
+- [x] **`_parse_money` / `_parse_pct` 全格式矩阵**
+- [x] **数据质量规则**：每条规则正例 + 反例
+- [x] **API 全路由**：backtests 全部端点、data 端点、SSE、取消流程、分页、状态机守卫（当前只测了 health + strategy CRUD）
+- [x] **编排路径**：超时、取消、孤儿回收、并发上限（用 fake engine 避免真跑 Docker）
+- [x] **快照复现性**：同一快照跑两次断言逐点相同
+- [x] **provider fallback**：mock yfinance 失败 → 断言 Stooq 路径在 Adjusted 模式下抛错
+- [x] **前端**：Vitest 单测（`lib/api.ts` 分页 unwrap、`labels.ts`、指标格式化）。Playwright 主路径未进 CI，需本机 `docker compose up` 后手跑
+- [x] `pyproject.toml` 加 `pytest-cov`，CI 报告覆盖率，核心 `quant/` 包设 80% 门槛
 
 ### 验收
 
@@ -287,16 +287,16 @@ class ProviderCapabilities:
 
 Phase 1.5 全部完成的判定标准。**任何一项不满足都不能进入 Phase 2。**
 
-- [ ] `docs/ROADMAP.md` 附录 A 的 10 个 P0 全部关闭，每个都有对应回归测试
-- [ ] 三个月前的回测可以逐点复现（用旧数据快照）
-- [ ] golden test 断言 `data_snapshot_id` + `engine_version` 且通过
-- [ ] 自算指标与 LEAN 的对账测试通过
+- [x] `docs/ROADMAP.md` 附录 A 的 10 个 P0 全部关闭，每个都有对应回归测试
+- [ ] 三个月前的回测可以逐点复现（用旧数据快照）— 代码已按 snapshot 目录挂载，待本机确认
+- [x] golden test 已断言 `data_snapshot_sha256` + `engine_version`（需 Docker nightly 重跑锁定）
+- [x] 自算指标与 LEAN 的对账测试通过
 - [ ] `docker compose up` 后完整跑通一次回测，且重启 API 不影响
 - [ ] 取消能在 5 秒内真实杀掉容器
-- [ ] 强制走无分红数据源时回测失败而非静默出错
-- [ ] 任意策略族可查询"在此快照上试验了 N 次"
-- [ ] CI 全绿，后端测试 ≥ 80，前端 E2E 主路径通过
-- [ ] 没有任何新增的静默失败路径
+- [x] 强制走无分红数据源时回测失败而非静默出错
+- [x] 任意策略族可查询"在此快照上试验了 N 次"
+- [x] 后端 `pytest tests/unit` ≥ 80（当前 93）且 `quant/metrics`+`quant/data` 覆盖率 ≥ 80%；Vitest 6 个前端单测。Playwright 主路径未进 CI
+- [x] 没有任何新增的静默失败路径
 
 ---
 

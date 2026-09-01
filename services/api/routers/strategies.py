@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from services.api.db import get_db
 from services.api.schemas import (
     StrategyCreate,
     StrategyOut,
+    StrategyPage,
     StrategyUpdate,
     StrategyVersionCreate,
     StrategyVersionOut,
+    TrialStatsOut,
 )
 from services.api.services import strategies as strategy_service
 
@@ -25,15 +29,23 @@ def _to_out(db: Session, strategy) -> StrategyOut:
         status=strategy.status,
         asset_class=strategy.asset_class,
         benchmark=strategy.benchmark,
+        family_id=strategy.family_id,
         created_at=strategy.created_at,
         updated_at=strategy.updated_at,
         latest_version=StrategyVersionOut.model_validate(latest) if latest else None,
     )
 
 
-@router.get("", response_model=list[StrategyOut])
-def list_strategies(db: Session = Depends(get_db)) -> list[StrategyOut]:
-    return [_to_out(db, s) for s in strategy_service.list_strategies(db)]
+@router.get("", response_model=StrategyPage)
+def list_strategies(
+    db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> StrategyPage:
+    rows, total = strategy_service.list_strategies(db, limit=limit, offset=offset)
+    return StrategyPage(
+        items=[_to_out(db, s) for s in rows], total=total, limit=limit, offset=offset
+    )
 
 
 @router.post("", response_model=StrategyOut, status_code=201)
@@ -57,6 +69,11 @@ def update_strategy(
 @router.delete("/{strategy_id}", status_code=204)
 def delete_strategy(strategy_id: UUID, db: Session = Depends(get_db)) -> None:
     strategy_service.delete_strategy(db, strategy_id)
+
+
+@router.get("/{strategy_id}/trial-stats", response_model=TrialStatsOut)
+def get_trial_stats(strategy_id: UUID, db: Session = Depends(get_db)) -> TrialStatsOut:
+    return TrialStatsOut.model_validate(strategy_service.trial_stats(db, strategy_id))
 
 
 @router.get("/{strategy_id}/versions", response_model=list[StrategyVersionOut])

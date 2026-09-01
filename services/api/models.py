@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     Date,
     DateTime,
     Enum,
@@ -76,6 +77,7 @@ class Strategy(Base):
     )
     asset_class: Mapped[str] = mapped_column(String(64), default="equity")
     benchmark: Mapped[str] = mapped_column(String(32), default="SPY")
+    family_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -135,6 +137,11 @@ class Backtest(Base):
     equity: Mapped[List[BacktestEquity]] = relationship(back_populates="backtest")
     trades: Mapped[List[BacktestTrade]] = relationship(back_populates="backtest")
     monthly_returns: Mapped[List[BacktestMonthlyReturn]] = relationship(back_populates="backtest")
+    rolling_windows: Mapped[List[BacktestRollingWindow]] = relationship(back_populates="backtest")
+    time_series: Mapped[List[BacktestTimeSeries]] = relationship(back_populates="backtest")
+    data_snapshot_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("data_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
 
 class BacktestMetrics(Base):
@@ -252,3 +259,78 @@ class AuditLog(Base):
     before: Mapped[Optional[dict]] = mapped_column(JSON)
     after: Mapped[Optional[dict]] = mapped_column(JSON)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DataSnapshot(Base):
+    __tablename__ = "data_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    snapshot_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    symbols: Mapped[dict] = mapped_column(JSON, default=list)
+    resolution: Mapped[str] = mapped_column(String(32), default="daily")
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    date_range_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    date_range_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    row_count: Mapped[int] = mapped_column(Integer, default=0)
+    content_sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    corporate_actions_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    quality_report: Mapped[dict] = mapped_column(JSON, default=dict)
+    provider_capabilities: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    superseded_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("data_snapshots.id", ondelete="SET NULL"), nullable=True
+    )
+
+
+class ExperimentTrial(Base):
+    __tablename__ = "experiment_trials"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    backtest_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("backtests.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    data_snapshot_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("data_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    strategy_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    universe_key: Mapped[str] = mapped_column(String(128), default="SPY")
+    strategy_family: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, index=True)
+    parameters: Mapped[dict] = mapped_column(JSON, default=dict)
+    parameter_hash: Mapped[str] = mapped_column(String(64), index=True)
+    observed_sharpe: Mapped[Optional[float]] = mapped_column(Float)
+    is_oos: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BacktestRollingWindow(Base):
+    __tablename__ = "backtest_rolling_windows"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    backtest_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("backtests.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    window_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    sharpe: Mapped[Optional[float]] = mapped_column(Float)
+    var_95: Mapped[Optional[float]] = mapped_column(Float)
+    var_99: Mapped[Optional[float]] = mapped_column(Float)
+    probabilistic_sharpe: Mapped[Optional[float]] = mapped_column(Float)
+    extras: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    backtest: Mapped[Backtest] = relationship(back_populates="rolling_windows")
+
+
+class BacktestTimeSeries(Base):
+    __tablename__ = "backtest_time_series"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    backtest_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("backtests.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+
+    backtest: Mapped[Backtest] = relationship(back_populates="time_series")

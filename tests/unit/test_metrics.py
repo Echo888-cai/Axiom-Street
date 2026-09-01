@@ -162,3 +162,48 @@ def test_does_not_prefer_lean_sharpe():
     assert metrics["sharpe"] != 99.0
     assert abs(metrics["total_return"] - 0.04) < 1e-9
     assert metrics["max_drawdown"] > -0.9
+
+
+def test_tail_risk_metrics_present():
+    values = [100_000]
+    v = 100_000.0
+    for i in range(30):
+        v *= 1.002 if i % 3 else 0.997
+        values.append(v)
+    metrics = compute_metrics_from_equity(_daily_equity(values))
+    assert metrics["var_95"] is not None
+    assert metrics["cvar_95"] is not None
+    assert metrics["skewness"] is not None
+    assert metrics["kurtosis"] is not None
+
+
+def test_parse_money_unicode_minus():
+    assert parse_money("−12.5") == -12.5
+
+
+def test_parse_money_usd_suffix():
+    assert parse_money("$10 USD") == 10.0
+
+
+def test_weekly_frequency_accepted():
+    points = []
+    base = datetime(2020, 1, 6, tzinfo=timezone.utc)
+    value = 100_000.0
+    for i in range(8):
+        value *= 1.01
+        points.append(
+            {
+                "ts": base + timedelta(days=7 * i),
+                "strategy_value": value,
+                "benchmark_value": 100_000.0,
+                "drawdown": 0.0,
+            }
+        )
+    metrics = compute_metrics_from_equity(points)
+    assert metrics["sharpe"] is not None
+
+
+def test_empty_equity_returns_zero_sharpe():
+    metrics = compute_metrics_from_equity([])
+    assert metrics["sharpe"] == 0.0
+    assert metrics["final_equity"] is None or metrics["final_equity"] == 0.0

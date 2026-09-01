@@ -5,12 +5,16 @@ from contextlib import asynccontextmanager
 
 from alembic import command
 from alembic.config import Config
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from services.api.db import Base, SessionLocal, engine
+from services.api.health import collect_health
 from services.api.models import User
-from services.api.routers import backtests, data, strategies, versions
+from services.api.observability import RequestIdMiddleware, configure_logging
+from services.api.routers import audit, backtests, data, strategies, versions
 from services.api.schemas import HealthOut
 from services.api.settings import get_settings
 
@@ -43,6 +47,7 @@ def seed_local_user() -> None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    configure_logging()
     bootstrap_schema()
     seed_local_user()
     yield
@@ -55,6 +60,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(RequestIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -67,11 +73,39 @@ app.include_router(strategies.router, prefix="/api/v1")
 app.include_router(backtests.router, prefix="/api/v1")
 app.include_router(versions.router, prefix="/api/v1")
 app.include_router(data.router, prefix="/api/v1")
+app.include_router(audit.router, prefix="/api/v1")
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_: Request, exc: HTTPException) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": {
+                "code": "validation_error",
+                "message": "请求校验失败",
+                "errors": exc.errors(),
+            }
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": {"code": "internal_error", "message": str(exc)}},
+    )
 
 
 @app.get("/health", response_model=HealthOut)
 def health() -> HealthOut:
-    return HealthOut(status="ok", service="api", version=settings.app_version)
+    return HealthOut.model_validate(collect_health())
 
 
 @app.get("/api/v1/health", response_model=HealthOut)

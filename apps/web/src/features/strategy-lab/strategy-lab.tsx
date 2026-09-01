@@ -38,6 +38,10 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     queryKey: ["versions", strategyId],
     queryFn: () => api.listVersions(strategyId),
   });
+  const trialStats = useQuery({
+    queryKey: ["trial-stats", strategyId],
+    queryFn: () => api.getTrialStats(strategyId),
+  });
 
   const [code, setCode] = useState("");
   const [config, setConfig] = useState<Record<string, unknown>>({});
@@ -238,6 +242,16 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
           </Button>
         </div>
       </div>
+
+      {trialStats.data && trialStats.data.total_trials > 0 ? (
+        <p className="text-xs text-aq-muted">
+          已在此策略族上试验 {trialStats.data.total_trials} 次
+          {trialStats.data.by_snapshot[0]
+            ? `（当前快照 ${trialStats.data.by_snapshot[0].snapshot_key || "—"}：${trialStats.data.by_snapshot[0].count} 次）`
+            : ""}
+          。多次试验会抬高过拟合风险。
+        </p>
+      ) : null}
 
       {code.includes("AfterMarketClose") ? (
         <p className="text-xs text-aq-negative">

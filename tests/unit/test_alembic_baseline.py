@@ -19,3 +19,7 @@ def test_alembic_baseline_creates_tables():
         assert f'"{table}"' in text
     assert "excess_return" in text
     assert "alpha_capm" in text
+    text2 = Path("services/api/alembic/versions/0002_phase15_trust.py").read_text(encoding="utf-8")
+    assert "experiment_trials" in text2
+    assert "data_snapshots" in text2
+    assert "backtest_rolling_windows" in text2

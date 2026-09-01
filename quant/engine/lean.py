@@ -11,6 +11,7 @@ from typing import Any
 from quant.data.lean_converter import ensure_lean_spy_data
 from quant.data.manifest import load_manifest
 from quant.engine.base import BacktestEngineResult, BacktestRequest, ProgressCallback, QuantEngine
+from quant.engine.errors import BacktestCancelled, EngineTimeout
 from quant.engine.result_parser import find_result_json, parse_lean_result
 
 LEAN_CONFIG_TEMPLATE = {
@@ -133,6 +134,7 @@ class LeanQuantEngine(QuantEngine):
         self._containers[request.backtest_id] = container_name
 
         progress("Running algorithm")
+        timeout = request.timeout_seconds
         cmd = [
             "docker",
             "run",
@@ -164,20 +166,38 @@ class LeanQuantEngine(QuantEngine):
             "/Lean/Launcher/config.json",
         ]
 
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, check=False, env=self._docker_env()
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=self._docker_env(),
         )
-        (job_dir / "docker_stdout.log").write_text(proc.stdout or "", encoding="utf-8")
-        (job_dir / "docker_stderr.log").write_text(proc.stderr or "", encoding="utf-8")
+        deadline = time.monotonic() + timeout
+        try:
+            while proc.poll() is None:
+                if request.cancel_check and request.cancel_check():
+                    self.cancel_backtest(request.backtest_id)
+                    raise BacktestCancelled(request.backtest_id)
+                if time.monotonic() > deadline:
+                    self.cancel_backtest(request.backtest_id)
+                    raise EngineTimeout(f"LEAN exceeded {timeout}s")
+                time.sleep(2)
+            stdout, stderr = proc.communicate()
+        except (BacktestCancelled, EngineTimeout):
+            if proc.poll() is None:
+                proc.kill()
+            raise
+        (job_dir / "docker_stdout.log").write_text(stdout or "", encoding="utf-8")
+        (job_dir / "docker_stderr.log").write_text(stderr or "", encoding="utf-8")
         if proc.returncode != 0:
             raise RuntimeError(
-                f"LEAN docker exited with {proc.returncode}: {(proc.stderr or proc.stdout)[-2000:]}"
+                f"LEAN docker exited with {proc.returncode}: {(stderr or stdout)[-2000:]}"
             )
 
         progress("Calculating metrics")
-        # Wait briefly for filesystem sync
         time.sleep(0.2)
-        result_json = find_result_json(results_dir)
+        result_json = find_result_json(results_dir, algorithm_class=request.strategy_class_name)
         if not result_json:
             raise RuntimeError("LEAN completed but no result JSON was found")
 
@@ -186,10 +206,13 @@ class LeanQuantEngine(QuantEngine):
 
         return BacktestEngineResult(
             engine_version=self.lean_image,
-            data_version=data_version,
+            data_version=str(manifest.get("sha256") or data_version),
             statistics=parsed["metrics"],
             equity=parsed["equity"],
             trades=parsed["trades"],
             monthly_returns=parsed["monthly_returns"],
             raw_path=str(result_json),
+            rolling_windows=parsed.get("rolling_windows") or [],
+            time_series=parsed.get("time_series") or [],
+            data_snapshot_id=manifest.get("snapshot_key") or manifest.get("sha256"),
         )

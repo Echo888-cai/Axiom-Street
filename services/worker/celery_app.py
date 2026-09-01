@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.signals import worker_ready
 
 from services.api.settings import get_settings
 
@@ -19,4 +20,22 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     worker_prefetch_multiplier=1,
+    worker_concurrency=settings.worker_concurrency,
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    task_time_limit=settings.lean_timeout_seconds + 120,
+    task_soft_time_limit=settings.lean_timeout_seconds + 60,
+    beat_schedule={
+        "reconcile-orphan-backtests": {
+            "task": "backtests.reconcile_orphans",
+            "schedule": 300.0,
+        }
+    },
 )
+
+
+@worker_ready.connect
+def _on_worker_ready(**_kwargs) -> None:
+    from services.worker.tasks import reconcile_orphan_backtests
+
+    reconcile_orphan_backtests(worker_restart=True)

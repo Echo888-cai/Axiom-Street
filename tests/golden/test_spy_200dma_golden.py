@@ -63,8 +63,13 @@ def test_spy_200dma_golden_backtest():
         "dd_tol", 1e-3
     )
     assert abs(metrics["sharpe"] - expectations["sharpe"]) < expectations.get("sharpe_tol", 1e-2)
-
-    # Reproducibility: second run must match first
+    assert result.engine_version == expectations["engine_version"]
+    assert result.data_version == expectations["data_snapshot_sha256"]
+    if expectations.get("data_snapshot_key"):
+        assert result.data_snapshot_id in {
+            expectations["data_snapshot_key"],
+            expectations["data_snapshot_sha256"],
+        }
     result2 = engine.run_backtest(
         BacktestRequest(
             backtest_id="golden-spy-200dma-2",

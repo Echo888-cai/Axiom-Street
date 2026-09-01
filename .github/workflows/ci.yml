@@ -22,7 +22,7 @@ jobs:
       - name: Mypy
         run: mypy quant services
       - name: Unit tests
-        run: pytest tests/unit -q
+        run: pytest tests/unit -q --cov=quant/metrics --cov=quant/data --cov-fail-under=80
 
   web:
     runs-on: ubuntu-latest
@@ -40,5 +40,7 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm test
       - name: Build
         run: npm run build

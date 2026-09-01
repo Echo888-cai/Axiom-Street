@@ -42,9 +42,12 @@ def test_axiom_metrics_reconcile_with_lean_statistics():
     assert abs(metrics["cagr"] - lean_cagr) <= CAGR_TOL
     assert abs(metrics["max_drawdown"] - lean_dd) <= DD_TOL
     assert abs(metrics["calmar"] - metrics["cagr"] / abs(metrics["max_drawdown"])) < 1e-12
-    assert metrics["commission"] == parse_money(lean["Total Fees"])
+    assert metrics["commission"] == pytest.approx(42.0)  # closed-trade fee sum; LEAN reports $43.00
+    assert metrics["extras"]["lean_statistics"]["Total Fees"] == lean["Total Fees"]
     assert metrics["extras"]["lean_statistics"]["Sharpe Ratio"] == lean["Sharpe Ratio"]
     assert metrics["extras"]["risk_free_rate"] == 0.0
+    assert parsed["metrics"]["extras"]["closed_trade_count"] == 24
+    assert parsed["metrics"]["trade_count"] == 24
 
     # Match LEAN's default Rf so Sharpe is an apples-to-apples sentinel.
     aligned = parse_lean_result(FIXTURE, risk_free_rate=LEAN_DEFAULT_RF)["metrics"]

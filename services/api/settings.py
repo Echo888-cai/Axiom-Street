@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     risk_free_rate: float = 0.0
     lean_timeout_seconds: int = 1800
+    sync_backtests: bool = False
+    max_inflight_backtests: int = 2
+    worker_concurrency: int = 2
 
     @property
     def cors_origin_list(self) -> list[str]:

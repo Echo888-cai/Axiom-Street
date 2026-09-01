@@ -1,13 +1,16 @@
 {
   "start_date": "2018-01-01",
   "end_date": "2020-12-31",
-  "trade_count": 43,
+  "trade_count": 24,
   "final_equity": 103979.2029,
   "max_drawdown": -0.221,
-  "sharpe": 0.052,
+  "sharpe": 0.136,
   "cagr": 0.01308,
   "equity_tol": 1.0,
   "dd_tol": 0.002,
   "sharpe_tol": 0.02,
-  "notes": "Frozen from Colima + quantconnect/lean:16355 smoke run on local SPY parquet (yfinance). Signal at close, fill next bar, 5 bps slippage."
+  "engine_version": "quantconnect/lean:16355",
+  "data_snapshot_sha256": "688782bea82662b5429da2118cbd19098635eb111dc340367b322819aaabd7d7",
+  "data_snapshot_key": "spy-daily-20260827-688782",
+  "notes": "Frozen from Colima + quantconnect/lean:16355. Axiom-computed Sharpe at Rf=0; trade_count is ClosedTrades round-trips. Signal at close, fill next bar, 5 bps slippage."
 }

@@ -1,50 +1,10 @@
-import os
-
-os.environ["AXIOM_DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
-os.environ["AXIOM_SYNC_BACKTESTS"] = "0"
-
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-
-@pytest.fixture()
-def client():
-    from services.api import db as db_module
-    from services.api.db import Base, get_db
-    from services.api.main import app
-
-    engine = create_engine(
-        "sqlite+pysqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
-    db_module.engine = engine
-    db_module.SessionLocal = TestingSessionLocal
-    Base.metadata.create_all(bind=engine)
-
-    def override_get_db():
-        db = TestingSessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    with TestClient(app) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
-
-
 def test_health(client):
     res = client.get("/health")
     assert res.status_code == 200
-    assert res.json()["status"] == "ok"
+    body = res.json()
+    assert body["service"] == "api"
+    assert body["status"] in {"ok", "degraded", "down"}
+    assert "checks" in body
 
 
 def test_strategy_crud_and_version(client):
@@ -59,11 +19,14 @@ def test_strategy_crud_and_version(client):
     strategy = create.json()
     assert strategy["name"] == "SPY 200DMA"
     assert strategy["latest_version"]["version"] == 1
+    assert strategy["family_id"] == strategy["id"]
     assert "Spy200DmaAlgorithm" in strategy["latest_version"]["code"]
 
     listed = client.get("/api/v1/strategies")
     assert listed.status_code == 200
-    assert len(listed.json()) == 1
+    payload = listed.json()
+    assert payload["total"] == 1
+    assert len(payload["items"]) == 1
 
     version = client.post(
         f"/api/v1/strategies/{strategy['id']}/versions",
@@ -75,3 +38,30 @@ def test_strategy_crud_and_version(client):
     )
     assert version.status_code == 201
     assert version.json()["version"] == 2
+
+
+def test_client_cannot_patch_validated(client):
+    created = client.post("/api/v1/strategies", json={"name": "guard"}).json()
+    res = client.patch(
+        f"/api/v1/strategies/{created['id']}",
+        json={"status": "VALIDATED"},
+    )
+    assert res.status_code == 409
+    detail = res.json()["detail"]
+    assert detail["code"] == "status_transition_forbidden"
+
+
+def test_client_can_archive(client):
+    created = client.post("/api/v1/strategies", json={"name": "arch"}).json()
+    res = client.patch(f"/api/v1/strategies/{created['id']}", json={"status": "ARCHIVED"})
+    assert res.status_code == 200
+    assert res.json()["status"] == "ARCHIVED"
+
+
+def test_audit_logs_readable(client):
+    created = client.post("/api/v1/strategies", json={"name": "audited"}).json()
+    res = client.get("/api/v1/audit-logs", params={"object_id": created["id"]})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total"] >= 1
+    assert body["items"][0]["action"] == "Strategy Created"

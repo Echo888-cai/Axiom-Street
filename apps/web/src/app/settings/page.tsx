@@ -29,7 +29,7 @@ export default function SettingsPage() {
     <div className="space-y-6 aq-enter">
       <PageHeader
         title="设置"
-        description="本地单用户工作区。当前行情使用 Yahoo Finance，失败时回退 Stooq，无需 API Key。"
+        description="本地单用户工作区。行情默认走 Yahoo Finance。不支持分红的数据源（如 Stooq）会拒绝调整价回测，不会静默降级。"
       />
 
       <div className="grid gap-4 md:grid-cols-2 aq-stagger">
@@ -74,8 +74,37 @@ export default function SettingsPage() {
                 ) : null}
               </dd>
             </div>
+            <Row label="快照" value={String(status.data?.snapshot_key || m.snapshot_key || "—")} />
+            <Row
+              label="分红/拆分"
+              value={
+                status.data?.corporate_actions_verified === true || m.corporate_actions_verified === true
+                  ? "已核验"
+                  : status.data?.corporate_actions_verified === false || m.corporate_actions_verified === false
+                    ? "未核验（不可做调整价）"
+                    : "—"
+              }
+            />
             <Row label="LEAN 数据" value={status.data?.lean_ready ? "已转换" : "未转换"} />
           </dl>
+          {status.data?.quality_report?.issues && status.data.quality_report.issues.length > 0 ? (
+            <div className="mt-4 rounded-aq border border-aq-border bg-aq-secondary px-3 py-2 text-xs">
+              <div className="mb-1 font-medium text-aq-text">数据质量</div>
+              <ul className="space-y-1 text-aq-muted">
+                {status.data.quality_report.issues.map((issue) => (
+                  <li key={`${issue.rule}-${issue.severity}`}>
+                    <span className={issue.severity === "blocking" ? "text-aq-negative" : ""}>
+                      {issue.severity === "blocking" ? "阻断" : "警告"} · {issue.rule}
+                    </span>
+                    {" — "}
+                    {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : status.data?.ready ? (
+            <p className="mt-4 text-xs text-aq-muted">质量校验通过，无阻断问题。</p>
+          ) : null}
           <div className="mt-5">
             <Button size="sm" onClick={() => ingest.mutate()} disabled={ingest.isPending}>
               {ingest.isPending ? "正在拉取 SPY…" : "拉取 SPY 行情"}

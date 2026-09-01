@@ -1,29 +1,70 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from quant.data.ingest_spy import data_status, load_spy_parquet
+from quant.data.quality import validate_ohlcv
+from services.api.hashing import canonical_hash
 from services.api.models import (
     AuditLog,
     Backtest,
     BacktestEquity,
     BacktestMetrics,
     BacktestMonthlyReturn,
+    BacktestRollingWindow,
     BacktestStatus,
+    BacktestTimeSeries,
     BacktestTrade,
+    ExperimentTrial,
     Strategy,
     StrategyVersion,
 )
 from services.api.schemas import BacktestCreate, BacktestOut
+from services.api.services import snapshots as snapshot_service
 from services.api.services.strategies import get_version
+from services.api.settings import get_settings
+
+_INFLIGHT = {BacktestStatus.QUEUED, BacktestStatus.STARTING, BacktestStatus.RUNNING}
+_TERMINAL = {BacktestStatus.COMPLETED, BacktestStatus.FAILED, BacktestStatus.CANCELLED}
 
 
-def list_backtests(db: Session) -> list[Backtest]:
-    return list(db.scalars(select(Backtest).order_by(Backtest.created_at.desc())).all())
+def list_backtests(
+    db: Session,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    strategy_id: UUID | None = None,
+    status_filter: BacktestStatus | None = None,
+    start_from: date | None = None,
+    end_to: date | None = None,
+) -> tuple[list[Backtest], int]:
+    stmt = select(Backtest)
+    count_stmt = select(func.count()).select_from(Backtest)
+    if strategy_id is not None:
+        stmt = stmt.join(StrategyVersion).where(StrategyVersion.strategy_id == strategy_id)
+        count_stmt = count_stmt.join(StrategyVersion).where(
+            StrategyVersion.strategy_id == strategy_id
+        )
+    if status_filter is not None:
+        stmt = stmt.where(Backtest.status == status_filter)
+        count_stmt = count_stmt.where(Backtest.status == status_filter)
+    if start_from is not None:
+        stmt = stmt.where(Backtest.start_date >= start_from)
+        count_stmt = count_stmt.where(Backtest.start_date >= start_from)
+    if end_to is not None:
+        stmt = stmt.where(Backtest.end_date <= end_to)
+        count_stmt = count_stmt.where(Backtest.end_date <= end_to)
+    total = int(db.scalar(count_stmt) or 0)
+    rows = list(
+        db.scalars(stmt.order_by(Backtest.created_at.desc()).offset(offset).limit(limit)).all()
+    )
+    return rows, total
 
 
 def get_backtest(db: Session, backtest_id: UUID) -> Backtest:
@@ -50,17 +91,44 @@ def to_out(db: Session, backtest: Backtest) -> BacktestOut:
             if metrics and metrics.trade_count is not None
             else None,
             "final_equity": metrics.final_equity if metrics else None,
+            "data_snapshot_id": backtest.data_snapshot_id,
         }
     )
 
 
+def _quality_gate(data_root: Path) -> None:
+    try:
+        frame = load_spy_parquet(data_root)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="还没有 SPY 行情数据。请打开「设置」点击「拉取 SPY 行情」。",
+        ) from exc
+    report = validate_ohlcv(frame)
+    if report.has_blocking_issues:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "data_quality",
+                "message": "行情数据质量校验未通过，拒绝开跑回测。",
+                "report": report.to_dict(),
+            },
+        )
+
+
+def _enqueue(backtest_id: str) -> None:
+    settings = get_settings()
+    if settings.sync_backtests:
+        from services.worker.tasks import execute_backtest
+
+        execute_backtest(backtest_id)
+        return
+    from services.worker.tasks import run_backtest_task
+
+    run_backtest_task.delay(backtest_id)
+
+
 def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
-    from pathlib import Path
-
-    from quant.data.ingest_spy import data_status
-    from quant.engine.lean import LeanQuantEngine
-    from services.api.settings import get_settings
-
     version = get_version(db, payload.strategy_version_id)
     if payload.end_date <= payload.start_date:
         raise HTTPException(
@@ -69,83 +137,97 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
         )
 
     settings = get_settings()
-    market = data_status(Path(settings.data_root))
+    data_root = Path(settings.data_root)
+    market = data_status(data_root)
     if not market.get("ready"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="还没有 SPY 行情数据。请打开「设置」点击「拉取 SPY 行情」。",
         )
 
-    lean_health = LeanQuantEngine(
-        lean_image=settings.lean_image,
-        data_root=Path(settings.data_root),
-        jobs_root=Path(settings.jobs_root),
-    ).health_check()
-    if not lean_health.get("docker_available"):
+    _quality_gate(data_root)
+
+    if market.get("corporate_actions_verified") is False:
+        source = (market.get("manifest") or {}).get("source") or "unknown"
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                "需要 Docker（Colima）才能跑 LEAN 回测。"
-                "请先执行 colima start，并用 DOCKER_HOST 重启 API。行情数据已经就绪。"
-            ),
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "provider_capability",
+                "message": f"数据源 {source} 不提供分红数据，无法进行调整价回测。",
+            },
         )
 
+    inflight = int(
+        db.scalar(select(func.count()).select_from(Backtest).where(Backtest.status.in_(_INFLIGHT)))
+        or 0
+    )
+    if inflight >= settings.max_inflight_backtests:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="并发回测已达上限，请等待正在运行的任务完成后再提交。",
+        )
+
+    snapshot = snapshot_service.ensure_snapshot_row(db, data_root)
+    strategy = db.get(Strategy, version.strategy_id)
+    params = payload.parameters or {}
     backtest = Backtest(
         strategy_version_id=version.id,
         start_date=payload.start_date,
         end_date=payload.end_date,
         benchmark=payload.benchmark,
         initial_capital=payload.initial_capital,
-        parameters=payload.parameters,
+        parameters=params,
         status=BacktestStatus.QUEUED,
         progress_step="Queued",
+        data_snapshot_id=snapshot.id if snapshot else None,
+        data_version=(snapshot.content_sha256 if snapshot else None)
+        or (market.get("manifest") or {}).get("sha256"),
     )
     db.add(backtest)
+    db.flush()
+    db.add(
+        ExperimentTrial(
+            backtest_id=backtest.id,
+            data_snapshot_id=snapshot.id if snapshot else None,
+            strategy_id=strategy.id if strategy else None,
+            universe_key="SPY",
+            strategy_family=strategy.family_id if strategy else None,
+            parameters=params,
+            parameter_hash=canonical_hash(
+                {
+                    "strategy_version_id": str(version.id),
+                    "start_date": str(payload.start_date),
+                    "end_date": str(payload.end_date),
+                    "benchmark": payload.benchmark,
+                    "initial_capital": payload.initial_capital,
+                    "parameters": params,
+                }
+            ),
+        )
+    )
     db.add(
         AuditLog(
             actor="local",
             action="Backtest Started",
             object_type="backtest",
-            object_id="pending",
+            object_id=str(backtest.id),
             after={
                 "strategy_version_id": str(version.id),
                 "start_date": str(payload.start_date),
                 "end_date": str(payload.end_date),
+                "data_snapshot_id": str(snapshot.id) if snapshot else None,
             },
         )
     )
     db.commit()
     db.refresh(backtest)
-
-    # Fix audit object id now that we have UUID
-    audit = db.scalars(
-        select(AuditLog)
-        .where(AuditLog.object_type == "backtest", AuditLog.object_id == "pending")
-        .order_by(AuditLog.id.desc())
-        .limit(1)
-    ).first()
-    if audit:
-        audit.object_id = str(backtest.id)
-        db.commit()
-
-    import threading
-
-    from services.worker.tasks import execute_backtest
-
-    bt_id = str(backtest.id)
-    threading.Thread(
-        target=execute_backtest, args=(bt_id,), daemon=True, name=f"backtest-{bt_id}"
-    ).start()
+    _enqueue(str(backtest.id))
     return backtest
 
 
 def cancel_backtest(db: Session, backtest_id: UUID) -> Backtest:
     backtest = get_backtest(db, backtest_id)
-    if backtest.status in {
-        BacktestStatus.COMPLETED,
-        BacktestStatus.FAILED,
-        BacktestStatus.CANCELLED,
-    }:
+    if backtest.status in _TERMINAL:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"当前状态为 {backtest.status.value}，无法取消",
@@ -163,6 +245,9 @@ def cancel_backtest(db: Session, backtest_id: UUID) -> Backtest:
     )
     db.commit()
     db.refresh(backtest)
+    from services.worker.tasks import flag_cancel
+
+    flag_cancel(str(backtest.id))
     return backtest
 
 
@@ -174,26 +259,52 @@ def get_metrics(db: Session, backtest_id: UUID) -> BacktestMetrics:
     return metrics
 
 
-def get_equity(db: Session, backtest_id: UUID) -> list[BacktestEquity]:
+def get_equity(
+    db: Session, backtest_id: UUID, *, limit: int = 5000, offset: int = 0
+) -> tuple[list[BacktestEquity], int]:
     get_backtest(db, backtest_id)
-    return list(
+    total = int(
+        db.scalar(
+            select(func.count())
+            .select_from(BacktestEquity)
+            .where(BacktestEquity.backtest_id == backtest_id)
+        )
+        or 0
+    )
+    rows = list(
         db.scalars(
             select(BacktestEquity)
             .where(BacktestEquity.backtest_id == backtest_id)
             .order_by(BacktestEquity.ts.asc())
+            .offset(offset)
+            .limit(limit)
         ).all()
     )
+    return rows, total
 
 
-def get_trades(db: Session, backtest_id: UUID) -> list[BacktestTrade]:
+def get_trades(
+    db: Session, backtest_id: UUID, *, limit: int = 500, offset: int = 0
+) -> tuple[list[BacktestTrade], int]:
     get_backtest(db, backtest_id)
-    return list(
+    total = int(
+        db.scalar(
+            select(func.count())
+            .select_from(BacktestTrade)
+            .where(BacktestTrade.backtest_id == backtest_id)
+        )
+        or 0
+    )
+    rows = list(
         db.scalars(
             select(BacktestTrade)
             .where(BacktestTrade.backtest_id == backtest_id)
             .order_by(BacktestTrade.trade_date.asc())
+            .offset(offset)
+            .limit(limit)
         ).all()
     )
+    return rows, total
 
 
 def get_monthly_returns(db: Session, backtest_id: UUID) -> list[BacktestMonthlyReturn]:
@@ -208,12 +319,44 @@ def get_monthly_returns(db: Session, backtest_id: UUID) -> list[BacktestMonthlyR
 
 
 def get_drawdowns(db: Session, backtest_id: UUID) -> list[dict]:
-    equity = get_equity(db, backtest_id)
+    rows, _ = get_equity(db, backtest_id, limit=50_000, offset=0)
     return [
         {
             "ts": point.ts,
             "drawdown": point.drawdown,
             "strategy_value": point.strategy_value,
         }
-        for point in equity
+        for point in rows
     ]
+
+
+def get_rolling_windows(db: Session, backtest_id: UUID) -> list[BacktestRollingWindow]:
+    get_backtest(db, backtest_id)
+    return list(
+        db.scalars(
+            select(BacktestRollingWindow)
+            .where(BacktestRollingWindow.backtest_id == backtest_id)
+            .order_by(BacktestRollingWindow.period_end.asc())
+        ).all()
+    )
+
+
+def get_time_series(
+    db: Session, backtest_id: UUID, name: str | None = None
+) -> list[BacktestTimeSeries]:
+    get_backtest(db, backtest_id)
+    stmt = select(BacktestTimeSeries).where(BacktestTimeSeries.backtest_id == backtest_id)
+    if name:
+        stmt = stmt.where(BacktestTimeSeries.name == name)
+    return list(db.scalars(stmt.order_by(BacktestTimeSeries.ts.asc())).all())
+
+
+def get_logs(backtest_id: UUID) -> dict[str, str]:
+    settings = get_settings()
+    job_dir = Path(settings.jobs_root) / str(backtest_id)
+    stdout = job_dir / "docker_stdout.log"
+    stderr = job_dir / "docker_stderr.log"
+    return {
+        "stdout": stdout.read_text(encoding="utf-8") if stdout.exists() else "",
+        "stderr": stderr.read_text(encoding="utf-8") if stderr.exists() else "",
+    }
