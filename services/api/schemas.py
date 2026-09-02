@@ -290,12 +290,15 @@ class UniverseMemberOut(ORMModel):
 class UniverseCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: Optional[str] = None
+    kind: str = "STATIC"
+    rules: Optional[dict] = None
     members: list[UniverseMemberCreate] = Field(default_factory=list)
 
 
 class UniverseUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     description: Optional[str] = None
+    rules: Optional[dict] = None
 
 
 class UniverseOut(ORMModel):
@@ -303,6 +306,7 @@ class UniverseOut(ORMModel):
     name: str
     description: Optional[str]
     kind: str
+    rules: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
     member_count: int = 0

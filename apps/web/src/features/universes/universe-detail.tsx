@@ -82,6 +82,15 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
     onError: (err: Error) => toast(err.message, "err"),
   });
 
+  const rebuild = useMutation({
+    mutationFn: () => api.rebuildUniverse(universeId),
+    onSuccess: () => {
+      invalidate();
+      toast("已按规则重建成分", "ok");
+    },
+    onError: (err: Error) => toast(err.message, "err"),
+  });
+
   const syncDelist = useMutation({
     mutationFn: () => api.syncUniverseDelistings(),
     onSuccess: (result) => {
@@ -116,6 +125,16 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
       ? a.effective_from.localeCompare(b.effective_from)
       : a.symbol.localeCompare(b.symbol),
   );
+  const isRule = row.kind === "RULE";
+  const ruleHint = isRule
+    ? [
+        row.rules?.min_price != null ? `最低价 ${row.rules.min_price}` : null,
+        row.rules?.min_adv_usd != null ? `最低 ADV$ ${row.rules.min_adv_usd}` : null,
+        `回看 ${row.rules?.lookback_days ?? 21} 个交易日`,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
 
   return (
     <div className="space-y-6 as-enter">
@@ -127,17 +146,29 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
         title={row.name}
         description={
           row.description ||
-          "成分区间两端都包含。摄取退市标的后会自动写上退出日；已有 effective_to 不会被覆盖。"
+          (isRule
+            ? `规则池。${ruleHint}。成分由已摄取行情计算，不能手工改区间。`
+            : "成分区间两端都包含。摄取退市标的后会自动写上退出日；已有 effective_to 不会被覆盖。")
         }
         action={
           <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => syncDelist.mutate()}
-              disabled={syncDelist.isPending}
-            >
-              {syncDelist.isPending ? "推断中…" : "按行情关闭退市成分"}
-            </Button>
+            {isRule ? (
+              <Button
+                variant="secondary"
+                onClick={() => rebuild.mutate()}
+                disabled={rebuild.isPending}
+              >
+                {rebuild.isPending ? "重建中…" : "按规则重建"}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={() => syncDelist.mutate()}
+                disabled={syncDelist.isPending}
+              >
+                {syncDelist.isPending ? "推断中…" : "按行情关闭退市成分"}
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
               删除标的池
             </Button>
@@ -145,6 +176,14 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
         }
       />
 
+      {isRule ? (
+        <Card>
+          <p className="text-sm text-as-text">{ruleHint}</p>
+          <p className="mt-2 text-xs text-as-muted">
+            用当前快照里每只标的的收盘价与成交额滚动均值做时点筛选。未过线的交易日不进入成分；不能手工改区间。
+          </p>
+        </Card>
+      ) : (
       <Card>
         <form
           className="flex flex-wrap items-end gap-3"
@@ -194,6 +233,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
           effective_to 不会被覆盖。
         </p>
       </Card>
+      )}
 
       <Card className="p-0">
         <div className="border-b border-as-border px-5 py-3 text-sm font-medium">成分</div>
@@ -227,6 +267,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
+                    {isRule ? null : (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -235,6 +276,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
                     >
                       移除
                     </Button>
+                    )}
                   </td>
                 </tr>
               ))}

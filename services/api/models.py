@@ -381,6 +381,7 @@ class IngestJob(Base):
 
 class UniverseKind(str, enum.Enum):
     STATIC = "STATIC"
+    RULE = "RULE"
 
 
 class Universe(Base):
@@ -392,6 +393,7 @@ class Universe(Base):
     kind: Mapped[UniverseKind] = mapped_column(
         _enum(UniverseKind, "universe_kind"), default=UniverseKind.STATIC, nullable=False
     )
+    rules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

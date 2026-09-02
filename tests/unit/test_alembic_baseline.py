@@ -32,3 +32,5 @@ def test_alembic_baseline_creates_tables():
     text4 = Path("services/api/alembic/versions/0004_ingest_jobs.py").read_text(encoding="utf-8")
     assert "ingest_jobs" in text4
     assert "completed_symbols" in text4
+    text5 = Path("services/api/alembic/versions/0005_universe_rules.py").read_text(encoding="utf-8")
+    assert "rules" in text5

@@ -32,6 +32,7 @@ def _to_out(universe: Universe, *, include_members: bool = True) -> UniverseOut:
         name=universe.name,
         description=universe.description,
         kind=universe.kind.value if isinstance(universe.kind, UniverseKind) else str(universe.kind),
+        rules=universe.rules,
         created_at=universe.created_at,
         updated_at=universe.updated_at,
         member_count=len(universe.members),
@@ -57,7 +58,12 @@ def list_universes(
 @router.post("", response_model=UniverseOut, status_code=status.HTTP_201_CREATED)
 def create_universe(payload: UniverseCreate, db: Session = Depends(get_db)) -> UniverseOut:
     universe = universe_service.create_universe(
-        db, payload.name, payload.description, payload.members
+        db,
+        payload.name,
+        payload.description,
+        payload.members,
+        kind=payload.kind,
+        rules=payload.rules,
     )
     return _to_out(universe)
 
@@ -79,7 +85,11 @@ def update_universe(
 ) -> UniverseOut:
     return _to_out(
         universe_service.update_universe(
-            db, universe_id, name=payload.name, description=payload.description
+            db,
+            universe_id,
+            name=payload.name,
+            description=payload.description,
+            rules=payload.rules,
         )
     )
 
@@ -125,6 +135,11 @@ def update_member(
 def delete_member(universe_id: UUID, member_id: UUID, db: Session = Depends(get_db)) -> Response:
     universe_service.delete_member(db, universe_id, member_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{universe_id}/rebuild", response_model=UniverseOut)
+def rebuild_universe(universe_id: UUID, db: Session = Depends(get_db)) -> UniverseOut:
+    return _to_out(universe_service.rebuild_rule_universe(db, universe_id))
 
 
 @router.get("/{universe_id}/constituents")

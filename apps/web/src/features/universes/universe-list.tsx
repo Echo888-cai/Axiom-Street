@@ -19,17 +19,35 @@ export function UniverseList() {
   const router = useRouter();
   const qc = useQueryClient();
   const [name, setName] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [minAdv, setMinAdv] = useState("");
   const { data, isLoading, error } = useQuery({
     queryKey: ["universes"],
     queryFn: api.listUniverses,
   });
 
   const create = useMutation({
-    mutationFn: () => api.createUniverse({ name: name.trim() }),
+    mutationFn: () => {
+      const price = minPrice.trim() ? Number(minPrice) : undefined;
+      const adv = minAdv.trim() ? Number(minAdv) : undefined;
+      const rule = price != null || adv != null;
+      return api.createUniverse({
+        name: name.trim(),
+        kind: rule ? "RULE" : "STATIC",
+        rules: rule
+          ? {
+              ...(price != null ? { min_price: price } : {}),
+              ...(adv != null ? { min_adv_usd: adv } : {}),
+            }
+          : undefined,
+      });
+    },
     onSuccess: (universe) => {
       qc.invalidateQueries({ queryKey: ["universes"] });
       toast("标的池已创建", "ok");
       setName("");
+      setMinPrice("");
+      setMinAdv("");
       router.push(`/universes/${universe.id}`);
     },
     onError: (err: Error) => toast(err.message, "err"),
@@ -39,10 +57,10 @@ export function UniverseList() {
     <div className="space-y-6 as-enter">
       <PageHeader
         title="标的池"
-        description="时点正确的成分列表。退市标的必须写 effective_to，否则回测会系统性偏高。"
+        description="时点正确的成分列表。可手写区间，或按价格/流动性规则从已摄取行情生成。"
         action={
           <form
-            className="flex items-center gap-2"
+            className="flex flex-wrap items-center justify-end gap-2"
             onSubmit={(e) => {
               e.preventDefault();
               if (name.trim()) create.mutate();
@@ -52,7 +70,23 @@ export function UniverseList() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="例如：含退市的美股池"
-              className="w-56"
+              className="w-44"
+            />
+            <Input
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              placeholder="最低价（可选）"
+              inputMode="decimal"
+              className="w-28"
+              aria-label="最低收盘价"
+            />
+            <Input
+              value={minAdv}
+              onChange={(e) => setMinAdv(e.target.value)}
+              placeholder="最低 ADV$（可选）"
+              inputMode="decimal"
+              className="w-36"
+              aria-label="最低日均成交额美元"
             />
             <Button type="submit" disabled={create.isPending || !name.trim()}>
               {create.isPending ? "创建中…" : "新建标的池"}
@@ -72,7 +106,7 @@ export function UniverseList() {
           <EmptyState
             icon={Layers}
             title="还没有标的池"
-            description="回测目前会默认使用快照里的全部标的，无法表达退市。建一个池，给每支股票写上有效区间。"
+            description="没有成分的区间无法开跑回测。手写每支股票的有效区间，或填写最低价/ADV 建成规则池。"
           />
         </Card>
       ) : (

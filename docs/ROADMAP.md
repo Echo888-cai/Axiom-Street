@@ -274,7 +274,9 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 **已交付（静态 + 时点）**：`universes` / `universe_members`（`effective_from` / `effective_to`）。摄取时若最后一根 K 线早于 14 个自然日，会把仍开放的成分写成 inclusive 退出日，**不覆盖**已有 `effective_to`。手动入口 `POST /api/v1/universes/sync-delistings`。
 
-仍待补强：规则筛选（市值/流动性/行业）生成时点成分。
+仍待补强：市值/行业等基本面规则（需要独立 fundamentals 源，当前不做静默近似）。
+
+价格与流动性规则（已交付）：`kind=RULE` + `rules.min_price` / `min_adv_usd`（成交额滚动均值，默认 21 个交易日）。从当前快照 parquet 生成时点成分；未过线的交易日不在池中。`POST /universes/{id}/rebuild` 替换派生成分，不覆盖 STATIC 池。
 
 时点正确的成分历史是消除**生存者偏差**的唯一手段。当前的静态 map file `20000101,spy` 无法支持退市股票轮转。若做多股票策略而不解决这一点，所有回测结果都会系统性偏高。
 

@@ -290,3 +290,72 @@ def test_ingest_delisted_symbol_records_effective_to(client, monkeypatch, tmp_pa
     assert by_symbol["BBBY"] == "2018-03-23"
     assert by_symbol["SPY"] == "2017-01-01"
     get_settings.cache_clear()
+
+
+def test_rule_universe_rejects_manual_members(client):
+    res = client.post(
+        "/api/v1/universes",
+        json={
+            "name": "rule-manual",
+            "kind": "RULE",
+            "rules": {"min_price": 5},
+            "members": [{"symbol": "SPY", "effective_from": "2010-01-04"}],
+        },
+    )
+    assert res.status_code == 400
+
+
+def test_rule_universe_builds_from_snapshot(client, monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+
+    from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
+    from services.api.settings import get_settings
+
+    monkeypatch.setenv("STREET_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+
+    def fake_fetch(symbol: str, **_k):
+        close = 100.0 if symbol == "SPY" else 8.0
+        rows = []
+        for day in (2, 3, 6, 7):
+            rows.append(
+                {
+                    "timestamp": datetime(2020, 1, day, tzinfo=timezone.utc),
+                    "open": close,
+                    "high": close,
+                    "low": close,
+                    "close": close,
+                    "volume": 1000,
+                    "dividends": 0.0,
+                    "stock_splits": 0.0,
+                    "exchange_timezone": "America/New_York",
+                    "symbol": symbol,
+                }
+            )
+        return FetchResult(pd.DataFrame(rows), "yfinance", YFINANCE_CAPABILITIES)
+
+    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    ingest = client.post(
+        "/api/v1/data/ingest",
+        json={"symbols": ["SPY", "QQQ"], "provider": "yfinance", "convert_lean": False},
+    )
+    assert ingest.status_code == 202, ingest.text
+    created = client.post(
+        "/api/v1/universes",
+        json={
+            "name": "流动池",
+            "kind": "RULE",
+            "rules": {"min_price": 10, "lookback_days": 1},
+        },
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["kind"] == "RULE"
+    assert {row["symbol"] for row in body["members"]} == {"SPY"}
+    assert body["members"][0]["effective_to"] is None
+    blocked = client.post(
+        f"/api/v1/universes/{body['id']}/members",
+        json={"symbol": "QQQ", "effective_from": "2020-01-02"},
+    )
+    assert blocked.status_code == 400
+    get_settings.cache_clear()

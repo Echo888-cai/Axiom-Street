@@ -249,7 +249,12 @@ export const api = {
   listUniverses: () =>
     request<Page<Universe>>("/api/v1/universes").then(unwrapList),
   getUniverse: (id: string) => request<Universe>(`/api/v1/universes/${id}`),
-  createUniverse: (body: { name: string; description?: string }) =>
+  createUniverse: (body: {
+    name: string;
+    description?: string;
+    kind?: string;
+    rules?: { min_price?: number; min_adv_usd?: number; lookback_days?: number };
+  }) =>
     request<Universe>("/api/v1/universes", {
       method: "POST",
       body: JSON.stringify(body),
@@ -285,6 +290,8 @@ export const api = {
       errors: Array<{ universe_id?: string; symbol?: string; message: string }>;
       inferred?: Array<{ symbol: string; last_bar: string; effective_to: string }>;
     }>("/api/v1/universes/sync-delistings", { method: "POST" }),
+  rebuildUniverse: (id: string) =>
+    request<Universe>(`/api/v1/universes/${id}/rebuild`, { method: "POST" }),
   previewUniverse: (
     universeId: string,
     params: { as_of?: string; start?: string; end?: string },
@@ -335,6 +342,11 @@ export type Universe = {
   name: string;
   description: string | null;
   kind: string;
+  rules?: {
+    min_price?: number;
+    min_adv_usd?: number;
+    lookback_days?: number;
+  } | null;
   created_at: string;
   updated_at: string;
   member_count: number;
