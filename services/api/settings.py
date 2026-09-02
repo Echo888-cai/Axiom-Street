@@ -6,9 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="AXIOM_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="STREET_", env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql+psycopg://axiom:axiom@localhost:5432/axiom"
+    database_url: str = "postgresql+psycopg://street:street@localhost:5432/street"
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"

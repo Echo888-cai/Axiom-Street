@@ -148,7 +148,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 - API 容器没有挂载 `docker.sock` → 用 `docker compose up` 起栈后，点"运行回测"必定失败
 - `uvicorn --workers N` 会产生 N 份互不协调的容器启动
 - API 重启 → 线程消失 → 回测永久卡在 `RUNNING`，无任何清理任务
-- `AXIOM_DOCKER_HOST`（compose 中定义）和 `AXIOM_SYNC_BACKTESTS`（.env.example 中定义）都是死配置，代码从不读取
+- `STREET_DOCKER_HOST`（compose 中定义）和 `STREET_SYNC_BACKTESTS`（.env.example 中定义）都是死配置，代码从不读取
 
 #### P0-9 取消功能是假的
 
@@ -284,7 +284,9 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 ### 4.4 增量摄取
 
-当前每次全量重拉。改为按日期增量 append + 定期全量校验（检测 vendor restatement）。restatement 必须产生新快照，不得原地修改。
+**已交付（基础版）**：`ingest(..., mode="full"|"incremental")` + API `IngestRequest.mode`。增量仅拉取 last-bar 之后的窗口，与 prior 拼接后写入新快照；重叠日期数值变化记入 `vendor_restatement` warning。prior 缺失时 fail loud。
+
+仍待补强：定期全量校验任务（检测 vendor restatement 的 scheduled full reconcile）、大批量（500 标的）吞吐与进度报告。
 
 **验收标准**：
 - 能一条命令摄取 500 支股票日线并生成对应 LEAN 数据；
@@ -488,7 +490,7 @@ Live 之前必须实现真实风控：单标的仓位上限、组合杠杆上限
 ### 10.3 安全
 
 - 用户提交的任意 Python 在 LEAN 容器内执行。当前隔离仅靠 `--network none` + 资源限制，尚可，但需补：seccomp profile、只读根文件系统、非 root 用户、禁用危险 import 的静态检查；
-- `docker-compose.yml` 与 `alembic.ini` 里的默认口令 `axiom:axiom` 已提交进仓库，需改为环境变量注入；
+- `docker-compose.yml` 与 `alembic.ini` 里的默认口令 `street:street` 已提交进仓库，需改为环境变量注入；
 - CORS 当前是 `allow_credentials` 的宽松配置。
 
 ### 10.4 版本控制

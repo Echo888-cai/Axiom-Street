@@ -87,7 +87,7 @@ export function HomeDashboard({
 
   if (error) {
     return (
-      <div className="space-y-6 aq-enter">
+      <div className="space-y-6 as-enter">
         <PageHeader
           title={hello}
           description="研究工作台需要本地 API 才能读取策略与回测。"
@@ -110,7 +110,7 @@ export function HomeDashboard({
 
   if (!hasResearch) {
     return (
-      <div className="space-y-8 aq-enter">
+      <div className="space-y-8 as-enter">
         <PageHeader
           title={hello}
           description="从一条可验证的假设开始。数字来自冻结数据与固定引擎，不是实盘组合。"
@@ -124,15 +124,15 @@ export function HomeDashboard({
             ].map((step, i) => (
               <div
                 key={step.n}
-                className={`p-8 ${i < 2 ? "border-b border-aq-border lg:border-b-0 lg:border-r" : ""}`}
+                className={`p-8 ${i < 2 ? "border-b border-as-border lg:border-b-0 lg:border-r" : ""}`}
               >
-                <div className="text-[11px] font-medium tracking-wider text-aq-primary">{step.n}</div>
-                <div className="mt-3 text-base font-medium text-aq-text">{step.title}</div>
-                <p className="mt-2 text-sm leading-relaxed text-aq-muted">{step.body}</p>
+                <div className="text-[11px] font-medium tracking-wider text-as-primary">{step.n}</div>
+                <div className="mt-3 text-base font-medium text-as-text">{step.title}</div>
+                <p className="mt-2 text-sm leading-relaxed text-as-muted">{step.body}</p>
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-3 border-t border-aq-border bg-aq-secondary/40 px-8 py-4">
+          <div className="flex flex-wrap items-center gap-3 border-t border-as-border bg-as-secondary/40 px-8 py-4">
             <Link href="/strategies">
               <Button>打开策略实验室</Button>
             </Link>
@@ -146,7 +146,7 @@ export function HomeDashboard({
   }
 
   return (
-    <div className="space-y-6 aq-enter">
+    <div className="space-y-6 as-enter">
       <PageHeader
         title={hello}
         description="研究工作台。这里的数字来自可复现回测，不是实盘组合。"
@@ -204,7 +204,7 @@ export function HomeDashboard({
           <CardHeader
             title="活跃策略"
             action={
-              <Link href="/strategies" className="text-xs text-aq-primary hover:underline">
+              <Link href="/strategies" className="text-xs text-as-primary hover:underline">
                 查看全部
               </Link>
             }
@@ -217,11 +217,11 @@ export function HomeDashboard({
                 <li key={s.id}>
                   <Link
                     href={`/strategies/${s.id}`}
-                    className="flex items-center justify-between gap-3 rounded-lg px-1 py-2.5 hover:bg-aq-secondary"
+                    className="flex items-center justify-between gap-3 rounded-lg px-1 py-2.5 hover:bg-as-secondary"
                   >
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-aq-text">{s.name}</div>
-                      <div className="text-[11px] text-aq-muted">{labelStatus(s.status)}</div>
+                      <div className="truncate text-sm font-medium text-as-text">{s.name}</div>
+                      <div className="text-[11px] text-as-muted">{labelStatus(s.status)}</div>
                     </div>
                     <Badge tone="blue">{s.benchmark}</Badge>
                   </Link>
@@ -237,7 +237,7 @@ export function HomeDashboard({
           <CardHeader
             title="最近回测"
             action={
-              <Link href="/backtests" className="text-xs text-aq-primary hover:underline">
+              <Link href="/backtests" className="text-xs text-as-primary hover:underline">
                 查看全部
               </Link>
             }
@@ -250,13 +250,13 @@ export function HomeDashboard({
                 <li key={b.id}>
                   <Link
                     href={`/backtests/${b.id}`}
-                    className="flex items-center justify-between gap-3 rounded-lg px-1 py-2.5 hover:bg-aq-secondary"
+                    className="flex items-center justify-between gap-3 rounded-lg px-1 py-2.5 hover:bg-as-secondary"
                   >
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-aq-text">
+                      <div className="truncate text-sm font-medium text-as-text">
                         {b.strategy_name || `${b.start_date} → ${b.end_date}`}
                       </div>
-                      <div className="text-[11px] text-aq-muted">
+                      <div className="text-[11px] text-as-muted">
                         {b.start_date} → {b.end_date}
                       </div>
                     </div>
@@ -264,7 +264,7 @@ export function HomeDashboard({
                       {b.status === "COMPLETED" && b.total_return != null ? (
                         <span
                           className={`hidden text-xs tabular sm:block ${
-                            b.total_return >= 0 ? "text-aq-positive" : "text-aq-negative"
+                            b.total_return >= 0 ? "text-as-positive" : "text-as-negative"
                           }`}
                         >
                           {formatPct(b.total_return)}
@@ -291,16 +291,16 @@ export function HomeDashboard({
                 href: completed[0] ? `/backtests/${completed[0].id}` : undefined,
               },
             ].map((item) => (
-              <li key={item.label} className="flex items-start gap-2 text-aq-muted">
+              <li key={item.label} className="flex items-start gap-2 text-as-muted">
                 <span
                   className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                    item.done ? "border-aq-positive bg-aq-positive text-white" : "border-aq-border"
+                    item.done ? "border-as-positive bg-as-positive text-white" : "border-as-border"
                   }`}
                 >
                   {item.done ? <Check className="h-3 w-3" /> : null}
                 </span>
                 {item.href ? (
-                  <Link href={item.href} className="hover:text-aq-text">
+                  <Link href={item.href} className="hover:text-as-text">
                     {item.label}
                   </Link>
                 ) : (
@@ -315,7 +315,7 @@ export function HomeDashboard({
           <CardHeader
             title="风险快照"
             action={
-              <Link href="/risk" className="text-xs text-aq-primary hover:underline">
+              <Link href="/risk" className="text-xs text-as-primary hover:underline">
                 查看完整风控
               </Link>
             }

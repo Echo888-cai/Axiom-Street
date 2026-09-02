@@ -36,7 +36,7 @@ export function UniverseList() {
   });
 
   return (
-    <div className="space-y-6 aq-enter">
+    <div className="space-y-6 as-enter">
       <PageHeader
         title="标的池"
         description="时点正确的成分列表。退市标的必须写 effective_to，否则回测会系统性偏高。"
@@ -62,7 +62,7 @@ export function UniverseList() {
       />
 
       {isLoading ? (
-        <Card className="h-40 animate-pulse bg-aq-secondary" />
+        <Card className="h-40 animate-pulse bg-as-secondary" />
       ) : error ? (
         <Card>
           <EmptyState title="API 未连接" description="请先启动 FastAPI 服务（端口 8000）。" />
@@ -76,21 +76,21 @@ export function UniverseList() {
           />
         </Card>
       ) : (
-        <div className="grid gap-3 aq-stagger">
+        <div className="grid gap-3 as-stagger">
           {data.map((item) => (
             <Link key={item.id} href={`/universes/${item.id}`}>
               <Card hover className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-aq-text">{item.name}</div>
+                    <div className="text-sm font-medium text-as-text">{item.name}</div>
                     <Badge tone="blue">{item.kind}</Badge>
                   </div>
-                  <div className="mt-1 text-xs text-aq-muted">
+                  <div className="mt-1 text-xs text-as-muted">
                     {item.description || "暂无描述"}
                   </div>
                 </div>
-                <div className="shrink-0 text-right text-xs text-aq-muted">
-                  <div className="tabular-nums text-sm text-aq-text">{item.member_count} 支</div>
+                <div className="shrink-0 text-right text-xs text-as-muted">
+                  <div className="tabular-nums text-sm text-as-text">{item.member_count} 支</div>
                   <div>{formatRelative(item.updated_at)}</div>
                 </div>
               </Card>

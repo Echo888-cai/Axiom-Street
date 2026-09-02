@@ -10,26 +10,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        aq: {
-          bg: "var(--aq-bg)",
-          secondary: "var(--aq-bg-secondary)",
-          border: "var(--aq-border)",
-          text: "var(--aq-text)",
-          muted: "var(--aq-text-secondary)",
-          primary: "var(--aq-primary)",
-          positive: "var(--aq-positive)",
-          negative: "var(--aq-negative)",
+        as: {
+          bg: "var(--as-bg)",
+          secondary: "var(--as-bg-secondary)",
+          border: "var(--as-border)",
+          text: "var(--as-text)",
+          muted: "var(--as-text-secondary)",
+          primary: "var(--as-primary)",
+          positive: "var(--as-positive)",
+          negative: "var(--as-negative)",
         },
       },
       borderRadius: {
-        aq: "var(--aq-radius)",
+        as: "var(--as-radius)",
       },
       boxShadow: {
-        aq: "var(--aq-shadow)",
-        "aq-lg": "var(--aq-shadow-lg)",
+        as: "var(--as-shadow)",
+        "as-lg": "var(--as-shadow-lg)",
       },
       transitionDuration: {
-        aq: "200ms",
+        as: "200ms",
       },
     },
   },

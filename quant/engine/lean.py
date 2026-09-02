@@ -74,15 +74,15 @@ class LeanQuantEngine(QuantEngine):
         jobs_root: Path | None = None,
     ) -> None:
         self.lean_image: str = (
-            lean_image or os.getenv("AXIOM_LEAN_IMAGE") or "quantconnect/lean:16355"
+            lean_image or os.getenv("STREET_LEAN_IMAGE") or "quantconnect/lean:16355"
         )
         self.data_root = Path(
-            data_root if data_root is not None else os.getenv("AXIOM_DATA_ROOT") or "data"
+            data_root if data_root is not None else os.getenv("STREET_DATA_ROOT") or "data"
         )
         self.jobs_root = Path(
-            jobs_root if jobs_root is not None else os.getenv("AXIOM_JOBS_ROOT") or "jobs"
+            jobs_root if jobs_root is not None else os.getenv("STREET_JOBS_ROOT") or "jobs"
         )
-        self.risk_free_rate = float(os.getenv("AXIOM_RISK_FREE_RATE") or 0.0)
+        self.risk_free_rate = float(os.getenv("STREET_RISK_FREE_RATE") or 0.0)
         self._containers: dict[str, str] = {}
 
     def _docker_env(self) -> dict[str, str]:

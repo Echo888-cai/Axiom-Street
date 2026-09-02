@@ -27,9 +27,9 @@ def test_spy_200dma_golden_backtest():
 
     expectations = json.loads(EXPECTATIONS.read_text(encoding="utf-8"))
     repo_root = Path(__file__).resolve().parents[2]
-    data_root = Path(os.getenv("AXIOM_DATA_ROOT", repo_root / "data"))
+    data_root = Path(os.getenv("STREET_DATA_ROOT", repo_root / "data"))
     # Colima can only bind-mount paths under the user home; avoid /var/folders tmp.
-    jobs_root = Path(os.getenv("AXIOM_JOBS_ROOT", repo_root / "jobs" / "golden"))
+    jobs_root = Path(os.getenv("STREET_JOBS_ROOT", repo_root / "jobs" / "golden"))
     jobs_root.mkdir(parents=True, exist_ok=True)
 
     if not (data_root / "market" / "equities" / "US" / "daily" / "SPY.parquet").exists():

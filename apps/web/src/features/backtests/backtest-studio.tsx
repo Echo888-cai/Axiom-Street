@@ -101,7 +101,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
   );
 
   if (backtest.isLoading || !backtest.data) {
-    return <Card className="h-80 animate-pulse bg-aq-secondary" />;
+    return <Card className="h-80 animate-pulse bg-as-secondary" />;
   }
 
   const bt = backtest.data;
@@ -136,7 +136,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
   }
 
   return (
-    <div className="space-y-6 aq-enter">
+    <div className="space-y-6 as-enter">
       <PageHeader
         crumbs={[
           { href: "/", label: "首页" },
@@ -181,7 +181,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
           {running ? (
             <div className="flex min-h-[280px] flex-col items-center justify-center gap-6 px-6">
               <ProgressSteps steps={RUN_STEPS} current={currentStep || "排队中"} />
-              <p className="text-sm text-aq-muted">{currentStep || "正在准备 LEAN 环境"}</p>
+              <p className="text-sm text-as-muted">{currentStep || "正在准备 LEAN 环境"}</p>
             </div>
           ) : (
             <EmptyState
@@ -204,7 +204,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6 aq-stagger">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6 as-stagger">
             <MetricTile label="总收益" value={formatPct(m?.total_return)} tone={metricTone(m?.total_return)} />
             <MetricTile label="年化 CAGR" value={formatPct(m?.cagr)} tone={metricTone(m?.cagr)} />
             <MetricTile label="夏普" value={formatNumber(m?.sharpe)} />
@@ -232,10 +232,10 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                 { id: "monthly", label: "月度" },
               ]}
             />
-            <div className="flex items-center gap-2 text-xs text-aq-muted">
+            <div className="flex items-center gap-2 text-xs text-as-muted">
               <button
                 type="button"
-                className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 hover:bg-aq-secondary hover:text-aq-text"
+                className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 hover:bg-as-secondary hover:text-as-text"
                 onClick={() => {
                   navigator.clipboard.writeText(bt.data_version || "");
                   toast("已复制数据指纹", "ok");
@@ -257,7 +257,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
               <Card>
                 <CardHeader
                   title="权益曲线"
-                  hint={<span className="text-[11px] text-aq-muted">策略 vs 基准</span>}
+                  hint={<span className="text-[11px] text-as-muted">策略 vs 基准</span>}
                   action={
                     <Tabs
                       value={period}
@@ -290,10 +290,10 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
 
           {tab === "trades" ? (
             <Card className="overflow-hidden p-0">
-              <div className="border-b border-aq-border px-5 py-4 text-sm font-medium">成交明细</div>
+              <div className="border-b border-as-border px-5 py-4 text-sm font-medium">成交明细</div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px] text-left text-xs">
-                  <thead className="sticky top-0 bg-aq-secondary/90 text-aq-muted backdrop-blur-sm">
+                  <thead className="sticky top-0 bg-as-secondary/90 text-as-muted backdrop-blur-sm">
                     <tr>
                       {["日期", "标的", "方向", "数量", "价格", "佣金"].map((h) => (
                         <th key={h} className="px-4 py-3 font-medium">
@@ -307,10 +307,10 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                       const dir = labelDirection(t.direction, t.quantity);
                       const sell = dir === "卖出";
                       return (
-                      <tr key={t.id} className="border-t border-aq-border/70 hover:bg-aq-secondary/50">
+                      <tr key={t.id} className="border-t border-as-border/70 hover:bg-as-secondary/50">
                         <td className="px-4 py-2.5 tabular">{t.trade_date.slice(0, 10)}</td>
                         <td className="px-4 py-2.5">{t.ticker}</td>
-                        <td className={`px-4 py-2.5 ${sell ? "text-aq-negative" : "text-aq-positive"}`}>
+                        <td className={`px-4 py-2.5 ${sell ? "text-as-negative" : "text-as-positive"}`}>
                           {dir}
                         </td>
                         <td className="px-4 py-2.5 tabular">{formatNumber(t.quantity, 0)}</td>
@@ -321,7 +321,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                     })}
                     {!trades.data?.length ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-aq-muted">
+                        <td colSpan={6} className="px-4 py-8 text-center text-as-muted">
                           暂无成交记录。
                         </td>
                       </tr>

@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
 
 function cellColor(value: number | null): string {
-  if (value === null) return "bg-aq-secondary text-aq-muted";
+  if (value === null) return "bg-as-secondary text-as-muted";
   const intensity = Math.min(Math.abs(value) / 0.08, 1);
   if (value >= 0) {
-    return `text-aq-positive`;
+    return `text-as-positive`;
   }
-  return `text-aq-negative`;
+  return `text-as-negative`;
   // keep intensity via inline style
   void intensity;
 }
@@ -21,14 +21,14 @@ export function MonthlyHeatmap({ data }: { data: MonthlyReturn[] }) {
   const map = new Map(data.map((d) => [`${d.year}-${d.month}`, d.return_pct]));
 
   if (!data.length) {
-    return <p className="text-sm text-aq-muted">暂无月度收益。</p>;
+    return <p className="text-sm text-as-muted">暂无月度收益。</p>;
   }
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] border-collapse text-xs">
         <thead>
-          <tr className="text-aq-muted">
+          <tr className="text-as-muted">
             <th className="px-2 py-2 text-left font-medium">年份</th>
             {MONTHS.map((m) => (
               <th key={m} className="px-2 py-2 text-right font-medium">
@@ -47,8 +47,8 @@ export function MonthlyHeatmap({ data }: { data: MonthlyReturn[] }) {
                 ? present.reduce((acc, v) => (1 + acc) * (1 + v) - 1, 0)
                 : null;
             return (
-              <tr key={year} className="border-t border-aq-border/70">
-                <td className="px-2 py-2 font-medium text-aq-text">{year}</td>
+              <tr key={year} className="border-t border-as-border/70">
+                <td className="px-2 py-2 font-medium text-as-text">{year}</td>
                 {vals.map((v, i) => (
                   <td
                     key={i}

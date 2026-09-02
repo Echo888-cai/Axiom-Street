@@ -75,6 +75,68 @@ def _combined_quality(reports: list[DataQualityReport]) -> DataQualityReport:
     )
 
 
+def _prior_parquet_path(root: Path, symbol: str) -> Path | None:
+    """Resolve prior bars from published latest path, then latest snapshot dir."""
+    published = root / "market" / "equities" / "US" / "daily" / f"{symbol}.parquet"
+    if published.exists():
+        return published
+    latest = latest_snapshot_dir(root)
+    if latest is None:
+        return None
+    candidate = latest / "market" / "equities" / "US" / "daily" / f"{symbol}.parquet"
+    return candidate if candidate.exists() else None
+
+
+def _detect_restatements(prior: pd.DataFrame, incoming: pd.DataFrame) -> list[QualityIssue]:
+    """Flag overlapping dates whose close/corp-actions differ (vendor restatement)."""
+    left = prior.copy()
+    right = incoming.copy()
+    left["timestamp"] = pd.to_datetime(left["timestamp"], utc=True)
+    right["timestamp"] = pd.to_datetime(right["timestamp"], utc=True)
+    merged = left.merge(right, on="timestamp", suffixes=("_prior", "_new"), how="inner")
+    if merged.empty:
+        return []
+    close_delta = (merged["close_new"] - merged["close_prior"]).abs()
+    # 1 bp on prior close, floor at 1e-6 absolute
+    threshold = (merged["close_prior"].abs() * 1e-4).clip(lower=1e-6)
+    changed = close_delta > threshold
+    for col in ("dividends", "stock_splits"):
+        prior_col, new_col = f"{col}_prior", f"{col}_new"
+        if prior_col in merged.columns and new_col in merged.columns:
+            changed = changed | (
+                merged[prior_col].fillna(0.0) - merged[new_col].fillna(0.0)
+            ).abs() > 1e-9
+    bad = merged.loc[changed]
+    if bad.empty:
+        return []
+    examples = bad["timestamp"].dt.strftime("%Y-%m-%d").head(5).tolist()
+    return [
+        QualityIssue(
+            rule="vendor_restatement",
+            severity="warning",
+            message=(
+                "Vendor restated overlapping history; wrote a new immutable snapshot "
+                "(prior snapshot left untouched)."
+            ),
+            count=int(len(bad)),
+            examples=examples,
+        )
+    ]
+
+
+def _merge_incremental(prior: pd.DataFrame, incoming: pd.DataFrame) -> tuple[pd.DataFrame, list[QualityIssue]]:
+    issues = _detect_restatements(prior, incoming)
+    left = prior.copy()
+    right = incoming.copy()
+    left["timestamp"] = pd.to_datetime(left["timestamp"], utc=True)
+    right["timestamp"] = pd.to_datetime(right["timestamp"], utc=True)
+    # Prefer incoming values on overlap (vendor revision wins), keep prior-only rows.
+    combined = pd.concat([left, right], ignore_index=True)
+    combined = combined.sort_values("timestamp").drop_duplicates(subset=["timestamp"], keep="last")
+    combined = combined.reset_index(drop=True)
+    return combined, issues
+
+
 def ingest(
     *,
     symbols: list[str] | str | None = None,
@@ -83,20 +145,50 @@ def ingest(
     end: Optional[str] = None,
     provider: Optional[str] = None,
     convert_lean: bool = True,
+    mode: str = "full",
 ) -> dict[str, Any]:
-    """Download daily bars into an immutable snapshot. Never overwrite a prior snapshot."""
+    """Download daily bars into an immutable snapshot. Never overwrite a prior snapshot.
+
+    mode:
+      - full: fetch [start, end] for every symbol
+      - incremental: require prior bars; fetch only after each symbol's last bar;
+        concat into a new snapshot. Restatements are warnings, never in-place edits.
+    """
+    if mode not in {"full", "incremental"}:
+        raise ValueError(f"unsupported ingest mode: {mode!r} (expected 'full' or 'incremental')")
+
     tickers = normalize_symbols(symbols)
-    root = Path(data_root or os.getenv("AXIOM_DATA_ROOT") or _repo_data_root())
-    provider_name = provider or os.getenv("AXIOM_DATA_PROVIDER") or "auto"
+    root = Path(data_root or os.getenv("STREET_DATA_ROOT") or _repo_data_root())
+    provider_name = provider or os.getenv("STREET_DATA_PROVIDER") or "auto"
 
     frames: dict[str, pd.DataFrame] = {}
     reports: list[DataQualityReport] = []
     sources: list[str] = []
     caps_ok = True
     last_caps = None
+    fetch_windows: dict[str, dict[str, str | None]] = {}
+    prior_snapshot_key = load_manifest(root).get("snapshot_key")
 
     for symbol in tickers:
-        fetched = fetch_daily(symbol, provider=provider_name, start=start, end=end)
+        fetch_start = start
+        prior_frame: pd.DataFrame | None = None
+        if mode == "incremental":
+            prior_path = _prior_parquet_path(root, symbol)
+            if prior_path is None:
+                raise ValueError(
+                    f"incremental ingest requires prior bars for {symbol}; "
+                    "run mode='full' once before incremental updates."
+                )
+            prior_frame = pd.read_parquet(prior_path)
+            if prior_frame.empty:
+                raise ValueError(
+                    f"incremental ingest found empty prior parquet for {symbol}; use mode='full'."
+                )
+            last_ts = pd.to_datetime(prior_frame["timestamp"], utc=True).max()
+            fetch_start = (last_ts + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+
+        fetch_windows[symbol] = {"start": fetch_start, "end": end}
+        fetched = fetch_daily(symbol, provider=provider_name, start=fetch_start, end=end)
         frame = fetched.frame
         source = fetched.source
         caps = fetched.capabilities
@@ -104,10 +196,20 @@ def ingest(
         sources.append(source)
         caps_ok = caps_ok and caps.corporate_actions
 
+        restatement_issues: list[QualityIssue] = []
+        if mode == "incremental":
+            assert prior_frame is not None
+            if frame.empty:
+                # No new bars — keep prior history as the new snapshot content.
+                frame = prior_frame.copy()
+            else:
+                frame, restatement_issues = _merge_incremental(prior_frame, frame)
+
         expected_end = pd.Timestamp(end, tz="UTC") if end else None
         report = validate_ohlcv(
             frame, expected_end=expected_end.to_pydatetime() if expected_end is not None else None
         )
+        report.issues.extend(restatement_issues)
         if report.has_blocking_issues:
             raise DataQualityError(f"{symbol} 数据质量校验未通过，拒绝写入快照。", report.to_dict())
         if convert_lean and not caps.corporate_actions:
@@ -178,6 +280,9 @@ def ingest(
         "rows": total_rows,
         "sha256": digest,
         "snapshot_key": snapshot_key,
+        "ingest_mode": mode,
+        "fetch_windows": fetch_windows,
+        "prior_snapshot_key": prior_snapshot_key,
         "corporate_actions_verified": caps_ok,
         "provider_capabilities": {
             "ohlcv": True if last_caps is None else last_caps.ohlcv,
@@ -208,6 +313,9 @@ def ingest(
         "quality_report": combined.to_dict(),
         "snapshot_dir": str(snap_dir),
         "symbols": tickers,
+        "ingest_mode": mode,
+        "fetch_windows": fetch_windows,
+        "prior_snapshot_key": prior_snapshot_key,
     }
 
 
@@ -218,6 +326,7 @@ def ingest_spy(
     end: Optional[str] = None,
     provider: Optional[str] = None,
     convert_lean: bool = True,
+    mode: str = "full",
 ) -> dict[str, Any]:
     return ingest(
         symbols=["SPY"],
@@ -226,11 +335,12 @@ def ingest_spy(
         end=end,
         provider=provider,
         convert_lean=convert_lean,
+        mode=mode,
     )
 
 
 def load_symbol_parquet(data_root: Optional[Path] = None, symbol: str = "SPY") -> pd.DataFrame:
-    root = Path(data_root or os.getenv("AXIOM_DATA_ROOT") or _repo_data_root())
+    root = Path(data_root or os.getenv("STREET_DATA_ROOT") or _repo_data_root())
     ticker = normalize_symbols([symbol])[0]
     path = root / "market" / "equities" / "US" / "daily" / f"{ticker}.parquet"
     if not path.exists():
@@ -265,7 +375,7 @@ def prune_unreferenced_snapshots(data_root: Path, referenced_keys: set[str]) -> 
 
 
 def data_status(data_root: Optional[Path] = None) -> dict:
-    root = Path(data_root or os.getenv("AXIOM_DATA_ROOT") or _repo_data_root())
+    root = Path(data_root or os.getenv("STREET_DATA_ROOT") or _repo_data_root())
     manifest = load_manifest(root)
     symbols = list_market_symbols(root)
     if not symbols:
@@ -309,6 +419,12 @@ if __name__ == "__main__":
     parser.add_argument("--start", default="2010-01-01")
     parser.add_argument("--end", default=None)
     parser.add_argument("--provider", default="auto")
+    parser.add_argument(
+        "--mode",
+        choices=("full", "incremental"),
+        default="full",
+        help="full = refetch history; incremental = append after last bar",
+    )
     parser.add_argument("--no-lean", action="store_true")
     args = parser.parse_args()
     result = ingest(
@@ -317,6 +433,7 @@ if __name__ == "__main__":
         end=args.end,
         provider=args.provider,
         convert_lean=not args.no_lean,
+        mode=args.mode,
     )
     print(
         json.dumps(

@@ -83,7 +83,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
   });
 
   if (universe.isLoading) {
-    return <Card className="h-40 animate-pulse bg-aq-secondary" />;
+    return <Card className="h-40 animate-pulse bg-as-secondary" />;
   }
   if (universe.error || !universe.data) {
     return (
@@ -101,7 +101,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
   );
 
   return (
-    <div className="space-y-6 aq-enter">
+    <div className="space-y-6 as-enter">
       <PageHeader
         crumbs={[
           { href: "/", label: "首页" },
@@ -127,7 +127,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
             if (symbol.trim()) add.mutate();
           }}
         >
-          <label className="space-y-1 text-[11px] text-aq-muted">
+          <label className="space-y-1 text-[11px] text-as-muted">
             标的
             <Input
               value={symbol}
@@ -136,11 +136,11 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
               className="w-28 uppercase"
             />
           </label>
-          <label className="space-y-1 text-[11px] text-aq-muted">
+          <label className="space-y-1 text-[11px] text-as-muted">
             进入日
             <Input type="date" className="w-[148px]" value={from} onChange={(e) => setFrom(e.target.value)} />
           </label>
-          <label className="space-y-1 text-[11px] text-aq-muted">
+          <label className="space-y-1 text-[11px] text-as-muted">
             退出日（可空）
             <Input
               type="date"
@@ -150,7 +150,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
               onChange={(e) => setTo(e.target.value)}
             />
           </label>
-          <label className="flex h-9 items-center gap-2 text-xs text-aq-muted">
+          <label className="flex h-9 items-center gap-2 text-xs text-as-muted">
             <input
               type="checkbox"
               className="accent-[#1677FF]"
@@ -163,13 +163,13 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
             {add.isPending ? "加入中…" : "加入成分"}
           </Button>
         </form>
-        <p className="mt-3 text-xs text-aq-muted">
+        <p className="mt-3 text-xs text-as-muted">
           推断退市需要该标的已摄取。最后一根 K 线若早于 14 个自然日，则记为 inclusive 退出日；否则视为仍在上市。
         </p>
       </Card>
 
       <Card className="p-0">
-        <div className="border-b border-aq-border px-5 py-3 text-sm font-medium">成分</div>
+        <div className="border-b border-as-border px-5 py-3 text-sm font-medium">成分</div>
         {!members.length ? (
           <EmptyState
             title="这个标的池还没有成分"
@@ -177,8 +177,8 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
           />
         ) : (
           <table className="w-full text-sm">
-            <thead className="text-left text-[11px] uppercase tracking-wide text-aq-muted">
-              <tr className="border-b border-aq-border">
+            <thead className="text-left text-[11px] uppercase tracking-wide text-as-muted">
+              <tr className="border-b border-as-border">
                 <th className="px-5 py-2 font-medium">标的</th>
                 <th className="px-5 py-2 font-medium">有效区间</th>
                 <th className="px-5 py-2 font-medium">状态</th>
@@ -187,9 +187,9 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
             </thead>
             <tbody>
               {members.map((member) => (
-                <tr key={member.id} className="border-b border-aq-border last:border-0">
+                <tr key={member.id} className="border-b border-as-border last:border-0">
                   <td className="px-5 py-3 font-medium tabular-nums">{member.symbol}</td>
-                  <td className="px-5 py-3 tabular-nums text-aq-muted">
+                  <td className="px-5 py-3 tabular-nums text-as-muted">
                     {spanLabel(member.effective_from, member.effective_to)}
                   </td>
                   <td className="px-5 py-3">
@@ -225,7 +225,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
             runPreview.mutate();
           }}
         >
-          <label className="space-y-1 text-[11px] text-aq-muted">
+          <label className="space-y-1 text-[11px] text-as-muted">
             查询日
             <Input type="date" className="w-[148px]" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
           </label>
@@ -234,11 +234,11 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
           </Button>
         </form>
         {preview ? (
-          <p className="mt-3 text-sm tabular-nums text-aq-text">
+          <p className="mt-3 text-sm tabular-nums text-as-text">
             {preview.length ? preview.join(", ") : "该日没有任何成分"}
           </p>
         ) : (
-          <p className="mt-3 text-xs text-aq-muted">不会编造成分。未查询时不显示结果。</p>
+          <p className="mt-3 text-xs text-as-muted">不会编造成分。未查询时不显示结果。</p>
         )}
       </Card>
 

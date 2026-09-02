@@ -55,7 +55,7 @@ def test_orphan_reconcile_fails_stale_running(monkeypatch):
     from services.api.settings import get_settings
 
     get_settings.cache_clear()
-    monkeypatch.setenv("AXIOM_LEAN_TIMEOUT_SECONDS", "60")
+    monkeypatch.setenv("STREET_LEAN_TIMEOUT_SECONDS", "60")
     get_settings.cache_clear()
 
     n = reconcile_orphan_backtests(worker_restart=False)

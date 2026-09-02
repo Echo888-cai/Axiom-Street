@@ -12,9 +12,9 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-aq border border-aq-border bg-aq-bg p-5 shadow-aq",
+        "rounded-as border border-as-border bg-as-bg p-5 shadow-as",
         hover &&
-          "transition-all duration-aq hover:-translate-y-px hover:border-aq-primary/25 hover:shadow-aq-lg",
+          "transition-all duration-as hover:-translate-y-px hover:border-as-primary/25 hover:shadow-as-lg",
         className,
       )}
     >
@@ -35,7 +35,7 @@ export function CardHeader({
   return (
     <div className="mb-4 flex items-start justify-between gap-3">
       <div>
-        <h3 className="text-sm font-medium tracking-tight text-aq-text">{title}</h3>
+        <h3 className="text-sm font-medium tracking-tight text-as-text">{title}</h3>
         {hint ? <div className="mt-0.5">{hint}</div> : null}
       </div>
       {action}

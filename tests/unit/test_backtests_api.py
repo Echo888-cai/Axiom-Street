@@ -77,7 +77,7 @@ def test_inflight_limit_returns_429(client, monkeypatch):
     from services.api.settings import get_settings
 
     get_settings.cache_clear()
-    monkeypatch.setenv("AXIOM_MAX_INFLIGHT_BACKTESTS", "1")
+    monkeypatch.setenv("STREET_MAX_INFLIGHT_BACKTESTS", "1")
     get_settings.cache_clear()
     strategy = _strategy(client)
     body = {
@@ -190,7 +190,7 @@ def test_duplicate_parameter_hash(client, monkeypatch):
     from services.api.settings import get_settings
 
     get_settings.cache_clear()
-    monkeypatch.setenv("AXIOM_MAX_INFLIGHT_BACKTESTS", "10")
+    monkeypatch.setenv("STREET_MAX_INFLIGHT_BACKTESTS", "10")
     get_settings.cache_clear()
     assert client.post("/api/v1/backtests", json=body).status_code == 201
     stats = client.get(f"/api/v1/strategies/{strategy['id']}/trial-stats").json()

@@ -1,16 +1,18 @@
+name: axiom-street
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-axiom}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-axiom}
-      POSTGRES_DB: ${POSTGRES_DB:-axiom}
+      POSTGRES_USER: ${POSTGRES_USER:-street}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-street}
+      POSTGRES_DB: ${POSTGRES_DB:-street}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-axiom} -d ${POSTGRES_DB:-axiom}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-street} -d ${POSTGRES_DB:-street}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -30,16 +32,16 @@ services:
       context: .
       dockerfile: infra/docker/Dockerfile.api
     environment:
-      AXIOM_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-axiom}:${POSTGRES_PASSWORD:-axiom}@postgres:5432/${POSTGRES_DB:-axiom}
-      AXIOM_REDIS_URL: redis://redis:6379/0
-      AXIOM_CELERY_BROKER_URL: redis://redis:6379/0
-      AXIOM_CELERY_RESULT_BACKEND: redis://redis:6379/1
-      AXIOM_DATA_ROOT: /data
-      AXIOM_JOBS_ROOT: /jobs
-      AXIOM_LEAN_IMAGE: quantconnect/lean:16355
-      AXIOM_CORS_ORIGINS: http://localhost:3000
-      AXIOM_SYNC_BACKTESTS: "false"
-      AXIOM_MAX_INFLIGHT_BACKTESTS: "2"
+      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-street}:${POSTGRES_PASSWORD:-street}@postgres:5432/${POSTGRES_DB:-street}
+      STREET_REDIS_URL: redis://redis:6379/0
+      STREET_CELERY_BROKER_URL: redis://redis:6379/0
+      STREET_CELERY_RESULT_BACKEND: redis://redis:6379/1
+      STREET_DATA_ROOT: /data
+      STREET_JOBS_ROOT: /jobs
+      STREET_LEAN_IMAGE: quantconnect/lean:16355
+      STREET_CORS_ORIGINS: http://localhost:3000
+      STREET_SYNC_BACKTESTS: "false"
+      STREET_MAX_INFLIGHT_BACKTESTS: "2"
     ports:
       - "8000:8000"
     volumes:
@@ -62,15 +64,15 @@ services:
       dockerfile: infra/docker/Dockerfile.api
     command: celery -A services.worker.celery_app worker --beat --loglevel=INFO --concurrency=2
     environment:
-      AXIOM_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-axiom}:${POSTGRES_PASSWORD:-axiom}@postgres:5432/${POSTGRES_DB:-axiom}
-      AXIOM_REDIS_URL: redis://redis:6379/0
-      AXIOM_CELERY_BROKER_URL: redis://redis:6379/0
-      AXIOM_CELERY_RESULT_BACKEND: redis://redis:6379/1
-      AXIOM_DATA_ROOT: "${PWD}/data"
-      AXIOM_JOBS_ROOT: "${PWD}/jobs"
-      AXIOM_LEAN_IMAGE: quantconnect/lean:16355
-      AXIOM_WORKER_CONCURRENCY: "2"
-      AXIOM_LEAN_TIMEOUT_SECONDS: "1800"
+      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-street}:${POSTGRES_PASSWORD:-street}@postgres:5432/${POSTGRES_DB:-street}
+      STREET_REDIS_URL: redis://redis:6379/0
+      STREET_CELERY_BROKER_URL: redis://redis:6379/0
+      STREET_CELERY_RESULT_BACKEND: redis://redis:6379/1
+      STREET_DATA_ROOT: "${PWD}/data"
+      STREET_JOBS_ROOT: "${PWD}/jobs"
+      STREET_LEAN_IMAGE: quantconnect/lean:16355
+      STREET_WORKER_CONCURRENCY: "2"
+      STREET_LEAN_TIMEOUT_SECONDS: "1800"
       DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       # Bind the host paths at the same location so `docker run -v` from the

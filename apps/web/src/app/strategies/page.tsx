@@ -37,7 +37,7 @@ export default function StrategiesPage() {
   });
 
   return (
-    <div className="space-y-6 aq-enter">
+    <div className="space-y-6 as-enter">
       <PageHeader
         title="策略实验室"
         description="把投资假设变成可验证、可复现的量化策略。"
@@ -49,7 +49,7 @@ export default function StrategiesPage() {
       />
 
       {isLoading ? (
-        <Card className="h-40 animate-pulse bg-aq-secondary" />
+        <Card className="h-40 animate-pulse bg-as-secondary" />
       ) : error ? (
         <Card>
           <EmptyState title="API 未连接" description="请先启动 FastAPI 服务（端口 8000）。" />
@@ -68,24 +68,24 @@ export default function StrategiesPage() {
           />
         </Card>
       ) : (
-        <div className="grid gap-3 aq-stagger">
+        <div className="grid gap-3 as-stagger">
           {data.map((s) => (
             <Link key={s.id} href={`/strategies/${s.id}`}>
               <Card hover className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-aq-text">{s.name}</div>
+                    <div className="text-sm font-medium text-as-text">{s.name}</div>
                     <Badge tone="blue">{s.benchmark}</Badge>
                   </div>
-                  <div className="mt-1 text-xs text-aq-muted">{s.description || "暂无描述"}</div>
+                  <div className="mt-1 text-xs text-as-muted">{s.description || "暂无描述"}</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="hidden text-right sm:block">
-                    <div className="text-[11px] text-aq-muted">v{s.latest_version?.version ?? 1}</div>
-                    <div className="text-[11px] text-aq-muted">{formatRelative(s.updated_at)}</div>
+                    <div className="text-[11px] text-as-muted">v{s.latest_version?.version ?? 1}</div>
+                    <div className="text-[11px] text-as-muted">{formatRelative(s.updated_at)}</div>
                   </div>
                   <Badge tone="neutral">{labelStatus(s.status)}</Badge>
-                  <ChevronRight className="h-4 w-4 text-aq-muted" />
+                  <ChevronRight className="h-4 w-4 text-as-muted" />
                 </div>
               </Card>
             </Link>

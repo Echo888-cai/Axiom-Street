@@ -154,11 +154,11 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
   });
 
   if (isLoading || !strategy) {
-    return <Card className="h-[70vh] animate-pulse bg-aq-secondary" />;
+    return <Card className="h-[70vh] animate-pulse bg-as-secondary" />;
   }
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-4 aq-enter">
+    <div className="flex h-[calc(100vh-7rem)] flex-col gap-4 as-enter">
       <PageHeader
         crumbs={[
           { href: "/", label: "首页" },
@@ -187,7 +187,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
           ) : (
             <button
               type="button"
-              className="cursor-text rounded-lg text-left hover:bg-aq-secondary"
+              className="cursor-text rounded-lg text-left hover:bg-as-secondary"
               onClick={() => setEditingName(true)}
               title="点击重命名"
             >
@@ -208,17 +208,17 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-aq border border-aq-border bg-aq-bg px-3 py-2.5 shadow-aq">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-as border border-as-border bg-as-bg px-3 py-2.5 shadow-as">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-1.5 text-[11px] text-aq-muted">
+          <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
             开始
             <Input type="date" className="w-[138px]" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-aq-muted">
+          <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
             结束
             <Input type="date" className="w-[138px]" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-aq-muted">
+          <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
             本金
             <Input
               type="number"
@@ -229,10 +229,10 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
               onChange={(e) => setCapital(e.target.value)}
             />
           </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-aq-muted">
+          <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
             标的池
             <select
-              className="h-9 rounded-lg border border-aq-border bg-aq-bg px-2 text-sm text-aq-text outline-none focus:border-aq-primary/40"
+              className="h-9 rounded-lg border border-as-border bg-as-bg px-2 text-sm text-as-text outline-none focus:border-as-primary/40"
               value={universeId}
               onChange={(e) => setUniverseId(e.target.value)}
             >
@@ -266,7 +266,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
       </div>
 
       {trialStats.data && trialStats.data.total_trials > 0 ? (
-        <p className="text-xs text-aq-muted">
+        <p className="text-xs text-as-muted">
           已在此策略族上试验 {trialStats.data.total_trials} 次
           {trialStats.data.by_snapshot[0]
             ? `（当前快照 ${trialStats.data.by_snapshot[0].snapshot_key || "—"}：${trialStats.data.by_snapshot[0].count} 次）`
@@ -276,21 +276,21 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
       ) : null}
 
       {code.includes("AfterMarketClose") ? (
-        <p className="text-xs text-aq-negative">
+        <p className="text-xs text-as-negative">
           当前代码使用了已失效的 AfterMarketClose。请点击「恢复模板代码」，否则回测会失败。
         </p>
       ) : null}
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-4">
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
-          <div className="border-b border-aq-border px-4 py-3 text-sm font-medium">策略构建器</div>
+          <div className="border-b border-as-border px-4 py-3 text-sm font-medium">策略构建器</div>
           <BuilderPanel config={config} onChange={setConfig} />
         </Card>
 
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-6">
-          <div className="flex items-center justify-between border-b border-aq-border px-4 py-3">
+          <div className="flex items-center justify-between border-b border-as-border px-4 py-3">
             <div className="text-sm font-medium">strategy.py</div>
-            <span className="text-[11px] text-aq-muted">Python · Monaco · ⌘S 保存</span>
+            <span className="text-[11px] text-as-muted">Python · Monaco · ⌘S 保存</span>
           </div>
           <div className="min-h-0 flex-1">
             <Editor
@@ -312,7 +312,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         </Card>
 
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
-          <div className="border-b border-aq-border px-4 py-3 text-sm font-medium">版本历史</div>
+          <div className="border-b border-as-border px-4 py-3 text-sm font-medium">版本历史</div>
           <VersionHistory
             versions={versions.data || []}
             currentId={strategy.latest_version?.id}

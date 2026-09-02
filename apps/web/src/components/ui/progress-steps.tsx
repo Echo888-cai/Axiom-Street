@@ -20,18 +20,18 @@ export function ProgressSteps({
             <span
               className={cn(
                 "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-medium",
-                done && "bg-aq-positive text-white",
-                here && "bg-aq-primary text-white",
-                !done && !here && "bg-aq-secondary text-aq-muted",
+                done && "bg-as-positive text-white",
+                here && "bg-as-primary text-white",
+                !done && !here && "bg-as-secondary text-as-muted",
               )}
             >
               {done ? <Check className="h-3 w-3" /> : i + 1}
             </span>
-            <span className={cn("text-xs", here ? "font-medium text-aq-text" : "text-aq-muted")}>
+            <span className={cn("text-xs", here ? "font-medium text-as-text" : "text-as-muted")}>
               {step}
             </span>
             {i < steps.length - 1 ? (
-              <span className="hidden h-px w-6 bg-aq-border sm:block" />
+              <span className="hidden h-px w-6 bg-as-border sm:block" />
             ) : null}
           </li>
         );

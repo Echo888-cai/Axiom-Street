@@ -13,7 +13,7 @@ export function VersionHistory({
   onSelect: (version: StrategyVersion) => void;
 }) {
   if (!versions.length) {
-    return <p className="p-4 text-xs text-aq-muted">还没有版本记录。</p>;
+    return <p className="p-4 text-xs text-as-muted">还没有版本记录。</p>;
   }
   return (
     <ul className="space-y-1 overflow-auto p-3">
@@ -23,17 +23,17 @@ export function VersionHistory({
             type="button"
             onClick={() => onSelect(v)}
             className={cn(
-              "w-full cursor-pointer rounded-lg px-3 py-2.5 text-left transition-colors duration-aq",
-              v.id === currentId ? "bg-[rgba(22,119,255,0.08)]" : "hover:bg-aq-secondary",
+              "w-full cursor-pointer rounded-lg px-3 py-2.5 text-left transition-colors duration-as",
+              v.id === currentId ? "bg-[rgba(22,119,255,0.08)]" : "hover:bg-as-secondary",
             )}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-aq-text">v{v.version}</span>
-              <span className="text-[10px] tabular text-aq-muted">
+              <span className="text-sm font-medium text-as-text">v{v.version}</span>
+              <span className="text-[10px] tabular text-as-muted">
                 {v.created_at.slice(0, 16).replace("T", " ")}
               </span>
             </div>
-            <p className="mt-0.5 truncate text-[11px] text-aq-muted">
+            <p className="mt-0.5 truncate text-[11px] text-as-muted">
               {v.commit_message || "无说明"}
             </p>
           </button>

@@ -42,16 +42,16 @@ export function ToastViewport() {
           key={item.id}
           type="button"
           onClick={() => dismiss(item.id)}
-          className="pointer-events-auto aq-scale-in flex items-start gap-3 rounded-aq border border-aq-border bg-aq-bg px-4 py-3 text-left text-sm shadow-aq-lg"
+          className="pointer-events-auto as-scale-in flex items-start gap-3 rounded-as border border-as-border bg-as-bg px-4 py-3 text-left text-sm shadow-as-lg"
         >
           {item.tone === "ok" ? (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-aq-positive" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-as-positive" />
           ) : item.tone === "err" ? (
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-aq-negative" />
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-as-negative" />
           ) : (
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-aq-primary" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-as-primary" />
           )}
-          <span className="text-aq-text">{item.title}</span>
+          <span className="text-as-text">{item.title}</span>
         </button>
       ))}
     </div>

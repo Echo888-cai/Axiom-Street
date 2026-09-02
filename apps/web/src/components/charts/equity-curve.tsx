@@ -99,10 +99,10 @@ export function EquityCurve({
   return (
     <div>
       <div ref={containerRef} className="w-full" />
-      <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-aq-muted">
+      <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-as-muted">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-3 rounded-full bg-aq-primary" />
+            <span className="h-1.5 w-3 rounded-full bg-as-primary" />
             策略
           </span>
           <span className="inline-flex items-center gap-1.5">

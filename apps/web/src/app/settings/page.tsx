@@ -37,13 +37,13 @@ export default function SettingsPage() {
   const symbolsLabel = (status.data?.symbols || []).join(", ") || String(m.symbol || "—");
 
   return (
-    <div className="space-y-6 aq-enter">
+    <div className="space-y-6 as-enter">
       <PageHeader
         title="设置"
         description="本地单用户工作区。行情默认走 Yahoo Finance。不支持分红的数据源（如 Stooq）会拒绝调整价回测，不会静默降级。"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 aq-stagger">
+      <div className="grid gap-4 md:grid-cols-2 as-stagger">
         <Card>
           <CardHeader title="运行环境" />
           <dl className="space-y-3 text-sm">
@@ -69,13 +69,13 @@ export default function SettingsPage() {
               value={`${m.start ? String(m.start).slice(0, 10) : "—"} → ${m.end ? String(m.end).slice(0, 10) : "—"}`}
             />
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-aq-muted">SHA256</dt>
-              <dd className="flex items-center gap-2 text-xs tabular text-aq-muted">
+              <dt className="text-as-muted">SHA256</dt>
+              <dd className="flex items-center gap-2 text-xs tabular text-as-muted">
                 {m.sha256 ? `${String(m.sha256).slice(0, 12)}…` : "—"}
                 {m.sha256 ? (
                   <button
                     type="button"
-                    className="cursor-pointer text-aq-primary"
+                    className="cursor-pointer text-as-primary"
                     onClick={() => {
                       navigator.clipboard.writeText(String(m.sha256));
                       toast("已复制指纹", "ok");
@@ -100,12 +100,12 @@ export default function SettingsPage() {
             <Row label="LEAN 数据" value={status.data?.lean_ready ? "已转换" : "未转换"} />
           </dl>
           {status.data?.quality_report?.issues && status.data.quality_report.issues.length > 0 ? (
-            <div className="mt-4 rounded-aq border border-aq-border bg-aq-secondary px-3 py-2 text-xs">
-              <div className="mb-1 font-medium text-aq-text">数据质量</div>
-              <ul className="space-y-1 text-aq-muted">
+            <div className="mt-4 rounded-as border border-as-border bg-as-secondary px-3 py-2 text-xs">
+              <div className="mb-1 font-medium text-as-text">数据质量</div>
+              <ul className="space-y-1 text-as-muted">
                 {status.data.quality_report.issues.map((issue) => (
                   <li key={`${issue.rule}-${issue.severity}`}>
-                    <span className={issue.severity === "blocking" ? "text-aq-negative" : ""}>
+                    <span className={issue.severity === "blocking" ? "text-as-negative" : ""}>
                       {issue.severity === "blocking" ? "阻断" : "警告"} · {issue.rule}
                     </span>
                     {" — "}
@@ -115,10 +115,10 @@ export default function SettingsPage() {
               </ul>
             </div>
           ) : status.data?.ready ? (
-            <p className="mt-4 text-xs text-aq-muted">质量校验通过，无阻断问题。</p>
+            <p className="mt-4 text-xs text-as-muted">质量校验通过，无阻断问题。</p>
           ) : null}
           <div className="mt-5 space-y-2">
-            <label className="block text-xs text-aq-muted" htmlFor="ingest-symbols">
+            <label className="block text-xs text-as-muted" htmlFor="ingest-symbols">
               标的（逗号分隔）
             </label>
             <div className="flex flex-wrap items-center gap-2">
@@ -135,9 +135,9 @@ export default function SettingsPage() {
               </Button>
             </div>
             {ingest.isPending ? (
-              <p className="text-[11px] text-aq-muted">正在下载并转换日线数据，通常需要几秒到几十秒。</p>
+              <p className="text-[11px] text-as-muted">正在下载并转换日线数据，通常需要几秒到几十秒。</p>
             ) : (
-              <p className="text-[11px] text-aq-muted">
+              <p className="text-[11px] text-as-muted">
                 每次拉取写入新的不可变快照，不会覆盖旧数据。多标的请一次填齐，例如 SPY, QQQ。
               </p>
             )}
@@ -153,12 +153,12 @@ export default function SettingsPage() {
               value={lean?.source === "worker" ? "Worker" : lean?.source === "api" ? "API 本地" : "—"}
             />
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-aq-muted">Docker</dt>
+              <dt className="text-as-muted">Docker</dt>
               <dd className="flex items-center gap-2">
                 <span
                   className={cn(
                     "h-1.5 w-1.5 rounded-full",
-                    lean?.docker_available ? "bg-aq-positive aq-live-dot" : "bg-aq-negative",
+                    lean?.docker_available ? "bg-as-positive as-live-dot" : "bg-as-negative",
                   )}
                 />
                 {lean?.docker_available ? (
@@ -169,7 +169,7 @@ export default function SettingsPage() {
               </dd>
             </div>
           </dl>
-          <p className="mt-4 text-xs leading-relaxed text-aq-muted">
+          <p className="mt-4 text-xs leading-relaxed text-as-muted">
             {lean?.note ||
               "真实回测由 worker 通过 Docker 运行 LEAN。本机可用 Colima 替代 Docker Desktop。"}
           </p>
@@ -177,23 +177,23 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader title="API Key（可选，后续）" />
-          <p className="text-sm leading-relaxed text-aq-muted">
+          <p className="text-sm leading-relaxed text-as-muted">
             当前不需要 Key。Polygon 双源对账与模拟交易会在后续阶段接入，届时写入{" "}
-            <code className="text-aq-text">.env</code>。
+            <code className="text-as-text">.env</code>。
           </p>
-          <ul className="mt-4 space-y-2 text-xs text-aq-muted">
+          <ul className="mt-4 space-y-2 text-xs text-as-muted">
             <li>
-              <span className="text-aq-text">POLYGON_API_KEY</span> — Polygon 美股（Phase 2）
+              <span className="text-as-text">POLYGON_API_KEY</span> — Polygon 美股（Phase 2）
             </li>
             <li>
-              <span className="text-aq-text">ALPACA_API_KEY</span> +{" "}
-              <span className="text-aq-text">ALPACA_API_SECRET</span> — 行情与模拟盘
+              <span className="text-as-text">ALPACA_API_KEY</span> +{" "}
+              <span className="text-as-text">ALPACA_API_SECRET</span> — 行情与模拟盘
             </li>
             <li>
-              <span className="text-aq-text">ALPHA_VANTAGE_API_KEY</span>
+              <span className="text-as-text">ALPHA_VANTAGE_API_KEY</span>
             </li>
             <li>
-              <span className="text-aq-text">TIINGO_API_KEY</span>
+              <span className="text-as-text">TIINGO_API_KEY</span>
             </li>
           </ul>
         </Card>
@@ -205,8 +205,8 @@ export default function SettingsPage() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-aq-muted">{label}</dt>
-      <dd className="text-right text-aq-text">{value}</dd>
+      <dt className="text-as-muted">{label}</dt>
+      <dd className="text-right text-as-text">{value}</dd>
     </div>
   );
 }

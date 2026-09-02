@@ -103,7 +103,7 @@ export function CommandPalette({
     <div className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-[14vh]">
       <button
         type="button"
-        className="absolute inset-0 bg-[rgba(15,23,42,0.28)] aq-fade"
+        className="absolute inset-0 bg-[rgba(15,23,42,0.28)] as-fade"
         aria-label="关闭命令盘"
         onClick={onClose}
       />
@@ -111,16 +111,16 @@ export function CommandPalette({
         role="dialog"
         aria-modal="true"
         aria-label="命令盘"
-        className="relative w-full max-w-[560px] overflow-hidden rounded-aq border border-aq-border bg-aq-bg shadow-aq-lg aq-scale-in"
+        className="relative w-full max-w-[560px] overflow-hidden rounded-as border border-as-border bg-as-bg shadow-as-lg as-scale-in"
       >
-        <div className="flex items-center gap-2 border-b border-aq-border px-4">
-          <Search className="h-4 w-4 text-aq-muted" />
+        <div className="flex items-center gap-2 border-b border-as-border px-4">
+          <Search className="h-4 w-4 text-as-muted" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜索策略、回测、页面…"
-            className="h-12 w-full bg-transparent text-sm text-aq-text outline-none placeholder:text-aq-muted"
+            className="h-12 w-full bg-transparent text-sm text-as-text outline-none placeholder:text-as-muted"
             onKeyDown={(e) => {
               if (e.key === "ArrowDown") {
                 e.preventDefault();
@@ -137,13 +137,13 @@ export function CommandPalette({
         </div>
         <div className="max-h-[420px] overflow-auto py-2">
           {!hits.length ? (
-            <p className="px-4 py-10 text-center text-sm text-aq-muted">没有匹配结果</p>
+            <p className="px-4 py-10 text-center text-sm text-as-muted">没有匹配结果</p>
           ) : (
             groups.map((group) => {
               const items = hits.filter((h) => h.group === group);
               return (
                 <div key={group} className="px-2 py-1">
-                  <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-aq-muted">
+                  <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-as-muted">
                     {group}
                   </div>
                   {items.map((hit) => {
@@ -155,11 +155,11 @@ export function CommandPalette({
                         onMouseEnter={() => setActive(index)}
                         onClick={() => go(hit.href)}
                         className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${
-                          index === active ? "bg-aq-secondary" : ""
+                          index === active ? "bg-as-secondary" : ""
                         }`}
                       >
-                        <span className="truncate text-aq-text">{hit.title}</span>
-                        <span className="ml-3 shrink-0 text-[11px] text-aq-muted">{hit.meta}</span>
+                        <span className="truncate text-as-text">{hit.title}</span>
+                        <span className="ml-3 shrink-0 text-[11px] text-as-muted">{hit.meta}</span>
                       </button>
                     );
                   })}
@@ -168,15 +168,15 @@ export function CommandPalette({
             })
           )}
         </div>
-        <div className="flex items-center gap-3 border-t border-aq-border bg-aq-secondary/50 px-4 py-2 text-[11px] text-aq-muted">
+        <div className="flex items-center gap-3 border-t border-as-border bg-as-secondary/50 px-4 py-2 text-[11px] text-as-muted">
           <span>
-            <kbd className="rounded border border-aq-border bg-aq-bg px-1">↑↓</kbd> 选择
+            <kbd className="rounded border border-as-border bg-as-bg px-1">↑↓</kbd> 选择
           </span>
           <span>
-            <kbd className="rounded border border-aq-border bg-aq-bg px-1">↵</kbd> 打开
+            <kbd className="rounded border border-as-border bg-as-bg px-1">↵</kbd> 打开
           </span>
           <span>
-            <kbd className="rounded border border-aq-border bg-aq-bg px-1">esc</kbd> 关闭
+            <kbd className="rounded border border-as-border bg-as-bg px-1">esc</kbd> 关闭
           </span>
         </div>
       </div>

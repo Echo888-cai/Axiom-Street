@@ -23,17 +23,17 @@ function StatusRow({
 }) {
   return (
     <div className="mt-2.5 first:mt-0">
-      <div className="flex items-center gap-2 text-xs text-aq-text">
+      <div className="flex items-center gap-2 text-xs text-as-text">
         <span
           className={cn(
             "h-1.5 w-1.5 rounded-full",
-            ok ? "bg-aq-positive" : warn ? "bg-[#F79009]" : "bg-aq-negative",
-            ok && "aq-live-dot",
+            ok ? "bg-as-positive" : warn ? "bg-[#F79009]" : "bg-as-negative",
+            ok && "as-live-dot",
           )}
         />
         {label}
       </div>
-      <p className="mt-0.5 pl-3.5 text-[11px] leading-relaxed text-aq-muted">{detail}</p>
+      <p className="mt-0.5 pl-3.5 text-[11px] leading-relaxed text-as-muted">{detail}</p>
     </div>
   );
 }
@@ -71,12 +71,12 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "flex h-screen shrink-0 flex-col border-r border-aq-border bg-aq-bg transition-[width] duration-300",
+        "flex h-screen shrink-0 flex-col border-r border-as-border bg-as-bg transition-[width] duration-300",
         collapsed ? "w-[72px]" : "w-[232px]",
       )}
     >
       <div className={cn("flex items-center gap-3 px-4 py-5", collapsed && "justify-center px-2")}>
-        <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-aq-border">
+        <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-as-border">
           <Image
             src="/logo.png"
             alt="Axiom Street"
@@ -88,10 +88,10 @@ export function AppSidebar() {
         </div>
         {!collapsed ? (
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold tracking-tight text-aq-text">
+            <div className="truncate text-sm font-semibold tracking-tight text-as-text">
               Axiom Street
             </div>
-            <div className="truncate text-[11px] text-aq-muted">Honest Quant Research</div>
+            <div className="truncate text-[11px] text-as-muted">Honest Quant Research</div>
           </div>
         ) : null}
       </div>
@@ -104,7 +104,7 @@ export function AppSidebar() {
           return (
             <div key={section.label}>
               {!collapsed ? (
-                <div className="px-3 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-aq-muted">
+                <div className="px-3 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-as-muted">
                   {section.label}
                 </div>
               ) : null}
@@ -121,10 +121,10 @@ export function AppSidebar() {
                       href={item.href}
                       title={item.label}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-aq",
+                        "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-as",
                         active
-                          ? "bg-[rgba(22,119,255,0.08)] font-medium text-aq-primary"
-                          : "text-aq-muted hover:bg-aq-secondary hover:text-aq-text",
+                          ? "bg-[rgba(22,119,255,0.08)] font-medium text-as-primary"
+                          : "text-as-muted hover:bg-as-secondary hover:text-as-text",
                         collapsed && "justify-center px-2",
                       )}
                     >
@@ -139,9 +139,9 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <div className="space-y-3 border-t border-aq-border p-3">
+      <div className="space-y-3 border-t border-as-border p-3">
         {!collapsed ? (
-          <div className="rounded-aq border border-aq-border bg-aq-secondary/60 p-3">
+          <div className="rounded-as border border-as-border bg-as-secondary/60 p-3">
             <StatusRow
               ok={apiOk}
               label="系统状态"
@@ -160,7 +160,7 @@ export function AppSidebar() {
                 dockerOk ? (
                   "LEAN / Docker 可用"
                 ) : (
-                  <Link href="/settings" className="text-aq-primary">
+                  <Link href="/settings" className="text-as-primary">
                     {dockerNote || "Worker 尚未上报 Docker 状态"}
                   </Link>
                 )
@@ -171,10 +171,10 @@ export function AppSidebar() {
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs text-aq-muted transition-colors hover:bg-aq-secondary hover:text-aq-text"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs text-as-muted transition-colors hover:bg-as-secondary hover:text-as-text"
         >
           <ChevronLeft
-            className={cn("h-4 w-4 transition-transform duration-aq", collapsed && "rotate-180")}
+            className={cn("h-4 w-4 transition-transform duration-as", collapsed && "rotate-180")}
           />
           {!collapsed ? "收起" : null}
         </button>

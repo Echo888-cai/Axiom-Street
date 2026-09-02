@@ -6,7 +6,7 @@ from services.api.settings import get_settings
 settings = get_settings()
 
 celery_app = Celery(
-    "axiom_quant",
+    "axiom_street",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
     include=["services.worker.tasks"],

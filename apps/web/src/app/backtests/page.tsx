@@ -39,7 +39,7 @@ export default function BacktestsPage() {
   }, [data, filter]);
 
   return (
-    <div className="space-y-6 aq-enter">
+    <div className="space-y-6 as-enter">
       <PageHeader
         title="回测"
         description="使用冻结数据与固定引擎版本的可复现 LEAN 回测。"
@@ -51,7 +51,7 @@ export default function BacktestsPage() {
       />
 
       {isLoading ? (
-        <Card className="h-40 animate-pulse bg-aq-secondary" />
+        <Card className="h-40 animate-pulse bg-as-secondary" />
       ) : error ? (
         <Card>
           <EmptyState title="API 未连接" description="请先启动 API（端口 8000）。" />
@@ -72,16 +72,16 @@ export default function BacktestsPage() {
       ) : (
         <>
           <Tabs value={filter} onChange={setFilter} items={FILTERS} />
-          <div className="space-y-3 aq-stagger">
+          <div className="space-y-3 as-stagger">
             {rows.map((bt) => (
               <Link key={bt.id} href={`/backtests/${bt.id}`}>
                 <Card hover className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-aq-text">
+                    <div className="truncate text-sm font-medium text-as-text">
                       {bt.strategy_name || "未命名策略"}
                       {bt.version_number ? ` · v${bt.version_number}` : ""}
                     </div>
-                    <div className="mt-1 text-xs text-aq-muted">
+                    <div className="mt-1 text-xs text-as-muted">
                       {bt.start_date} → {bt.end_date}
                       {bt.engine_version ? ` · ${bt.engine_version}` : ""}
                     </div>
@@ -97,13 +97,13 @@ export default function BacktestsPage() {
                     <Badge tone={BACKTEST_TONE[bt.status] || "blue"}>
                       {labelStatus(bt.status)}
                     </Badge>
-                    <ChevronRight className="h-4 w-4 text-aq-muted" />
+                    <ChevronRight className="h-4 w-4 text-as-muted" />
                   </div>
                 </Card>
               </Link>
             ))}
             {!rows.length ? (
-              <p className="py-8 text-center text-sm text-aq-muted">这一筛选下没有记录。</p>
+              <p className="py-8 text-center text-sm text-as-muted">这一筛选下没有记录。</p>
             ) : null}
           </div>
         </>
@@ -124,10 +124,10 @@ function Metric({
   neg?: boolean;
 }) {
   const tone =
-    neg ? "text-aq-negative" : pos != null && pos >= 0 ? "text-aq-positive" : pos != null ? "text-aq-negative" : "text-aq-text";
+    neg ? "text-as-negative" : pos != null && pos >= 0 ? "text-as-positive" : pos != null ? "text-as-negative" : "text-as-text";
   return (
     <div className="text-right">
-      <div className="text-[10px] text-aq-muted">{label}</div>
+      <div className="text-[10px] text-as-muted">{label}</div>
       <div className={`text-xs tabular ${tone}`}>{value}</div>
     </div>
   );

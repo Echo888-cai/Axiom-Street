@@ -26,6 +26,7 @@ class IngestRequest(BaseModel):
     end: Optional[str] = None
     provider: str = Field(default="auto", description="auto | yfinance | stooq")
     convert_lean: bool = True
+    mode: str = Field(default="full", description="full | incremental")
 
 
 def _lean_engine_status() -> dict:
@@ -51,6 +52,7 @@ def _run_ingest(payload: IngestRequest, db: Session) -> dict:
             end=payload.end,
             provider=payload.provider,
             convert_lean=payload.convert_lean,
+            mode=payload.mode,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -77,6 +79,9 @@ def _run_ingest(payload: IngestRequest, db: Session) -> dict:
         "data_snapshot_id": str(snapshot.id),
         "symbols": result.get("symbols") or tickers,
         "quality_report": result.get("quality_report"),
+        "ingest_mode": result.get("ingest_mode") or payload.mode,
+        "fetch_windows": result.get("fetch_windows"),
+        "prior_snapshot_key": result.get("prior_snapshot_key"),
         "status": data_status(Path(settings.data_root)),
     }
 

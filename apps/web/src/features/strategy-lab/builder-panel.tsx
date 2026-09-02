@@ -32,13 +32,13 @@ export function BuilderPanel({
   return (
     <div className="space-y-4 overflow-auto p-4">
       <label className="block">
-        <div className="mb-1.5 text-[11px] font-medium text-aq-muted">投资假设</div>
+        <div className="mb-1.5 text-[11px] font-medium text-as-muted">投资假设</div>
         <textarea
           value={hypothesis}
           onChange={(e) => onChange({ ...config, hypothesis: e.target.value })}
           rows={4}
           placeholder="用一句话写下这条策略为什么应该赚钱。"
-          className="w-full resize-none rounded-lg border border-aq-border bg-aq-bg px-3 py-2 text-sm leading-relaxed text-aq-text outline-none placeholder:text-aq-muted focus:border-aq-primary/40 focus:ring-2 focus-visible:ring-aq-primary/20"
+          className="w-full resize-none rounded-lg border border-as-border bg-as-bg px-3 py-2 text-sm leading-relaxed text-as-text outline-none placeholder:text-as-muted focus:border-as-primary/40 focus:ring-2 focus-visible:ring-as-primary/20"
         />
       </label>
       <Field label="标的">
@@ -81,7 +81,7 @@ export function BuilderPanel({
           onChange={(e) => patch("risk", "max_position_pct", (Number(e.target.value) || 100) / 100)}
         />
       </Field>
-      <p className="text-[11px] leading-relaxed text-aq-muted">
+      <p className="text-[11px] leading-relaxed text-as-muted">
         入场：{String(signal.entry_signal || "close > SMA")}。成交约定为收盘信号、下一根 K 线成交。
       </p>
     </div>
@@ -100,8 +100,8 @@ function Field({
   return (
     <label className="block">
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-medium text-aq-muted">{label}</span>
-        {hint ? <span className="text-[10px] text-aq-muted">{hint}</span> : null}
+        <span className="text-[11px] font-medium text-as-muted">{label}</span>
+        {hint ? <span className="text-[10px] text-as-muted">{hint}</span> : null}
       </div>
       {children}
     </label>

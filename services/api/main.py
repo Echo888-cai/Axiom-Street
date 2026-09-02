@@ -27,7 +27,7 @@ def _alembic_upgrade() -> None:
 def bootstrap_schema() -> None:
     """Apply schema via Alembic. In-memory/test DBs use create_all (no migration history)."""
     settings = get_settings()
-    skip = os.getenv("AXIOM_SKIP_MIGRATIONS", "").lower() in {"1", "true", "yes"}
+    skip = os.getenv("STREET_SKIP_MIGRATIONS", "").lower() in {"1", "true", "yes"}
     if skip or ":memory:" in settings.database_url:
         Base.metadata.create_all(bind=engine)
         return
@@ -37,9 +37,9 @@ def bootstrap_schema() -> None:
 def seed_local_user() -> None:
     db = SessionLocal()
     try:
-        existing = db.query(User).filter(User.email == "local@axiom.quant").first()
+        existing = db.query(User).filter(User.email == "local@axiom.street").first()
         if not existing:
-            db.add(User(email="local@axiom.quant", display_name="David"))
+            db.add(User(email="local@axiom.street", display_name="David"))
             db.commit()
     finally:
         db.close()

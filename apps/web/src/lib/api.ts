@@ -215,7 +215,12 @@ export const api = {
     request<MonthlyReturn[]>(`/api/v1/backtests/${id}/monthly-returns`),
   eventsUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/events`,
   dataStatus: () => request<DataStatus>("/api/v1/data/status"),
-  ingest: (body?: { symbols?: string[]; start?: string; provider?: string }) =>
+  ingest: (body?: {
+    symbols?: string[];
+    start?: string;
+    provider?: string;
+    mode?: "full" | "incremental";
+  }) =>
     request<{ ok: boolean; status: DataStatus; symbols?: string[] }>("/api/v1/data/ingest", {
       method: "POST",
       body: JSON.stringify({
