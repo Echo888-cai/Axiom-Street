@@ -1,7 +1,21 @@
-# 架构
+# Axiom Street 架构
 
 > 本文描述**目标架构**，并标注每一层的当前状态。
 > 愿景见 `docs/VISION.md`，施工计划见 `docs/ROADMAP.md`。
+
+## 仓库布局
+
+| 路径 | 职责 |
+|------|------|
+| `apps/web` | Next.js 研究工作台 UI |
+| `services/api` | FastAPI；唯一的数据库写入路径 |
+| `services/worker` | Celery worker；持有 `docker.sock`，执行 LEAN |
+| `quant/` | 纯 Python 量化核心（不依赖 web framework） |
+| `data/` | 不可变行情快照与 manifest |
+| `tests/` | 单元测试 + Golden Backtest |
+| `design-system/axiom-street` | 设计令牌 |
+| `brand/` | 品牌主视觉 |
+| `docs/` | 愿景 / 路线图 / 架构 / 数据契约 |
 
 ---
 

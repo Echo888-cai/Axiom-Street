@@ -4,7 +4,7 @@ LEAN's Sharpe/Sortino default to a 1% risk-free rate. Axiom defaults to 0%
 (configurable via ``risk_free_rate``). CAGR and max drawdown do not depend on
 that assumption and are compared directly.
 
-Tolerances (docs/PHASE-1.5.md WP-1):
+Tolerances (Phase 1.5 reconciliation baseline):
 Sharpe ±0.05, CAGR ±0.1 percentage points, MaxDD ±0.5 percentage points.
 """
 

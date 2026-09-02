@@ -1,56 +1,117 @@
-# Axiom Quant
+<p align="center">
+  <img src="brand/logo.png" alt="Axiom Street" width="160" />
+</p>
 
-**一个让你难以自欺的量化研究环境。**
+<h1 align="center">Axiom Street</h1>
 
-量化研究真正的失败模式不是「找不到策略」，而是「找到了一个不存在的策略并且信了它」。Axiom Quant 不追求成为最快的回测器，而是成为最诚实的那个——把统计有效性当作核心功能，而不是可选的附加报告。
+<p align="center">
+  <strong>Honest quantitative research.</strong><br />
+  Built so you cannot easily fool yourself.
+</p>
 
-完整定位、核心信念与反目标见 **[`docs/VISION.md`](docs/VISION.md)**。
+<p align="center">
+  A research workbench where statistical validity is a first-class product feature —<br />
+  not an optional appendix at the bottom of a pretty backtest report.
+</p>
 
-## 文档
+---
 
-按此顺序阅读：
+## Why Axiom Street exists
 
-| 文档 | 内容 |
-|------|------|
-| [`docs/VISION.md`](docs/VISION.md) | 产品愿景与六条核心信念。**与路线图冲突时以愿景为准** |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | 代码审查结论、P0 缺陷清单、全阶段施工蓝图 |
-| [`docs/PHASE-1.5.md`](docs/PHASE-1.5.md) | Phase 1.5 可信性加固（已完成） |
-| [`docs/PHASE-2.md`](docs/PHASE-2.md) | **当前阶段**的可执行任务清单（WP-1 → WP-4） |
-| [`docs/architecture.md`](docs/architecture.md) | 目标架构、不可违反的边界、可复现性契约 |
-| [`docs/data-sources.md`](docs/data-sources.md) | 数据源与摄取 |
-| [`design-system/axiom-quant/MASTER.md`](design-system/axiom-quant/MASTER.md) | 设计令牌与反模式 |
-| [`.cursor/rules/axiom-quant.mdc`](.cursor/rules/axiom-quant.mdc) | 施工纪律（自动注入，每个 PR 都受约束） |
+The real failure mode in quant research is not “failing to find a strategy.”  
+It is **finding a strategy that never existed — and believing it**.
 
-## 当前状态
+Any competent programmer can surface a Sharpe 2.5 equity curve on SPY in an afternoon.  
+That curve is usually fake. Not because the data is wrong, and not because the code has a bug —  
+but because **you tried four hundred variants on the same sample and kept the best one**.
 
-**Phase 0 + Phase 1 + Phase 1.5 已完成**：SPY 200DMA 经 LEAN Docker 产出真实订单；指标由 Axiom 自算；数据快照不可变；回测走 Celery；取消会杀掉容器。
+Most platforms optimize for faster, prettier backtests.  
+Axiom Street optimizes for a different outcome: **numbers you are allowed to trust**.
 
-**Phase 2 进行中 — 数据平台化。** 摄取与引擎已按 `symbols` 参数化；标的池是时点正确的一等实体。Polygon 对账、增量摄取尚未交付。在此之前不要把回测数字用于真实投资决策。
+> Full product constitution: [`docs/VISION.md`](docs/VISION.md)
 
-## 技术栈
+---
 
-| 层 | 选择 |
-|----|------|
+## Principles that ship in the product
+
+| Principle | What it means in practice |
+|-----------|---------------------------|
+| **Fail loud** | Missing corporate actions fail the backtest. Silent fallbacks are bugs. |
+| **Metrics belong to Axiom** | We compute Sharpe / drawdown / etc. from the return series. LEAN stats are cross-checks only. |
+| **Immutable data** | Snapshots are content-addressed. Ingest never overwrites history. |
+| **Trial ledger** | Every backtest is counted. Multiple-testing penalties cannot be reconstructed after the fact. |
+| **Validation before AI** | Phase 3 ships before Copilot. Without validation, AI is an overfitting amplifier. |
+
+---
+
+## Architecture at a glance
+
+```
+apps/web          Next.js research UI
+services/api      FastAPI — sole database write path
+services/worker   Celery — owns docker.sock, runs LEAN
+quant/            Pure Python quant core (engine · data · metrics · risk)
+data/             Immutable market snapshots + manifests
+docs/             Vision · roadmap · architecture · data contracts
+design-system/    Design tokens (restraint over spectacle)
+brand/            Official mark
+```
+
+Hard boundaries (non-negotiable):
+
+- Controllers never call LEAN internals — only `QuantEngine`
+- Strategies never know about brokers
+- Risk cannot be bypassed by strategy code or AI
+- Backtests run in workers, never in the API process
+
+Details: [`docs/architecture.md`](docs/architecture.md)
+
+---
+
+## Stack
+
+| Layer | Choice |
+|-------|--------|
 | Web | Next.js · TypeScript · Tailwind · Monaco · Lightweight Charts |
 | API | FastAPI · SQLAlchemy · Alembic · PostgreSQL |
 | Jobs | Celery · Redis · SSE |
-| Quant | LEAN (Docker, 版本固定) · pandas · DuckDB · Parquet |
+| Quant | LEAN (Docker, pinned) · pandas · DuckDB · Parquet |
 | Infra | Docker Compose |
 
-选型理由见 `docs/architecture.md` 第 5 节。原则是优先成熟组件——自研回测引擎是虚荣工程。
+Mature components over vanity engineering. We do not rewrite a backtester for sport.
 
-## 快速开始
+---
+
+## Current status
+
+| Phase | Status |
+|-------|--------|
+| 0–1 Foundation + SPY 200DMA path | Done |
+| 1.5 Trust hardening (fail-loud, Celery, trial ledger) | Done |
+| **2 Data platform** (PIT universes, dual-source, incremental ingest) | **In progress** |
+| 3 Validation engine | Next |
+| 4–8 Research · AI · Paper · Live · Portfolio | Sequenced after validation |
+
+Do not treat backtest numbers as investment advice until Phase 2–3 close the remaining trust gaps.
+
+Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+
+---
+
+## Quick start
 
 ```bash
-# 需要 Docker Desktop
+# Requires Docker Desktop
 docker compose up --build
 ```
 
-- Web: http://localhost:3000
-- API: http://localhost:8000/health
-- API 文档: http://localhost:8000/docs
+| Surface | URL |
+|---------|-----|
+| Web | http://localhost:3000 |
+| API health | http://localhost:8000/health |
+| OpenAPI | http://localhost:8000/docs |
 
-### 仅启动 API（不起全栈）
+### API only
 
 ```bash
 python3.11 -m venv .venv
@@ -59,23 +120,42 @@ pip install -e ".[dev]"
 uvicorn services.api.main:app --reload --port 8000
 ```
 
-### 摄取行情
+### Ingest market data
 
 ```bash
 python -m quant.data.ingest_spy SPY
 python -m quant.data.ingest_spy SPY QQQ
-# 或 POST /api/v1/data/ingest
-# 或在 Settings 填写标的后点「拉取行情」
 ```
 
-### 测试
+### Tests
 
 ```bash
 pytest tests/unit -q
-pytest -m golden        # 需要 Docker + LEAN 镜像
+pytest -m golden        # requires Docker + pinned LEAN image
 ```
 
-## 许可
+---
 
-- LEAN: Apache-2.0
-- TradingView Lightweight Charts: Apache-2.0（须保留 attribution，见 `NOTICE`）
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [`docs/VISION.md`](docs/VISION.md) | What we are — and what we refuse to become |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phased construction blueprint |
+| [`docs/architecture.md`](docs/architecture.md) | Layers, boundaries, reproducibility contract |
+| [`docs/data-sources.md`](docs/data-sources.md) | Providers, capabilities, ingest layout |
+| [`design-system/axiom-street/MASTER.md`](design-system/axiom-street/MASTER.md) | Tokens and anti-patterns |
+| [`.cursor/rules/axiom-street.mdc`](.cursor/rules/axiom-street.mdc) | Engineering discipline for every PR |
+
+---
+
+## License & attribution
+
+- QuantConnect LEAN — Apache-2.0
+- TradingView Lightweight Charts — Apache-2.0 (attribution required; see [`NOTICE`](NOTICE))
+
+---
+
+<p align="center">
+  <sub>Axiom Street — research discipline, productized.</sub>
+</p>

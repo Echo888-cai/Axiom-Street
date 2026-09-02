@@ -1,4 +1,4 @@
-# Axiom Quant Design System
+# Axiom Street Design System
 
 ## Product
 

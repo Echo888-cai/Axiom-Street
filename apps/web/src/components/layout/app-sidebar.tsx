@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, Hexagon } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { NAV_ITEMS } from "./nav";
@@ -75,15 +76,22 @@ export function AppSidebar() {
       )}
     >
       <div className={cn("flex items-center gap-3 px-4 py-5", collapsed && "justify-center px-2")}>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(22,119,255,0.1)] text-aq-primary">
-          <Hexagon className="h-5 w-5" strokeWidth={2.2} />
+        <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-aq-border">
+          <Image
+            src="/logo.png"
+            alt="Axiom Street"
+            width={36}
+            height={36}
+            className="h-8 w-8 object-contain"
+            priority
+          />
         </div>
         {!collapsed ? (
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold tracking-tight text-aq-text">
-              Axiom Quant
+              Axiom Street
             </div>
-            <div className="truncate text-[11px] text-aq-muted">量化研究工作台</div>
+            <div className="truncate text-[11px] text-aq-muted">Honest Quant Research</div>
           </div>
         ) : null}
       </div>

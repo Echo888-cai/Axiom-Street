@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     jobs_root: str = "jobs"
     lean_image: str = "quantconnect/lean:16355"
     cors_origins: str = "http://localhost:3000"
-    app_name: str = "Axiom Quant"
+    app_name: str = "Axiom Street"
     app_version: str = "0.1.0"
     risk_free_rate: float = 0.0
     lean_timeout_seconds: int = 1800

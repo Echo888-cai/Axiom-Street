@@ -1,19 +1,19 @@
 ---
-description: Axiom Quant phase discipline, quant correctness, and architecture rules
+description: Axiom Street phase discipline, quant correctness, and architecture rules
 alwaysApply: true
 ---
 
-# Axiom Quant Rules
+# Axiom Street Rules
 
-Product vision: `docs/VISION.md` · Roadmap: `docs/ROADMAP.md` · Current tasks: `docs/PHASE-2.md`
+Product vision: `docs/VISION.md` · Roadmap: `docs/ROADMAP.md` · Architecture: `docs/architecture.md`
 
 When a rule below conflicts with a feature request, the rule wins. When the vision conflicts with the roadmap, the vision wins.
 
 ## Current scope
 
-- **Active phase: Phase 2 — Data platform.** Lift remaining SPY assumptions, point-in-time universes, dual-source reconciliation, incremental ingest. See `docs/PHASE-2.md`.
+- **Active phase: Phase 2 — Data platform.** Lift remaining SPY assumptions, point-in-time universes, dual-source reconciliation, incremental ingest. See `docs/ROADMAP.md`.
 - Do not start Phase 3 (validation) until Phase 2 is fully delivered with tests. One phase at a time.
-- Phase order is **deliberately re-sequenced** from the original PRD: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
+- Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
 - **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.
 - Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.
 
@@ -63,7 +63,7 @@ This is the highest-priority correctness rule. A wrong number is worse than no n
 
 ## UI
 
-- Follow Axiom design tokens (white, `#1677FF`, restrained green/red). See `design-system/axiom-quant/MASTER.md`.
+- Follow Axiom design tokens (white, `#1677FF`, restrained green/red). See `design-system/axiom-street/MASTER.md`.
 - No purple gradients, neon, glassmorphism, robot icons, or oversized chart walls.
 - Financial figures use `tabular-nums`. Empty states use honest copy and never fake portfolio P&L.
 - Split components; no 3000-line pages.

@@ -1,1 +1,1 @@
-"""Axiom Quant FastAPI application."""
+"""Axiom Street FastAPI application."""

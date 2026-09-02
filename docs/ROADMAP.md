@@ -1,15 +1,15 @@
-# Axiom Quant — 成长为顶级量化研究产品的路线图
+# Axiom Street — 成长为顶级量化研究产品的路线图
 
-> 本文档是施工蓝图。审查基准：2026-08-31，代码状态 = Phase 0 + Phase 1 已完成。
+> 本文档是施工蓝图。审查基准：2026-08-31；当前执行阶段 = **Phase 2 数据平台**。
 >
 > **文档体系**
 > - `docs/VISION.md` — 产品愿景与核心信念（**冲突时以愿景为准**）
-> - `docs/ROADMAP.md` — 本文，全阶段施工蓝图
-> - `docs/PHASE-1.5.md` — 当前阶段的可执行任务清单
+> - `docs/ROADMAP.md` — 本文，全阶段施工蓝图与验收标准
 > - `docs/architecture.md` — 目标架构与不可违反的边界
-> - `.cursor/rules/axiom-quant.mdc` — 施工纪律（每个 PR 都受其约束）
+> - `docs/data-sources.md` — 数据源与摄取契约
+> - `.cursor/rules/axiom-street.mdc` — 施工纪律（每个 PR 都受其约束）
 >
-> 阅读顺序：先读 `VISION.md`，再读本文第 0 章（审查结论）与第 1 章（P0 缺陷），然后按 `PHASE-1.5.md` 开工。
+> 阅读顺序：先读 `VISION.md`，再读本文第 0 章（审查结论）与当前阶段章节，对照 `architecture.md` 开工。
 
 ---
 
@@ -190,7 +190,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 **目标：让系统输出的每一个数字都可信、可复现，且永不静默出错。**
 **预估：3–4 周 / 9 个工作包。这是所有后续工作的地基，不允许跳过或部分完成。**
 
-> **可执行任务清单见 `docs/PHASE-1.5.md`** —— WP-0 到 WP-8，每个工作包对应一个 PR，含逐条验收标准与阶段 DoD。
+> Phase 1.5 可执行工作包（WP-0 → WP-8）已关闭；验收标准保留在本章与 CI / golden tests 中。
 > 本章只保留两个架构级 schema 定义，因为任务清单会引用它们。
 
 ### 3.2 不可变数据快照（架构级）
@@ -246,14 +246,14 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 ### 3.4 本阶段其余内容
 
-编排层收敛到 Celery、超时与真实取消、孤儿回收、Alembic 真实 baseline、CI、结构化日志、`/health` 真实探活、列表分页、策略状态机守卫、测试从 9 个补到 ~80 个——全部展开在 `docs/PHASE-1.5.md` 的 WP-0 / WP-6 / WP-7 / WP-8。
+编排层收敛到 Celery、超时与真实取消、孤儿回收、Alembic 真实 baseline、CI、结构化日志、`/health` 真实探活、列表分页、策略状态机守卫、测试从 9 个补到 ~80 个——Phase 1.5 已交付。
 
 ---
 
 ## 4. Phase 2 — 数据平台化与多资产
 
 **目标：从"只能跑 SPY"到"能跑任意标的池"，并具备机构级数据血缘。**
-**预估：4–5 周 / 4 个工作包。可执行清单见 `docs/PHASE-2.md`。**
+**预估：4–5 周 / 4 个工作包。可执行清单与验收标准见本章 Phase 2 各节。**
 
 ### 4.1 解除 SPY 硬编码
 
@@ -516,7 +516,7 @@ Live 之前必须实现真实风控：单标的仓位上限、组合杠杆上限
 
 ## 12. 施工纪律
 
-完整纪律见 `.cursor/rules/axiom-quant.mdc`（该文件 `alwaysApply: true`，会自动注入每次会话）。三条最容易被违反的：
+完整纪律见 `.cursor/rules/axiom-street.mdc`（该文件 `alwaysApply: true`，会自动注入每次会话）。三条最容易被违反的：
 
 1. **不要在验证引擎（Phase 3）之前实现 AI 策略生成。** 顺序颠倒会让 AI 变成过拟合放大器。
 2. **不要在数据快照（Phase 1.5）之前扩展多资产。** 不可复现的问题会被放大 N 倍。

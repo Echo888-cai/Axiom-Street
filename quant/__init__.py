@@ -1,1 +1,1 @@
-"""Axiom Quant quantitative core."""
+"""Axiom Street quantitative core."""

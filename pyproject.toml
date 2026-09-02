@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "axiom-quant"
+name = "axiom-street"
 version = "0.1.0"
-description = "AI-Native Quantitative Research & Automated Trading Workbench"
+description = "Axiom Street — Honest quantitative research workbench"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [

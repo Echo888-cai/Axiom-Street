@@ -11,8 +11,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Axiom Quant",
-  description: "AI 原生量化研究与交易工作台",
+  title: "Axiom Street",
+  description: "Honest quantitative research — hard to fool yourself with.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

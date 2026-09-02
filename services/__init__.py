@@ -1,1 +1,1 @@
-"""Axiom Quant services package."""
+"""Axiom Street services package."""
