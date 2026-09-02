@@ -104,9 +104,9 @@ def _detect_restatements(prior: pd.DataFrame, incoming: pd.DataFrame) -> list[Qu
     for col in ("dividends", "stock_splits"):
         prior_col, new_col = f"{col}_prior", f"{col}_new"
         if prior_col in merged.columns and new_col in merged.columns:
-            changed = changed | (
-                merged[prior_col].fillna(0.0) - merged[new_col].fillna(0.0)
-            ).abs() > 1e-9
+            changed = (
+                changed | (merged[prior_col].fillna(0.0) - merged[new_col].fillna(0.0)).abs() > 1e-9
+            )
     bad = merged.loc[changed]
     if bad.empty:
         return []
@@ -125,7 +125,9 @@ def _detect_restatements(prior: pd.DataFrame, incoming: pd.DataFrame) -> list[Qu
     ]
 
 
-def _merge_incremental(prior: pd.DataFrame, incoming: pd.DataFrame) -> tuple[pd.DataFrame, list[QualityIssue]]:
+def _merge_incremental(
+    prior: pd.DataFrame, incoming: pd.DataFrame
+) -> tuple[pd.DataFrame, list[QualityIssue]]:
     issues = _detect_restatements(prior, incoming)
     left = prior.copy()
     right = incoming.copy()
@@ -153,7 +155,9 @@ def ingest(
     """Download daily bars into an immutable snapshot. Never overwrite a prior snapshot.
 
     mode:
-      - full: fetch [start, end] for every symbol
+      - full: fetch [start, end] for every symbol. If a prior snapshot exists,
+        overlapping bars that changed become ``vendor_restatement`` warnings;
+        the prior snapshot is never mutated.
       - incremental: require prior bars; fetch only after each symbol's last bar;
         concat into a new snapshot. Restatements are warnings, never in-place edits.
 
@@ -193,17 +197,17 @@ def ingest(
             on_progress(symbol, index, total)
         fetch_start = start
         prior_frame: pd.DataFrame | None = None
+        prior_path = _prior_parquet_path(root, symbol)
+        if prior_path is not None:
+            prior_frame = pd.read_parquet(prior_path)
+            if prior_frame is not None and prior_frame.empty:
+                prior_frame = None
+
         if mode == "incremental":
-            prior_path = _prior_parquet_path(root, symbol)
-            if prior_path is None:
+            if prior_frame is None:
                 raise ValueError(
                     f"incremental ingest requires prior bars for {symbol}; "
                     "run mode='full' once before incremental updates."
-                )
-            prior_frame = pd.read_parquet(prior_path)
-            if prior_frame.empty:
-                raise ValueError(
-                    f"incremental ingest found empty prior parquet for {symbol}; use mode='full'."
                 )
             last_ts = pd.to_datetime(prior_frame["timestamp"], utc=True).max()
             fetch_start = (last_ts + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
@@ -225,6 +229,9 @@ def ingest(
                 frame = prior_frame.copy()
             else:
                 frame, restatement_issues = _merge_incremental(prior_frame, frame)
+        elif mode == "full" and prior_frame is not None and not frame.empty:
+            # Scheduled/full re-pulls keep prior untouched but surface vendor revisions.
+            restatement_issues = _detect_restatements(prior_frame, frame)
 
         expected_end = pd.Timestamp(end, tz="UTC") if end else None
         report = validate_ohlcv(

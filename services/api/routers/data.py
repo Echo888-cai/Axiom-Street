@@ -67,10 +67,20 @@ def _create_job(payload: IngestRequest, db: Session) -> dict:
 
 
 @router.get("/status")
-def get_data_status() -> dict:
+def get_data_status(db: Session = Depends(get_db)) -> dict:
     settings = get_settings()
     status_payload = data_status(Path(settings.data_root))
     status_payload["lean_engine"] = _lean_engine_status()
+    status_payload["market_reconcile"] = {
+        "enabled": settings.market_reconcile_enabled,
+        "interval_seconds": settings.market_reconcile_interval_seconds,
+        "provider": settings.market_reconcile_provider,
+        "reconcile_with": settings.market_reconcile_with,
+    }
+    latest = ingest_job_service.latest_ingest_job(db)
+    status_payload["latest_ingest_job"] = (
+        ingest_job_service.serialize_job(latest) if latest is not None else None
+    )
     return status_payload
 
 
@@ -117,6 +127,21 @@ def get_ingest_job(job_id: UUID, db: Session = Depends(get_db)) -> dict:
     return ingest_job_service.serialize_job(job)
 
 
+@router.post("/reconcile", status_code=status.HTTP_202_ACCEPTED)
+def trigger_market_reconcile(
+    force: bool = False,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Enqueue a full reconcile of the latest snapshot universe (Beat uses the same path)."""
+    result = ingest_job_service.schedule_market_reconcile(db, force=force)
+    if result.get("skipped"):
+        raise HTTPException(
+            status_code=409 if result.get("reason") == "ingest_in_progress" else 400,
+            detail=result,
+        )
+    return result
+
+
 @router.get("/ingest/{job_id}/events")
 async def ingest_job_events(job_id: UUID) -> EventSourceResponse:
     async def event_generator():
@@ -129,7 +154,9 @@ async def ingest_job_events(job_id: UUID) -> EventSourceResponse:
                 except KeyError:
                     yield {
                         "event": "done",
-                        "data": json.dumps({"id": str(job_id), "status": "FAILED", "error": "not_found"}),
+                        "data": json.dumps(
+                            {"id": str(job_id), "status": "FAILED", "error": "not_found"}
+                        ),
                     }
                     break
                 payload = ingest_job_service.serialize_job(job)

@@ -288,7 +288,9 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 **进度/编排（已交付）**：`ingest_jobs` + Celery `data.ingest` + SSE `/data/ingest/{id}/events`；Settings 展示 `completed/total` 与当前标的。
 
-仍待补强：定期全量校验任务（Beat scheduled full reconcile）、500 标的吞吐压测与限速。
+**定期全量校验（已交付）**：Celery Beat `data.reconcile_market`（默认 24h）对当前 universe 做 `mode=full` 再拉；与 prior 重叠 bar 的数值变化写入 `vendor_restatement` warning，**不改写**旧快照。手动入口 `POST /api/v1/data/reconcile`。关闭：`STREET_MARKET_RECONCILE_ENABLED=false`。
+
+仍待补强：500 标的吞吐压测与限速。
 
 **验收标准**：
 - 能一条命令摄取 500 支股票日线并生成对应 LEAN 数据；

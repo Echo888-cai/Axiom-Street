@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quant.data.ingest_spy import data_status, ingest
@@ -16,6 +17,18 @@ from services.api import db as db_module
 from services.api.models import IngestJob, IngestJobStatus
 from services.api.services import snapshots as snapshot_service
 from services.api.settings import get_settings
+
+ACTIVE_INGEST_STATUSES = (
+    IngestJobStatus.QUEUED,
+    IngestJobStatus.STARTING,
+    IngestJobStatus.RUNNING,
+)
+
+_SKIP_MESSAGES = {
+    "disabled": "定时全量校验已关闭（STREET_MARKET_RECONCILE_ENABLED=false）",
+    "no_symbols": "还没有行情快照，无法做全量校验。请先拉取至少一只标的。",
+    "ingest_in_progress": "已有行情任务在跑，跳过本次全量校验以免并发写快照。",
+}
 
 
 def serialize_job(job: IngestJob) -> dict[str, Any]:
@@ -66,6 +79,7 @@ def create_ingest_job(
         convert_lean=convert_lean,
         total_symbols=len(tickers),
         completed_symbols=0,
+        created_at=datetime.now(timezone.utc),
     )
     db.add(job)
     db.commit()
@@ -187,3 +201,82 @@ def execute_ingest_job(job_id: str) -> dict[str, Any]:
         return payload
     finally:
         db.close()
+
+
+def latest_ingest_job(db: Session) -> IngestJob | None:
+    return db.scalars(
+        select(IngestJob).order_by(
+            IngestJob.created_at.desc(),
+            IngestJob.started_at.desc(),
+        )
+    ).first()
+
+
+def has_active_ingest_job(db: Session) -> IngestJob | None:
+    return db.scalars(
+        select(IngestJob)
+        .where(IngestJob.status.in_(ACTIVE_INGEST_STATUSES))
+        .order_by(IngestJob.created_at.desc())
+    ).first()
+
+
+def _skip(reason: str, **extra: Any) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "ok": False,
+        "skipped": True,
+        "reason": reason,
+        "message": _SKIP_MESSAGES[reason],
+    }
+    payload.update(extra)
+    return payload
+
+
+def schedule_market_reconcile(
+    db: Session | None = None,
+    *,
+    force: bool = False,
+    scheduled: bool = False,
+) -> dict[str, Any]:
+    """Enqueue a full re-pull of the latest snapshot universe to catch vendor revisions.
+
+    Creates an ``IngestJob`` with ``mode=full`` so progress/SSE stay consistent with
+    manual Settings pulls. Beat calls this with ``scheduled=True`` (honours the
+    enabled flag). The HTTP endpoint always allows a manual run unless another
+    ingest is already active (``force`` overrides that guard).
+    """
+    settings = get_settings()
+    owns_session = db is None
+    session = db or db_module.SessionLocal()
+    try:
+        if scheduled and not settings.market_reconcile_enabled and not force:
+            return _skip("disabled")
+
+        status = data_status(Path(settings.data_root))
+        symbols = list(status.get("symbols") or [])
+        if not symbols:
+            return _skip("no_symbols")
+
+        active = has_active_ingest_job(session)
+        if active is not None and not force:
+            return _skip("ingest_in_progress", active_job_id=str(active.id))
+
+        secondary = (settings.market_reconcile_with or "").strip() or None
+        job = create_ingest_job(
+            session,
+            symbols=symbols,
+            start="2010-01-01",
+            end=None,
+            provider=(settings.market_reconcile_provider or "auto").strip() or "auto",
+            mode="full",
+            reconcile_with=secondary,
+            convert_lean=True,
+        )
+        return {
+            "ok": True,
+            "skipped": False,
+            "job": serialize_job(job),
+            "symbols": list(job.symbols or []),
+        }
+    finally:
+        if owns_session:
+            session.close()

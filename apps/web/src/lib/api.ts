@@ -215,6 +215,11 @@ export const api = {
     request<MonthlyReturn[]>(`/api/v1/backtests/${id}/monthly-returns`),
   eventsUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/events`,
   dataStatus: () => request<DataStatus>("/api/v1/data/status"),
+  reconcileMarket: (force = false) =>
+    request<{ ok: boolean; skipped: boolean; job: IngestJob; symbols: string[] }>(
+      `/api/v1/data/reconcile?force=${force ? "true" : "false"}`,
+      { method: "POST" },
+    ),
   ingest: (body?: {
     symbols?: string[];
     start?: string;
@@ -391,6 +396,13 @@ export type DataStatus = {
     reported_at?: string | null;
     note?: string | null;
   };
+  market_reconcile?: {
+    enabled: boolean;
+    interval_seconds: number;
+    provider: string;
+    reconcile_with: string | null;
+  };
+  latest_ingest_job?: IngestJob | null;
 };
 
 export { unwrapList };

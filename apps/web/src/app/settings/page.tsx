@@ -25,6 +25,40 @@ export default function SettingsPage() {
     };
   }, []);
 
+  const watchJob = (created: IngestJob, doneOk: string) => {
+    setJob(created);
+    sourceRef.current?.close();
+    const es = new EventSource(api.ingestEventsUrl(created.id));
+    sourceRef.current = es;
+    es.addEventListener("progress", (ev) => {
+      try {
+        setJob(JSON.parse((ev as MessageEvent).data) as IngestJob);
+      } catch {
+        /* ignore malformed frames */
+      }
+    });
+    es.addEventListener("done", (ev) => {
+      try {
+        const finalJob = JSON.parse((ev as MessageEvent).data) as IngestJob;
+        setJob(finalJob);
+        qc.invalidateQueries({ queryKey: ["data-status"] });
+        if (finalJob.status === "COMPLETED") {
+          toast(doneOk, "ok");
+        } else {
+          toast(finalJob.error?.message || "行情任务失败", "err");
+        }
+      } catch {
+        toast("行情任务结束，但无法解析结果", "err");
+      } finally {
+        es.close();
+        sourceRef.current = null;
+      }
+    });
+    es.onerror = () => {
+      /* EventSource retries; terminal state arrives via done */
+    };
+  };
+
   const ingest = useMutation({
     mutationFn: () => {
       const symbols = tickers
@@ -34,45 +68,25 @@ export default function SettingsPage() {
       return api.ingest({ provider: "auto", start: "2010-01-01", symbols });
     },
     onSuccess: (created) => {
-      setJob(created);
-      sourceRef.current?.close();
-      const es = new EventSource(api.ingestEventsUrl(created.id));
-      sourceRef.current = es;
-      es.addEventListener("progress", (ev) => {
-        try {
-          setJob(JSON.parse((ev as MessageEvent).data) as IngestJob);
-        } catch {
-          /* ignore malformed frames */
-        }
-      });
-      es.addEventListener("done", (ev) => {
-        try {
-          const finalJob = JSON.parse((ev as MessageEvent).data) as IngestJob;
-          setJob(finalJob);
-          qc.invalidateQueries({ queryKey: ["data-status"] });
-          if (finalJob.status === "COMPLETED") {
-            const names = (finalJob.result?.symbols || finalJob.symbols || []).join(", ");
-            toast(`${names} 行情已更新`, "ok");
-          } else {
-            toast(finalJob.error?.message || "行情拉取失败", "err");
-          }
-        } catch {
-          toast("行情任务结束，但无法解析结果", "err");
-        } finally {
-          es.close();
-          sourceRef.current = null;
-        }
-      });
-      es.onerror = () => {
-        /* EventSource retries; terminal state arrives via done */
-      };
+      const names = (created.symbols || []).join(", ") || "行情";
+      watchJob(created, `${names} 行情已更新`);
+    },
+    onError: (err: Error) => toast(err.message, "err"),
+  });
+
+  const reconcile = useMutation({
+    mutationFn: () => api.reconcileMarket(false),
+    onSuccess: (body) => {
+      watchJob(body.job, "全量校验完成（新旧快照均保留）");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
 
   const running =
     ingest.isPending ||
+    reconcile.isPending ||
     (job != null && !["COMPLETED", "FAILED", "CANCELLED"].includes(job.status));
+  const cadence = formatReconcileCadence(status.data?.market_reconcile);
 
   const m = status.data?.manifest || {};
   const lean = status.data?.lean_engine;
@@ -140,6 +154,7 @@ export default function SettingsPage() {
               }
             />
             <Row label="LEAN 数据" value={status.data?.lean_ready ? "已转换" : "未转换"} />
+            <Row label="全量校验" value={cadence} />
           </dl>
           {status.data?.quality_report?.issues && status.data.quality_report.issues.length > 0 ? (
             <div className="mt-4 rounded-as border border-as-border bg-as-secondary px-3 py-2 text-xs">
@@ -175,6 +190,15 @@ export default function SettingsPage() {
               <Button size="sm" onClick={() => ingest.mutate()} disabled={running}>
                 {running ? "正在拉取…" : "拉取行情"}
               </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => reconcile.mutate()}
+                disabled={running || !status.data?.ready}
+                aria-label="对当前标的池做一次全量再拉，检测 vendor 改历史"
+              >
+                立即全量校验
+              </Button>
             </div>
             {running && job ? (
               <div className="rounded-as border border-as-border bg-as-secondary/60 px-3 py-2 text-[11px] text-as-muted">
@@ -192,7 +216,7 @@ export default function SettingsPage() {
               </div>
             ) : (
               <p className="text-[11px] text-as-muted">
-                每次拉取写入新的不可变快照，不会覆盖旧数据。多标的请一次填齐，例如 SPY, QQQ, IWM。
+                每次拉取写入新的不可变快照，不会覆盖旧数据。全量校验按当前标的池再拉一遍，用来发现 vendor 改历史。
               </p>
             )}
           </div>
@@ -256,6 +280,23 @@ export default function SettingsPage() {
       </div>
     </div>
   );
+}
+
+function formatReconcileCadence(cfg?: {
+  enabled: boolean;
+  interval_seconds: number;
+} | null): string {
+  if (!cfg) return "—";
+  if (!cfg.enabled) return "定时已关闭（仍可手动）";
+  const seconds = cfg.interval_seconds;
+  if (seconds % 86_400 === 0) {
+    const days = seconds / 86_400;
+    return days === 1 ? "每天自动全量再拉" : `每 ${days} 天自动全量再拉`;
+  }
+  if (seconds % 3_600 === 0) {
+    return `每 ${seconds / 3_600} 小时自动全量再拉`;
+  }
+  return `每 ${seconds} 秒自动全量再拉`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

@@ -347,6 +347,14 @@ def run_ingest_task(job_id: str) -> dict:
     return execute_ingest_job(job_id)
 
 
+@celery_app.task(name="data.reconcile_market")
+def reconcile_market_data_task(force: bool = False) -> dict:
+    """Periodic full re-pull of the current universe to catch vendor restatements."""
+    from services.api.services.ingest_jobs import schedule_market_reconcile
+
+    return schedule_market_reconcile(force=force, scheduled=True)
+
+
 @celery_app.task(name="backtests.reconcile_orphans")
 def reconcile_orphan_backtests_task() -> int:
     return reconcile_orphan_backtests()

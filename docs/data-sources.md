@@ -31,10 +31,23 @@ python -m quant.data.ingest_spy SPY --provider polygon --reconcile-with yfinance
 
 也可设 `STREET_RECONCILE_WITH=yfinance`。
 
+## 定期全量校验
+
+Celery Beat 每天对当前已发布 universe 做一次 `mode=full` 再拉（任务名 `data.reconcile_market`），用来抓 vendor 事后改历史。发现重叠日期 close / 分红 / 拆分变化 → `vendor_restatement` warning，并写入**新快照**；旧快照只会被 `superseded_by` 标记。
+
+| 变量 | 默认 | 作用 |
+|------|------|------|
+| `STREET_MARKET_RECONCILE_ENABLED` | `true` | 关闭则 Beat 跳过；手动 `POST /api/v1/data/reconcile` 仍可用 |
+| `STREET_MARKET_RECONCILE_INTERVAL_SECONDS` | `86400` | Beat 间隔（下限 60s） |
+| `STREET_MARKET_RECONCILE_PROVIDER` | `auto` | 全量再拉的主源 |
+| `STREET_MARKET_RECONCILE_WITH` | 空 | 可选对账源，例如 `yfinance` |
+
+已有 ingest 在跑时，定时任务会 skip（`ingest_in_progress`），避免并发写。Settings 可手动触发同一路径。
+
 规则：
 
 - 摄取**永不原地改写**旧快照
-- 增量路径发现 vendor restatement → `vendor_restatement` warning + 新快照
+- 增量或全量再拉发现 vendor restatement → `vendor_restatement` warning + 新快照
 - 无 prior 时 `incremental` → fail loud
 - Polygon 无 key → fail loud（不静默降级到 yfinance）
 
@@ -43,6 +56,7 @@ python -m quant.data.ingest_spy SPY
 python -m quant.data.ingest_spy SPY QQQ --mode incremental
 # POST /api/v1/data/ingest
 #   {"symbols": ["SPY"], "provider": "polygon", "reconcile_with": "yfinance"}
+# POST /api/v1/data/reconcile   # 对当前 universe 全量再拉（与 Beat 同一路径）
 ```
 
 环境变量前缀为 `STREET_`（见 `.env.example`）。

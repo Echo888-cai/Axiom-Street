@@ -42,6 +42,8 @@ services:
       STREET_CORS_ORIGINS: http://localhost:3000
       STREET_SYNC_BACKTESTS: "false"
       STREET_SYNC_INGESTS: "false"
+      STREET_MARKET_RECONCILE_ENABLED: "true"
+      STREET_MARKET_RECONCILE_INTERVAL_SECONDS: "86400"
       STREET_MAX_INFLIGHT_BACKTESTS: "2"
     ports:
       - "8000:8000"
@@ -74,6 +76,10 @@ services:
       STREET_LEAN_IMAGE: quantconnect/lean:16355
       STREET_WORKER_CONCURRENCY: "2"
       STREET_LEAN_TIMEOUT_SECONDS: "1800"
+      STREET_SYNC_INGESTS: "false"
+      STREET_MARKET_RECONCILE_ENABLED: "true"
+      STREET_MARKET_RECONCILE_INTERVAL_SECONDS: "86400"
+      STREET_MARKET_RECONCILE_PROVIDER: "auto"
       DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       # Bind the host paths at the same location so `docker run -v` from the

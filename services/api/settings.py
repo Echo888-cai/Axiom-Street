@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     sync_ingests: bool = False
     max_inflight_backtests: int = 2
     worker_concurrency: int = 2
+    # Periodic full market re-pull to detect vendor restatements (seconds).
+    market_reconcile_enabled: bool = True
+    market_reconcile_interval_seconds: int = 86_400
+    market_reconcile_provider: str = "auto"
+    market_reconcile_with: str | None = None  # optional secondary, e.g. yfinance
 
     @property
     def cors_origin_list(self) -> list[str]:

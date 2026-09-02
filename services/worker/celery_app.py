@@ -12,6 +12,22 @@ celery_app = Celery(
     include=["services.worker.tasks"],
 )
 
+_beat_schedule = {
+    "reconcile-orphan-backtests": {
+        "task": "backtests.reconcile_orphans",
+        "schedule": 300.0,
+    },
+    "publish-worker-health": {
+        "task": "worker.publish_health",
+        "schedule": 15.0,
+    },
+}
+if settings.market_reconcile_enabled:
+    _beat_schedule["reconcile-market-data"] = {
+        "task": "data.reconcile_market",
+        "schedule": float(max(60, settings.market_reconcile_interval_seconds)),
+    }
+
 celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
@@ -25,16 +41,7 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
     task_time_limit=settings.lean_timeout_seconds + 120,
     task_soft_time_limit=settings.lean_timeout_seconds + 60,
-    beat_schedule={
-        "reconcile-orphan-backtests": {
-            "task": "backtests.reconcile_orphans",
-            "schedule": 300.0,
-        },
-        "publish-worker-health": {
-            "task": "worker.publish_health",
-            "schedule": 15.0,
-        },
-    },
+    beat_schedule=_beat_schedule,
 )
 
 
