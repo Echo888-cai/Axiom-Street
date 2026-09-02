@@ -111,6 +111,9 @@ def _seed(Session):
         end_date=date(2018, 6, 1),
         status=BacktestStatus.QUEUED,
         progress_step="Queued",
+        universe_snapshot=[
+            {"symbol": "SPY", "effective_from": "2018-01-01", "effective_to": None}
+        ],
     )
     db.add(backtest)
     db.flush()
@@ -210,3 +213,26 @@ def test_execute_backtest_passes_ten_name_universe(monkeypatch):
     assert fake.last_request is not None
     assert fake.last_request.universe == list(DEFAULT_EQUAL_WEIGHT_UNIVERSE)
     assert len(fake.last_request.memberships) == 10
+
+
+def test_execute_backtest_empty_universe_fails(monkeypatch):
+    Session = _session(monkeypatch)
+    fake = _FakeEngine()
+    monkeypatch.setattr("services.worker.tasks.LeanQuantEngine", lambda **_k: fake)
+    from services.worker.tasks import execute_backtest
+
+    backtest_id, _ = _seed(Session)
+    db = Session()
+    bt = db.get(Backtest, __import__("uuid").UUID(backtest_id))
+    bt.universe_snapshot = None
+    db.commit()
+    db.close()
+
+    result = execute_backtest(backtest_id)
+    assert result["error"] == "universe_missing"
+    db = Session()
+    bt = db.get(Backtest, __import__("uuid").UUID(backtest_id))
+    assert bt.status == BacktestStatus.FAILED
+    assert bt.error["code"] == "universe_missing"
+    assert fake.last_request is None
+    db.close()

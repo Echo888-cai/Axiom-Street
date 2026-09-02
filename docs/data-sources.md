@@ -67,6 +67,7 @@ python -m quant.data.ingest_spy --symbols-file tickers.txt
 - 增量或全量再拉发现 vendor restatement → `vendor_restatement` warning + 新快照
 - 无 prior 时 `incremental` → fail loud
 - Polygon 无 key → fail loud（不静默降级到 yfinance）
+- 最后一根 K 线早于 14 个自然日 → 推断 `effective_to`，写入仍开放的标的池成分（不覆盖已有退出日）
 
 ```bash
 python -m quant.data.ingest_spy SPY

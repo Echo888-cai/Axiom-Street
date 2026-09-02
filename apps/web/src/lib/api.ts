@@ -278,6 +278,13 @@ export const api = {
     request<void>(`/api/v1/universes/${universeId}/members/${memberId}`, {
       method: "DELETE",
     }),
+  syncUniverseDelistings: () =>
+    request<{
+      applied: Array<{ universe_id: string; symbol: string; effective_to: string }>;
+      skipped: Array<{ universe_id: string; symbol: string; reason?: string }>;
+      errors: Array<{ universe_id?: string; symbol?: string; message: string }>;
+      inferred?: Array<{ symbol: string; last_bar: string; effective_to: string }>;
+    }>("/api/v1/universes/sync-delistings", { method: "POST" }),
   previewUniverse: (
     universeId: string,
     params: { as_of?: string; start?: string; end?: string },
@@ -417,6 +424,11 @@ export type DataStatus = {
     suspect_bars?: number;
     has_blocking_issues?: boolean;
     issues?: Array<{ rule: string; severity: string; message: string; examples?: string[] }>;
+  }>;
+  inferred_delistings?: Array<{
+    symbol: string;
+    last_bar: string;
+    effective_to: string;
   }>;
 };
 

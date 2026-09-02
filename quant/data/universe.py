@@ -129,3 +129,22 @@ def infer_effective_to_from_bars(last_bar: date, *, as_of: date | None = None) -
     if age > STALE_CALENDAR_DAYS:
         return last_bar
     return None
+
+
+def inferred_delistings(
+    last_bars: dict[str, date], *, as_of: date | None = None
+) -> list[dict[str, str]]:
+    """Map stale last-bars to inclusive effective_to. Live names are omitted."""
+    rows: list[dict[str, str]] = []
+    for symbol, last_bar in last_bars.items():
+        inferred = infer_effective_to_from_bars(last_bar, as_of=as_of)
+        if inferred is None:
+            continue
+        rows.append(
+            {
+                "symbol": symbol,
+                "last_bar": last_bar.isoformat(),
+                "effective_to": inferred.isoformat(),
+            }
+        )
+    return rows

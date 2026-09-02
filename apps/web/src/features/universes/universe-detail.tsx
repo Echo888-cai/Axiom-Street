@@ -82,6 +82,23 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
     onError: (err: Error) => toast(err.message, "err"),
   });
 
+  const syncDelist = useMutation({
+    mutationFn: () => api.syncUniverseDelistings(),
+    onSuccess: (result) => {
+      invalidate();
+      const n = result.applied.length;
+      if (n === 0 && result.errors.length === 0) {
+        toast("没有需要关闭的开放区间", "info");
+        return;
+      }
+      if (n > 0) toast(`已写入 ${n} 个退市日`, "ok");
+      if (result.errors.length > 0) {
+        toast(result.errors[0].message, "err");
+      }
+    },
+    onError: (err: Error) => toast(err.message, "err"),
+  });
+
   if (universe.isLoading) {
     return <Card className="h-40 animate-pulse bg-as-secondary" />;
   }
@@ -110,12 +127,21 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
         title={row.name}
         description={
           row.description ||
-          "成分区间两端都包含。退市日之后该标的不得再进入回测。"
+          "成分区间两端都包含。摄取退市标的后会自动写上退出日；已有 effective_to 不会被覆盖。"
         }
         action={
-          <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
-            删除标的池
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => syncDelist.mutate()}
+              disabled={syncDelist.isPending}
+            >
+              {syncDelist.isPending ? "推断中…" : "按行情关闭退市成分"}
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
+              删除标的池
+            </Button>
+          </div>
         }
       />
 
@@ -164,7 +190,8 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
           </Button>
         </form>
         <p className="mt-3 text-xs text-as-muted">
-          推断退市需要该标的已摄取。最后一根 K 线若早于 14 个自然日，则记为 inclusive 退出日；否则视为仍在上市。
+          最后一根 K 线若早于 14 个自然日，则记为 inclusive 退出日。拉取行情会自动关闭匹配的开放区间；已填写的
+          effective_to 不会被覆盖。
         </p>
       </Card>
 

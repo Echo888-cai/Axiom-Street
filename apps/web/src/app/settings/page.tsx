@@ -180,6 +180,7 @@ export default function SettingsPage() {
             source={status.data?.reconcile_with}
             ready={Boolean(status.data?.ready)}
           />
+          <InferredDelistings rows={status.data?.inferred_delistings} ready={Boolean(status.data?.ready)} />
           <div className="mt-5 space-y-2">
             <label className="block text-xs text-as-muted" htmlFor="ingest-symbols">
               标的（逗号分隔）
@@ -330,6 +331,39 @@ function ReconcileReports({
                 {issue.examples && issue.examples.length > 0 ? `（${issue.examples[0]}）` : ""}
               </p>
             ))}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function InferredDelistings({
+  rows,
+  ready,
+}: {
+  rows?: Array<{ symbol: string; last_bar: string; effective_to: string }>;
+  ready: boolean;
+}) {
+  if (!ready) return null;
+  if (!rows || rows.length === 0) {
+    return (
+      <p className="mt-3 text-[11px] text-as-muted">
+        最近一次摄取没有发现退市（最后一根 K 线仍在 14 个自然日内）。开放区间的成分可在「标的池」按行情关闭。
+      </p>
+    );
+  }
+  return (
+    <div className="mt-4 rounded-as border border-as-border bg-as-secondary px-3 py-2 text-xs">
+      <div className="mb-1 font-medium text-as-text">推断退市</div>
+      <ul className="space-y-1 text-as-muted">
+        {rows.map((row) => (
+          <li key={row.symbol} className="tabular-nums">
+            <span className="text-as-text">{row.symbol}</span>
+            {" — 最后一根 "}
+            {row.last_bar}
+            {" → effective_to "}
+            {row.effective_to}
           </li>
         ))}
       </ul>

@@ -14,6 +14,7 @@ def _ready(monkeypatch) -> None:
                 "snapshot_key": "spy-daily-test-abc123",
                 "source": "yfinance",
             },
+            "symbols": ["SPY"],
         },
     )
     monkeypatch.setattr("services.api.services.backtests._quality_gate", lambda *_a, **_k: None)
@@ -212,3 +213,80 @@ def test_universe_id_and_symbols_cannot_both_be_set(client, monkeypatch):
 def test_unknown_universe_is_404(client):
     res = client.get("/api/v1/universes/00000000-0000-0000-0000-000000000001")
     assert res.status_code == 404
+
+
+def test_sync_delistings_closes_stale_open_members(client, monkeypatch):
+    frame = pd.DataFrame({"timestamp": [pd.Timestamp("2018-03-23")]})
+    monkeypatch.setattr(
+        "services.api.services.universes.load_symbol_parquet",
+        lambda *_a, **_k: frame,
+    )
+    created = client.post(
+        "/api/v1/universes",
+        json={
+            "name": "sync-delist",
+            "members": [{"symbol": "BBBY", "effective_from": "2010-01-04"}],
+        },
+    ).json()
+    res = client.post("/api/v1/universes/sync-delistings")
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["applied"][0]["symbol"] == "BBBY"
+    assert body["applied"][0]["effective_to"] == "2018-03-23"
+    got = client.get(f"/api/v1/universes/{created['id']}").json()
+    assert got["members"][0]["effective_to"] == "2018-03-23"
+
+
+def test_ingest_delisted_symbol_records_effective_to(client, monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+
+    from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
+    from services.api.settings import get_settings
+
+    monkeypatch.setenv("STREET_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+
+    def fake_fetch(symbol: str, **_k):
+        rows = []
+        for day in (19, 20, 21, 22, 23):
+            rows.append(
+                {
+                    "timestamp": datetime(2018, 3, day, tzinfo=timezone.utc),
+                    "open": 10.0,
+                    "high": 11.0,
+                    "low": 9.0,
+                    "close": 10.0,
+                    "volume": 1000,
+                    "dividends": 0.0,
+                    "stock_splits": 0.0,
+                    "exchange_timezone": "America/New_York",
+                    "symbol": symbol,
+                }
+            )
+        return FetchResult(pd.DataFrame(rows), "yfinance", YFINANCE_CAPABILITIES)
+
+    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    universe = client.post(
+        "/api/v1/universes",
+        json={
+            "name": "含退市",
+            "members": [
+                {"symbol": "BBBY", "effective_from": "2010-01-04"},
+                {"symbol": "SPY", "effective_from": "2010-01-04", "effective_to": "2017-01-01"},
+            ],
+        },
+    ).json()
+    ingest = client.post(
+        "/api/v1/data/ingest",
+        json={"symbols": ["BBBY"], "provider": "yfinance", "convert_lean": False},
+    )
+    assert ingest.status_code == 202, ingest.text
+    job = ingest.json()
+    assert job["status"] == "COMPLETED"
+    applied = (job.get("result") or {}).get("universe_delistings", {}).get("applied") or []
+    assert any(row["symbol"] == "BBBY" and row["effective_to"] == "2018-03-23" for row in applied)
+    got = client.get(f"/api/v1/universes/{universe['id']}").json()
+    by_symbol = {row["symbol"]: row["effective_to"] for row in got["members"]}
+    assert by_symbol["BBBY"] == "2018-03-23"
+    assert by_symbol["SPY"] == "2017-01-01"
+    get_settings.cache_clear()

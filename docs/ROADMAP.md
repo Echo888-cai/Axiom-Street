@@ -272,7 +272,9 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 ### 4.2 标的池（Universe）作为一等实体
 
-新增 `universes` 表 + `universe_members` 表，支持：静态列表、规则筛选（市值/流动性/行业）、**时点正确的成分变动**（`effective_from` / `effective_to`）。
+**已交付（静态 + 时点）**：`universes` / `universe_members`（`effective_from` / `effective_to`）。摄取时若最后一根 K 线早于 14 个自然日，会把仍开放的成分写成 inclusive 退出日，**不覆盖**已有 `effective_to`。手动入口 `POST /api/v1/universes/sync-delistings`。
+
+仍待补强：规则筛选（市值/流动性/行业）生成时点成分。
 
 时点正确的成分历史是消除**生存者偏差**的唯一手段。当前的静态 map file `20000101,spy` 无法支持退市股票轮转。若做多股票策略而不解决这一点，所有回测结果都会系统性偏高。
 
@@ -292,7 +294,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 **吞吐 / 限速（已交付）**：默认最多 500 标的；出站 HTTP 走 token bucket（`STREET_INGEST_RPS=2`）+ 并发拉取（`STREET_INGEST_CONCURRENCY=4`）。超过上限 fail loud，不静默截断。`python -m quant.data.ingest_spy --symbols-file tickers.txt`。
 
-**横截面基线（已交付）**：`EqualWeightUniverseAlgorithm`（1/N，月度再平衡，下一根 K 线成交）。LEAN 注入 `universe=` 参数；临时 `universe: [10 names]` 会写入 `universe_snapshot`。策略实验室可加载该模板。
+**横截面基线（已交付）**：`EqualWeightUniverseAlgorithm`（1/N，月度再平衡，下一根 K 线成交）。LEAN 注入 `universe=` 参数；临时 `universe: [10 names]` 会写入 `universe_snapshot`。策略实验室可加载该模板。Worker **不再默认 SPY**：没有标的池/快照/symbols 则回测失败。
 
 **验收标准**：
 - 能一条命令摄取 500 支股票日线并生成对应 LEAN 数据；

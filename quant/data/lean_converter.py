@@ -115,7 +115,9 @@ def ensure_lean_support_files(lean_root: Path, symbols: list[str] | None = None)
     """
     from quant.data.symbols import normalize_symbols
 
-    tickers = normalize_symbols(symbols or ["SPY"])
+    if not symbols:
+        raise ValueError("ensure_lean_support_files 需要至少一个标的")
+    tickers = normalize_symbols(symbols)
     market_hours = lean_root / "market-hours" / "market-hours-database.json"
     market_hours.parent.mkdir(parents=True, exist_ok=True)
     # Never overwrite a large official file with a stub
@@ -158,7 +160,10 @@ def convert_to_lean(
     from quant.data.symbols import list_market_symbols, normalize_symbols
 
     root = Path(data_root)
-    tickers = normalize_symbols(symbols or list_market_symbols(root) or ["SPY"])
+    found = list(symbols) if symbols else list_market_symbols(root)
+    if not found:
+        raise ValueError("没有可转换的标的")
+    tickers = normalize_symbols(found)
     lean_root = root / "lean"
     ensure_lean_support_files(lean_root, tickers)
 
@@ -194,7 +199,10 @@ def ensure_lean_data(data_root: Path, symbols: list[str] | None = None) -> Path:
     from quant.data.types import ProviderCapabilityError
 
     root = Path(data_root)
-    tickers = normalize_symbols(symbols or list_market_symbols(root) or ["SPY"])
+    found = list(symbols) if symbols else list_market_symbols(root)
+    if not found:
+        raise ValueError("没有可转换的标的")
+    tickers = normalize_symbols(found)
     lean_root = root / "lean"
     daily = root / "market" / "equities" / "US" / "daily"
     manifest = load_manifest(root)

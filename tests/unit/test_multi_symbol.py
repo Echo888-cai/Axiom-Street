@@ -26,6 +26,13 @@ def test_as_symbol_list_accepts_comma_string():
     assert as_symbol_list("SPY,QQQ") == ["SPY", "QQQ"]
 
 
+def test_as_symbol_list_none_fails_loud():
+    with pytest.raises(ValueError, match="至少需要一个"):
+        as_symbol_list(None)
+    with pytest.raises(ValueError, match="至少需要一个"):
+        normalize_symbols(None)
+
+
 def test_snapshot_slug_joins_then_hashes_long_lists():
     assert snapshot_slug(["SPY", "QQQ"]) == "spy-qqq"
     long = [f"S{i:02d}" for i in range(20)]

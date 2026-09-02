@@ -101,8 +101,20 @@ def to_out(db: Session, backtest: Backtest) -> BacktestOut:
     )
 
 
+def _open_membership_snapshot(symbols: list[str], start: date) -> list[dict]:
+    return [
+        Membership(symbol=symbol, effective_from=start, effective_to=None).to_dict()
+        for symbol in symbols
+    ]
+
+
 def _quality_gate(data_root: Path, symbols: list[str] | None = None) -> None:
-    tickers = symbols or ["SPY"]
+    if not symbols:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="回测没有标的，无法做质量门禁",
+        )
+    tickers = symbols
     for symbol in tickers:
         try:
             frame = load_symbol_parquet(data_root, symbol)
@@ -206,18 +218,16 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
             universe_snapshot = [member.to_dict() for member in overlapping]
         elif payload.universe:
             universe = normalize_symbols(payload.universe)
-            universe_snapshot = [
-                Membership(
-                    symbol=symbol,
-                    effective_from=payload.start_date,
-                    effective_to=None,
-                ).to_dict()
-                for symbol in universe
-            ]
+            universe_snapshot = _open_membership_snapshot(universe, payload.start_date)
         else:
-            universe = as_symbol_list(
-                market.get("symbols") or (snapshot.symbols if snapshot else None)
-            )
+            raw = market.get("symbols") or (snapshot.symbols if snapshot else None)
+            if not raw:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="还没有标的列表。请指定标的池，或打开「设置」拉取行情。",
+                )
+            universe = as_symbol_list(raw)
+            universe_snapshot = _open_membership_snapshot(universe, payload.start_date)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 

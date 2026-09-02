@@ -7,7 +7,7 @@ import os
 import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -36,6 +36,7 @@ from quant.data.types import (
     ProviderCapabilityError,
     QualityIssue,
 )
+from quant.data.universe import inferred_delistings
 
 
 def _repo_data_root() -> Path:
@@ -359,6 +360,12 @@ def ingest(
         if item["reconcile_report"] is not None:
             reconcile_reports.append(item["reconcile_report"])
 
+    last_bars: dict[str, date] = {}
+    for symbol, frame in frames.items():
+        ts_max = pd.to_datetime(frame["timestamp"].max(), utc=True)
+        last_bars[symbol] = ts_max.date()
+    delistings = inferred_delistings(last_bars)
+
     combined = _combined_quality(reports)
     tmp = root / ".ingest_tmp"
     if tmp.exists():
@@ -405,6 +412,7 @@ def ingest(
             "manifest": manifest,
             "quality_report": combined.to_dict(),
             "symbols": tickers,
+            "inferred_delistings": delistings,
         }
 
     tmp.rename(snap_dir)
@@ -427,6 +435,7 @@ def ingest(
         "prior_snapshot_key": prior_snapshot_key,
         "reconcile_with": reconcile_provider,
         "reconcile_reports": reconcile_reports,
+        "inferred_delistings": delistings,
         "corporate_actions_verified": caps_ok,
         "provider_capabilities": {
             "ohlcv": True if last_caps is None else last_caps.ohlcv,
@@ -462,6 +471,7 @@ def ingest(
         "prior_snapshot_key": prior_snapshot_key,
         "reconcile_with": reconcile_provider,
         "reconcile_reports": reconcile_reports,
+        "inferred_delistings": delistings,
     }
 
 
@@ -542,9 +552,9 @@ def data_status(data_root: Optional[Path] = None) -> dict:
     lean_ready = bool(symbols) and all((lean_daily / f"{s.lower()}.zip").exists() for s in symbols)
     latest = latest_snapshot_dir(root)
     quality = manifest.get("quality_report") or {}
-    first = symbols[0] if symbols else "SPY"
-    parquet = daily / f"{first}.parquet"
-    lean_zip = lean_daily / f"{first.lower()}.zip"
+    first = symbols[0] if symbols else None
+    parquet = daily / f"{first}.parquet" if first else daily / "_none.parquet"
+    lean_zip = lean_daily / f"{first.lower()}.zip" if first else lean_daily / "_none.zip"
     return {
         "ready": ready,
         "lean_ready": lean_ready,
@@ -560,6 +570,7 @@ def data_status(data_root: Optional[Path] = None) -> dict:
         "symbols": symbols,
         "reconcile_with": manifest.get("reconcile_with"),
         "reconcile_reports": manifest.get("reconcile_reports") or [],
+        "inferred_delistings": manifest.get("inferred_delistings") or [],
         "ingest_limits": {
             "max_symbols": ingest_max_symbols(),
             "rps": ingest_rps(),

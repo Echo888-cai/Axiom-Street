@@ -9,7 +9,7 @@ _TICKER = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
 def normalize_symbols(symbols: list[str] | str | None) -> list[str]:
     """Uppercase, dedupe, and reject empty/illegal tickers. Fail loud."""
     if symbols is None:
-        raw: list[str] = ["SPY"]
+        raw: list[str] = []
     elif isinstance(symbols, str):
         raw = [part.strip() for part in symbols.replace(";", ",").split(",")]
     else:
@@ -34,12 +34,12 @@ def normalize_symbols(symbols: list[str] | str | None) -> list[str]:
 def as_symbol_list(value: object) -> list[str]:
     """Coerce manifest/DB `symbols` which may be a list or a comma string."""
     if value is None:
-        return ["SPY"]
+        raise ValueError("至少需要一个标的")
     if isinstance(value, str):
         return normalize_symbols(value)
     if isinstance(value, (list, tuple)):
         return normalize_symbols([str(item) for item in value])
-    return ["SPY"]
+    raise ValueError(f"无法解析标的列表: {type(value).__name__}")
 
 
 def list_market_symbols(data_root: Path) -> list[str]:

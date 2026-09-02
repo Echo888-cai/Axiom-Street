@@ -87,6 +87,22 @@ def test_infer_effective_to_when_stale():
     assert infer_effective_to_from_bars(date(2026, 8, 31), as_of=date(2026, 9, 1)) is None
 
 
+def test_inferred_delistings_omits_live_names():
+    from quant.data.universe import inferred_delistings
+
+    rows = inferred_delistings(
+        {"BBBY": date(2018, 3, 23), "SPY": date(2026, 8, 31)},
+        as_of=date(2026, 9, 1),
+    )
+    assert rows == [
+        {
+            "symbol": "BBBY",
+            "last_bar": "2018-03-23",
+            "effective_to": "2018-03-23",
+        }
+    ]
+
+
 def test_docker_volume_overlay_shadows_snapshot_map_files(tmp_path):
     from quant.engine.lean import docker_volume_args
 

@@ -18,6 +18,7 @@ from quant.data.types import DataQualityError, ProviderCapabilityError
 from services.api import db as db_module
 from services.api.models import IngestJob, IngestJobStatus
 from services.api.services import snapshots as snapshot_service
+from services.api.services import universes as universe_service
 from services.api.settings import get_settings
 
 ACTIVE_INGEST_STATUSES = (
@@ -180,6 +181,9 @@ def execute_ingest_job(job_id: str) -> dict[str, Any]:
         job.progress_step = "Writing snapshot"
         db.commit()
         snapshot = snapshot_service.upsert_snapshot_from_ingest(db, result)
+        delist = universe_service.apply_inferred_delistings(
+            db, list(result.get("inferred_delistings") or [])
+        )
         parquet = result.get("parquet")
         payload = {
             "ok": True,
@@ -193,6 +197,8 @@ def execute_ingest_job(job_id: str) -> dict[str, Any]:
             "prior_snapshot_key": result.get("prior_snapshot_key"),
             "reconcile_with": result.get("reconcile_with"),
             "reconcile_reports": result.get("reconcile_reports"),
+            "inferred_delistings": result.get("inferred_delistings") or [],
+            "universe_delistings": delist,
             "status": data_status(Path(settings.data_root)),
         }
         job.status = IngestJobStatus.COMPLETED

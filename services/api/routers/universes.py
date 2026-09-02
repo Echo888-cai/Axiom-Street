@@ -62,6 +62,12 @@ def create_universe(payload: UniverseCreate, db: Session = Depends(get_db)) -> U
     return _to_out(universe)
 
 
+@router.post("/sync-delistings")
+def sync_delistings(db: Session = Depends(get_db)) -> dict:
+    """Close open-ended members whose last ingested bar is stale (delisted)."""
+    return universe_service.sync_delistings_from_data(db)
+
+
 @router.get("/{universe_id}", response_model=UniverseOut)
 def get_universe(universe_id: UUID, db: Session = Depends(get_db)) -> UniverseOut:
     return _to_out(universe_service.get_universe(db, universe_id))

@@ -12,6 +12,7 @@ def _ready(monkeypatch) -> None:
                 "snapshot_key": "spy-daily-test-abc123",
                 "source": "yfinance",
             },
+            "symbols": ["SPY"],
         },
     )
     monkeypatch.setattr("services.api.services.backtests._quality_gate", lambda *_a, **_k: None)
@@ -48,6 +49,10 @@ def test_create_backtest_writes_trial(client, monkeypatch):
         },
     )
     assert created.status_code == 201, created.text
+    snapshot = created.json()["universe_snapshot"]
+    assert snapshot is not None
+    assert snapshot[0]["symbol"] == "SPY"
+    assert snapshot[0]["effective_to"] is None
     stats = client.get(f"/api/v1/strategies/{strategy['id']}/trial-stats")
     assert stats.status_code == 200
     payload = stats.json()

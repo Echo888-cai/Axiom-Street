@@ -45,9 +45,13 @@ def upsert_snapshot_from_ingest(db: Session, result: dict[str, Any]) -> DataSnap
         .order_by(DataSnapshot.created_at.desc())
     ).first()
 
+    raw_symbols = result.get("symbols") or manifest.get("symbols") or manifest.get("symbol")
+    if not raw_symbols:
+        raise ValueError("快照没有 symbols，拒绝写入")
+
     row = DataSnapshot(
         snapshot_key=snapshot_key,
-        symbols=as_symbol_list(manifest.get("symbols") or manifest.get("symbol") or ["SPY"]),
+        symbols=as_symbol_list(raw_symbols),
         resolution=str(manifest.get("resolution") or "daily"),
         provider=str(manifest.get("source") or "unknown"),
         date_range_start=_parse_ts(manifest.get("start")),

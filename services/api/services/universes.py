@@ -16,6 +16,7 @@ from quant.data.universe import (
     constituents_as_of,
     constituents_overlapping,
     infer_effective_to_from_bars,
+    inferred_delistings,
     memberships_overlapping,
     validate_memberships,
 )
@@ -258,3 +259,106 @@ def preview_constituents(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="需要 as_of，或同时提供 start 与 end",
     )
+
+
+def _last_bar_date(frame) -> date:
+    last = frame["timestamp"].max()
+    if hasattr(last, "date"):
+        return last.date()
+    return date.fromisoformat(str(last)[:10])
+
+
+def apply_inferred_delistings(db: Session, delistings: list[dict[str, str]]) -> dict:
+    """Close open-ended memberships from stale last bars.
+
+    Never overwrite an existing effective_to. Never invent a live listing.
+    """
+    applied: list[dict[str, str]] = []
+    skipped: list[dict[str, str]] = []
+    errors: list[dict[str, str]] = []
+    by_symbol: dict[str, date] = {}
+    for row in delistings:
+        symbol = str(row["symbol"]).upper()
+        by_symbol[symbol] = date.fromisoformat(str(row["effective_to"])[:10])
+    if not by_symbol:
+        return {"applied": applied, "skipped": skipped, "errors": errors}
+
+    members = list(
+        db.scalars(select(UniverseMember).where(UniverseMember.symbol.in_(list(by_symbol)))).all()
+    )
+    for member in members:
+        inferred = by_symbol[member.symbol]
+        if member.effective_to is not None:
+            skipped.append(
+                {
+                    "universe_id": str(member.universe_id),
+                    "symbol": member.symbol,
+                    "effective_to": member.effective_to.isoformat(),
+                    "reason": "existing_effective_to_preserved",
+                }
+            )
+            if member.effective_to != inferred:
+                errors.append(
+                    {
+                        "universe_id": str(member.universe_id),
+                        "symbol": member.symbol,
+                        "message": (
+                            f"已有 effective_to {member.effective_to} 与本次推断 "
+                            f"{inferred} 不一致，拒绝覆盖"
+                        ),
+                    }
+                )
+            continue
+        if inferred < member.effective_from:
+            errors.append(
+                {
+                    "universe_id": str(member.universe_id),
+                    "symbol": member.symbol,
+                    "message": (
+                        f"推断退出日 {inferred} 早于进入日 {member.effective_from}，拒绝改写"
+                    ),
+                }
+            )
+            continue
+        member.effective_to = inferred
+        applied.append(
+            {
+                "universe_id": str(member.universe_id),
+                "symbol": member.symbol,
+                "effective_to": inferred.isoformat(),
+            }
+        )
+    return {"applied": applied, "skipped": skipped, "errors": errors}
+
+
+def sync_delistings_from_data(db: Session, *, as_of: date | None = None) -> dict:
+    """Infer delist dates from current parquets for every open-ended member."""
+    data_root = Path(get_settings().data_root)
+    open_members = list(
+        db.scalars(select(UniverseMember).where(UniverseMember.effective_to.is_(None))).all()
+    )
+    last_bars: dict[str, date] = {}
+    missing: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for member in open_members:
+        if member.symbol in seen:
+            continue
+        seen.add(member.symbol)
+        try:
+            frame = load_symbol_parquet(data_root, member.symbol)
+        except FileNotFoundError:
+            missing.append(
+                {
+                    "universe_id": str(member.universe_id),
+                    "symbol": member.symbol,
+                    "message": f"没有 {member.symbol} 行情，无法推断 effective_to",
+                }
+            )
+            continue
+        last_bars[member.symbol] = _last_bar_date(frame)
+    delistings = inferred_delistings(last_bars, as_of=as_of)
+    result = apply_inferred_delistings(db, delistings)
+    result["errors"] = list(result["errors"]) + missing
+    result["inferred"] = delistings
+    db.commit()
+    return result

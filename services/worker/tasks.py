@@ -7,6 +7,7 @@ from uuid import UUID
 import redis
 import structlog
 
+from quant.data.symbols import as_symbol_list
 from quant.data.universe import Membership
 from quant.engine.base import BacktestRequest
 from quant.engine.errors import BacktestCancelled, EngineTimeout
@@ -32,6 +33,35 @@ from services.api.settings import get_settings
 from services.worker.celery_app import celery_app
 
 log = structlog.get_logger("axiom.worker")
+
+_NO_UNIVERSE = "回测没有标的。请指定标的池、临时 symbols，或先拉取行情。"
+
+
+def resolve_execution_universe(
+    *,
+    universe_snapshot: list | None,
+    snapshot_symbols: object | None,
+    config: object | None,
+) -> tuple[list[str], list[Membership]]:
+    """PIT snapshot wins. Never guess SPY."""
+    memberships: list[Membership] = []
+    universe: list[str] = []
+    if universe_snapshot:
+        memberships = [Membership.from_dict(item) for item in universe_snapshot]
+        for member in memberships:
+            if member.symbol not in universe:
+                universe.append(member.symbol)
+        if universe:
+            return universe, memberships
+    if snapshot_symbols:
+        universe = as_symbol_list(snapshot_symbols)
+        return universe, memberships
+    if isinstance(config, dict):
+        configured = (config.get("universe") or {}).get("symbols")
+        if configured:
+            universe = as_symbol_list(configured)
+            return universe, memberships
+    raise ValueError(_NO_UNIVERSE)
 
 
 def _redis():
@@ -129,30 +159,26 @@ def execute_backtest(backtest_id: str) -> dict:
         _set_progress(db, backtest, BacktestStatus.STARTING, "Preparing environment")
 
         data_root = Path(settings.data_root)
-        memberships: list[Membership] = []
-        universe = ["SPY"]
-        if backtest.universe_snapshot:
-            memberships = [Membership.from_dict(item) for item in backtest.universe_snapshot]
-            universe = []
-            for member in memberships:
-                if member.symbol not in universe:
-                    universe.append(member.symbol)
+        snap = None
         if backtest.data_snapshot_id:
             snap = db.get(DataSnapshot, backtest.data_snapshot_id)
             if snap:
-                from quant.data.symbols import as_symbol_list
-
-                if not memberships:
-                    universe = as_symbol_list(snap.symbols)
                 candidate = Path(settings.data_root) / "snapshots" / snap.snapshot_key
                 if candidate.exists():
                     data_root = candidate
-        if not memberships and isinstance(version.config, dict):
-            configured = (version.config.get("universe") or {}).get("symbols")
-            if configured:
-                from quant.data.symbols import as_symbol_list as _as_list
-
-                universe = _as_list(configured)
+        try:
+            universe, memberships = resolve_execution_universe(
+                universe_snapshot=backtest.universe_snapshot,
+                snapshot_symbols=snap.symbols if snap else None,
+                config=version.config,
+            )
+        except ValueError as exc:
+            backtest.status = BacktestStatus.FAILED
+            backtest.error = {"code": "universe_missing", "message": str(exc)}
+            backtest.finished_at = datetime.now(timezone.utc)
+            backtest.progress_step = "Failed"
+            db.commit()
+            return {"error": "universe_missing", "message": str(exc)}
 
         engine = LeanQuantEngine(
             lean_image=settings.lean_image,
