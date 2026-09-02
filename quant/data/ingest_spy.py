@@ -15,6 +15,7 @@ from quant.data.lean_converter import convert_to_lean
 from quant.data.manifest import load_manifest, save_manifest
 from quant.data.providers import fetch_daily, provider_status
 from quant.data.quality import validate_ohlcv
+from quant.data.reconcile import reconcile_frames
 from quant.data.symbols import list_market_symbols, normalize_symbols, snapshot_slug
 from quant.data.types import (
     DataQualityError,
@@ -146,6 +147,7 @@ def ingest(
     provider: Optional[str] = None,
     convert_lean: bool = True,
     mode: str = "full",
+    reconcile_with: str | None = None,
 ) -> dict[str, Any]:
     """Download daily bars into an immutable snapshot. Never overwrite a prior snapshot.
 
@@ -153,6 +155,10 @@ def ingest(
       - full: fetch [start, end] for every symbol
       - incremental: require prior bars; fetch only after each symbol's last bar;
         concat into a new snapshot. Restatements are warnings, never in-place edits.
+
+    reconcile_with:
+      Optional secondary provider (e.g. ``yfinance`` when primary is ``polygon``).
+      Close mismatches become warnings; corporate-action disagreements block.
     """
     if mode not in {"full", "incremental"}:
         raise ValueError(f"unsupported ingest mode: {mode!r} (expected 'full' or 'incremental')")
@@ -160,10 +166,18 @@ def ingest(
     tickers = normalize_symbols(symbols)
     root = Path(data_root or os.getenv("STREET_DATA_ROOT") or _repo_data_root())
     provider_name = provider or os.getenv("STREET_DATA_PROVIDER") or "auto"
+    reconcile_provider = reconcile_with or os.getenv("STREET_RECONCILE_WITH") or None
+    if reconcile_provider:
+        reconcile_provider = reconcile_provider.strip().lower() or None
+        if reconcile_provider in {"auto", provider_name}:
+            raise ValueError(
+                "reconcile_with must name a concrete secondary provider distinct from primary"
+            )
 
     frames: dict[str, pd.DataFrame] = {}
     reports: list[DataQualityReport] = []
     sources: list[str] = []
+    reconcile_reports: list[dict[str, Any]] = []
     caps_ok = True
     last_caps = None
     fetch_windows: dict[str, dict[str, str | None]] = {}
@@ -210,6 +224,22 @@ def ingest(
             frame, expected_end=expected_end.to_pydatetime() if expected_end is not None else None
         )
         report.issues.extend(restatement_issues)
+
+        if reconcile_provider:
+            frame_start = pd.to_datetime(frame["timestamp"], utc=True).min().strftime("%Y-%m-%d")
+            frame_end = pd.to_datetime(frame["timestamp"], utc=True).max().strftime("%Y-%m-%d")
+            secondary = fetch_daily(
+                symbol, provider=reconcile_provider, start=frame_start, end=frame_end
+            )
+            recon = reconcile_frames(
+                frame,
+                secondary.frame,
+                primary_source=source,
+                secondary_source=secondary.source,
+            )
+            report.issues.extend(recon.issues)
+            reconcile_reports.append({"symbol": symbol, **recon.to_dict()})
+
         if report.has_blocking_issues:
             raise DataQualityError(f"{symbol} 数据质量校验未通过，拒绝写入快照。", report.to_dict())
         if convert_lean and not caps.corporate_actions:
@@ -283,6 +313,8 @@ def ingest(
         "ingest_mode": mode,
         "fetch_windows": fetch_windows,
         "prior_snapshot_key": prior_snapshot_key,
+        "reconcile_with": reconcile_provider,
+        "reconcile_reports": reconcile_reports,
         "corporate_actions_verified": caps_ok,
         "provider_capabilities": {
             "ohlcv": True if last_caps is None else last_caps.ohlcv,
@@ -316,6 +348,8 @@ def ingest(
         "ingest_mode": mode,
         "fetch_windows": fetch_windows,
         "prior_snapshot_key": prior_snapshot_key,
+        "reconcile_with": reconcile_provider,
+        "reconcile_reports": reconcile_reports,
     }
 
 
@@ -327,6 +361,7 @@ def ingest_spy(
     provider: Optional[str] = None,
     convert_lean: bool = True,
     mode: str = "full",
+    reconcile_with: str | None = None,
 ) -> dict[str, Any]:
     return ingest(
         symbols=["SPY"],
@@ -336,6 +371,7 @@ def ingest_spy(
         provider=provider,
         convert_lean=convert_lean,
         mode=mode,
+        reconcile_with=reconcile_with,
     )
 
 
@@ -425,6 +461,11 @@ if __name__ == "__main__":
         default="full",
         help="full = refetch history; incremental = append after last bar",
     )
+    parser.add_argument(
+        "--reconcile-with",
+        default=None,
+        help="optional secondary provider for dual-source reconciliation (e.g. yfinance)",
+    )
     parser.add_argument("--no-lean", action="store_true")
     args = parser.parse_args()
     result = ingest(
@@ -434,6 +475,7 @@ if __name__ == "__main__":
         provider=args.provider,
         convert_lean=not args.no_lean,
         mode=args.mode,
+        reconcile_with=args.reconcile_with,
     )
     print(
         json.dumps(

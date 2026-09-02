@@ -278,9 +278,9 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 ### 4.3 数据源升级与交叉对账
 
-- 接入 Polygon（`.env.example` 已预留 key，adapter 未实现）作为主源，yfinance 降级为对账源；
-- **双源对账**：同一标的同一日的 close 偏差超过阈值（如 10 bps）则标记该 bar 为 suspect 并进入 quality report；
-- 分红/拆分事件必须双源一致才写入 factor file。
+**已交付（脚手架）**：`fetch_polygon`（无 key fail loud）+ `quant/data/reconcile.py`（close >10 bps → warning；分红/拆分冲突 → blocking）+ ingest/API `--reconcile-with`。
+
+仍待补强：有真实 `POLYGON_API_KEY` 时的端到端 golden、对账报告前端呈现、默认生产路径切到 Polygon 主源。
 
 ### 4.4 增量摄取
 

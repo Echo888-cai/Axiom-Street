@@ -23,11 +23,15 @@ YFINANCE_CAPABILITIES = ProviderCapabilities(
 STOOQ_CAPABILITIES = ProviderCapabilities(
     ohlcv=True, dividends=False, splits=False, point_in_time=False
 )
+POLYGON_CAPABILITIES = ProviderCapabilities(
+    ohlcv=True, dividends=True, splits=True, point_in_time=False
+)
 
 CAPABILITIES_BY_SOURCE = {
     "yfinance": YFINANCE_CAPABILITIES,
     "yahoo": YFINANCE_CAPABILITIES,
     "stooq": STOOQ_CAPABILITIES,
+    "polygon": POLYGON_CAPABILITIES,
 }
 
 

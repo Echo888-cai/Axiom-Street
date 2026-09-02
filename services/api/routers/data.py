@@ -24,9 +24,13 @@ class IngestRequest(BaseModel):
     symbols: list[str] = Field(default_factory=lambda: ["SPY"])
     start: str = "2010-01-01"
     end: Optional[str] = None
-    provider: str = Field(default="auto", description="auto | yfinance | stooq")
+    provider: str = Field(default="auto", description="auto | yfinance | stooq | polygon")
     convert_lean: bool = True
     mode: str = Field(default="full", description="full | incremental")
+    reconcile_with: Optional[str] = Field(
+        default=None,
+        description="optional secondary provider for dual-source reconciliation",
+    )
 
 
 def _lean_engine_status() -> dict:
@@ -53,6 +57,7 @@ def _run_ingest(payload: IngestRequest, db: Session) -> dict:
             provider=payload.provider,
             convert_lean=payload.convert_lean,
             mode=payload.mode,
+            reconcile_with=payload.reconcile_with,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -82,6 +87,8 @@ def _run_ingest(payload: IngestRequest, db: Session) -> dict:
         "ingest_mode": result.get("ingest_mode") or payload.mode,
         "fetch_windows": result.get("fetch_windows"),
         "prior_snapshot_key": result.get("prior_snapshot_key"),
+        "reconcile_with": result.get("reconcile_with"),
+        "reconcile_reports": result.get("reconcile_reports"),
         "status": data_status(Path(settings.data_root)),
     }
 
