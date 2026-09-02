@@ -340,6 +340,13 @@ def run_backtest_task(backtest_id: str) -> dict:
     return execute_backtest(backtest_id)
 
 
+@celery_app.task(name="data.ingest")
+def run_ingest_task(job_id: str) -> dict:
+    from services.api.services.ingest_jobs import execute_ingest_job
+
+    return execute_ingest_job(job_id)
+
+
 @celery_app.task(name="backtests.reconcile_orphans")
 def reconcile_orphan_backtests_task() -> int:
     return reconcile_orphan_backtests()

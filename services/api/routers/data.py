@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from pathlib import Path
 from typing import Optional
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sse_starlette.sse import EventSourceResponse
 
-from quant.data.ingest_spy import data_status, ingest
+from quant.data.ingest_spy import data_status
 from quant.data.symbols import normalize_symbols
-from quant.data.types import DataQualityError, ProviderCapabilityError
-from services.api.db import get_db
+from services.api.db import SessionLocal, get_db
 from services.api.health import docker_status
 from services.api.models import DataSnapshot
-from services.api.services import snapshots as snapshot_service
+from services.api.services import ingest_jobs as ingest_job_service
 from services.api.settings import get_settings
 
 router = APIRouter(prefix="/data", tags=["data"])
@@ -45,60 +48,30 @@ def _lean_engine_status() -> dict:
     }
 
 
-def _run_ingest(payload: IngestRequest, db: Session) -> dict:
-    settings = get_settings()
+def _create_job(payload: IngestRequest, db: Session) -> dict:
     try:
         tickers = normalize_symbols(payload.symbols)
-        result = ingest(
+        job = ingest_job_service.create_ingest_job(
+            db,
             symbols=tickers,
-            data_root=Path(settings.data_root),
             start=payload.start,
             end=payload.end,
             provider=payload.provider,
-            convert_lean=payload.convert_lean,
             mode=payload.mode,
             reconcile_with=payload.reconcile_with,
+            convert_lean=payload.convert_lean,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except DataQualityError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail={"code": "data_quality", "message": str(exc), "report": exc.report},
-        ) from exc
-    except ProviderCapabilityError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail={"code": "provider_capability", "message": str(exc)},
-        ) from exc
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-    snapshot = snapshot_service.upsert_snapshot_from_ingest(db, result)
-    db.commit()
-    parquet = result.get("parquet")
-    return {
-        "ok": True,
-        "parquet": str(parquet) if parquet is not None else None,
-        "snapshot_key": result.get("snapshot_key"),
-        "data_snapshot_id": str(snapshot.id),
-        "symbols": result.get("symbols") or tickers,
-        "quality_report": result.get("quality_report"),
-        "ingest_mode": result.get("ingest_mode") or payload.mode,
-        "fetch_windows": result.get("fetch_windows"),
-        "prior_snapshot_key": result.get("prior_snapshot_key"),
-        "reconcile_with": result.get("reconcile_with"),
-        "reconcile_reports": result.get("reconcile_reports"),
-        "status": data_status(Path(settings.data_root)),
-    }
+    return ingest_job_service.serialize_job(job)
 
 
 @router.get("/status")
 def get_data_status() -> dict:
     settings = get_settings()
-    status = data_status(Path(settings.data_root))
-    status["lean_engine"] = _lean_engine_status()
-    return status
+    status_payload = data_status(Path(settings.data_root))
+    status_payload["lean_engine"] = _lean_engine_status()
+    return status_payload
 
 
 @router.get("/snapshots")
@@ -123,12 +96,49 @@ def list_snapshots(db: Session = Depends(get_db)) -> dict:
     }
 
 
-@router.post("/ingest")
+@router.post("/ingest", status_code=status.HTTP_202_ACCEPTED)
 def ingest_endpoint(payload: IngestRequest, db: Session = Depends(get_db)) -> dict:
-    return _run_ingest(payload, db)
+    """Enqueue an ingest job. Returns immediately with job id + progress fields."""
+    return _create_job(payload, db)
 
 
-@router.post("/ingest/spy")
+@router.post("/ingest/spy", status_code=status.HTTP_202_ACCEPTED)
 def ingest_spy_endpoint(payload: IngestRequest, db: Session = Depends(get_db)) -> dict:
     payload.symbols = ["SPY"]
-    return _run_ingest(payload, db)
+    return _create_job(payload, db)
+
+
+@router.get("/ingest/{job_id}")
+def get_ingest_job(job_id: UUID, db: Session = Depends(get_db)) -> dict:
+    try:
+        job = ingest_job_service.get_job(db, job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return ingest_job_service.serialize_job(job)
+
+
+@router.get("/ingest/{job_id}/events")
+async def ingest_job_events(job_id: UUID) -> EventSourceResponse:
+    async def event_generator():
+        terminal = {"COMPLETED", "FAILED", "CANCELLED"}
+        while True:
+            db = SessionLocal()
+            try:
+                try:
+                    job = ingest_job_service.get_job(db, job_id)
+                except KeyError:
+                    yield {
+                        "event": "done",
+                        "data": json.dumps({"id": str(job_id), "status": "FAILED", "error": "not_found"}),
+                    }
+                    break
+                payload = ingest_job_service.serialize_job(job)
+                yield {"event": "progress", "data": json.dumps(payload)}
+                if payload["status"] in terminal:
+                    yield {"event": "done", "data": json.dumps(payload)}
+                    break
+            finally:
+                db.close()
+            await asyncio.sleep(1.0)
+
+    return EventSourceResponse(event_generator())

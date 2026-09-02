@@ -220,17 +220,22 @@ export const api = {
     start?: string;
     provider?: string;
     mode?: "full" | "incremental";
+    reconcile_with?: string;
   }) =>
-    request<{ ok: boolean; status: DataStatus; symbols?: string[] }>("/api/v1/data/ingest", {
+    request<IngestJob>("/api/v1/data/ingest", {
       method: "POST",
       body: JSON.stringify({
         symbols: body?.symbols?.length ? body.symbols : ["SPY"],
         provider: body?.provider || "auto",
         start: body?.start || "2010-01-01",
+        mode: body?.mode || "full",
+        reconcile_with: body?.reconcile_with,
       }),
     }),
+  getIngestJob: (id: string) => request<IngestJob>(`/api/v1/data/ingest/${id}`),
+  ingestEventsUrl: (id: string) => `${API_URL}/api/v1/data/ingest/${id}/events`,
   ingestSpy: (body?: { start?: string; provider?: string }) =>
-    request<{ ok: boolean; status: DataStatus }>("/api/v1/data/ingest/spy", {
+    request<IngestJob>("/api/v1/data/ingest/spy", {
       method: "POST",
       body: JSON.stringify(body || { provider: "auto", start: "2010-01-01" }),
     }),
@@ -322,6 +327,33 @@ export type Universe = {
   updated_at: string;
   member_count: number;
   members: UniverseMember[];
+};
+
+export type IngestJob = {
+  id: string;
+  status: string;
+  progress_step: string | null;
+  symbols: string[];
+  start: string;
+  end: string | null;
+  provider: string;
+  mode: string;
+  reconcile_with: string | null;
+  convert_lean: boolean;
+  current_symbol: string | null;
+  completed_symbols: number;
+  total_symbols: number;
+  result: {
+    ok?: boolean;
+    symbols?: string[];
+    snapshot_key?: string;
+    quality_report?: DataStatus["quality_report"];
+  } | null;
+  error: { code?: string; message?: string } | null;
+  data_snapshot_id: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
 };
 
 export type DataSnapshot = {

@@ -340,6 +340,45 @@ class BacktestTimeSeries(Base):
     backtest: Mapped[Backtest] = relationship(back_populates="time_series")
 
 
+class IngestJobStatus(str, enum.Enum):
+    QUEUED = "QUEUED"
+    STARTING = "STARTING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class IngestJob(Base):
+    __tablename__ = "ingest_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    status: Mapped[IngestJobStatus] = mapped_column(
+        _enum(IngestJobStatus, "ingest_job_status"),
+        default=IngestJobStatus.QUEUED,
+        nullable=False,
+    )
+    progress_step: Mapped[Optional[str]] = mapped_column(String(255))
+    symbols: Mapped[dict] = mapped_column(JSON, default=list)
+    start: Mapped[str] = mapped_column(String(32), default="2010-01-01")
+    end: Mapped[Optional[str]] = mapped_column(String(32))
+    provider: Mapped[str] = mapped_column(String(64), default="auto")
+    mode: Mapped[str] = mapped_column(String(32), default="full")
+    reconcile_with: Mapped[Optional[str]] = mapped_column(String(64))
+    convert_lean: Mapped[bool] = mapped_column(Boolean, default=True)
+    current_symbol: Mapped[Optional[str]] = mapped_column(String(16))
+    completed_symbols: Mapped[int] = mapped_column(Integer, default=0)
+    total_symbols: Mapped[int] = mapped_column(Integer, default=0)
+    result: Mapped[Optional[dict]] = mapped_column(JSON)
+    error: Mapped[Optional[dict]] = mapped_column(JSON)
+    data_snapshot_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("data_snapshots.id", ondelete="SET NULL"), nullable=True
+    )
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class UniverseKind(str, enum.Enum):
     STATIC = "STATIC"
 

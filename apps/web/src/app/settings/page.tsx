@@ -2,8 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { api, type IngestJob } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,16 @@ import { cn } from "@/lib/utils";
 export default function SettingsPage() {
   const qc = useQueryClient();
   const [tickers, setTickers] = useState("SPY");
+  const [job, setJob] = useState<IngestJob | null>(null);
+  const sourceRef = useRef<EventSource | null>(null);
   const status = useQuery({ queryKey: ["data-status"], queryFn: api.dataStatus });
+
+  useEffect(() => {
+    return () => {
+      sourceRef.current?.close();
+    };
+  }, []);
+
   const ingest = useMutation({
     mutationFn: () => {
       const symbols = tickers
@@ -24,13 +33,46 @@ export default function SettingsPage() {
         .filter(Boolean);
       return api.ingest({ provider: "auto", start: "2010-01-01", symbols });
     },
-    onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: ["data-status"] });
-      const names = (result.symbols || []).join(", ") || tickers.toUpperCase();
-      toast(`${names} 行情已更新`, "ok");
+    onSuccess: (created) => {
+      setJob(created);
+      sourceRef.current?.close();
+      const es = new EventSource(api.ingestEventsUrl(created.id));
+      sourceRef.current = es;
+      es.addEventListener("progress", (ev) => {
+        try {
+          setJob(JSON.parse((ev as MessageEvent).data) as IngestJob);
+        } catch {
+          /* ignore malformed frames */
+        }
+      });
+      es.addEventListener("done", (ev) => {
+        try {
+          const finalJob = JSON.parse((ev as MessageEvent).data) as IngestJob;
+          setJob(finalJob);
+          qc.invalidateQueries({ queryKey: ["data-status"] });
+          if (finalJob.status === "COMPLETED") {
+            const names = (finalJob.result?.symbols || finalJob.symbols || []).join(", ");
+            toast(`${names} 行情已更新`, "ok");
+          } else {
+            toast(finalJob.error?.message || "行情拉取失败", "err");
+          }
+        } catch {
+          toast("行情任务结束，但无法解析结果", "err");
+        } finally {
+          es.close();
+          sourceRef.current = null;
+        }
+      });
+      es.onerror = () => {
+        /* EventSource retries; terminal state arrives via done */
+      };
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
+
+  const running =
+    ingest.isPending ||
+    (job != null && !["COMPLETED", "FAILED", "CANCELLED"].includes(job.status));
 
   const m = status.data?.manifest || {};
   const lean = status.data?.lean_engine;
@@ -130,15 +172,27 @@ export default function SettingsPage() {
                 aria-label="要拉取的标的代码"
                 className="max-w-[220px]"
               />
-              <Button size="sm" onClick={() => ingest.mutate()} disabled={ingest.isPending}>
-                {ingest.isPending ? "正在拉取…" : "拉取行情"}
+              <Button size="sm" onClick={() => ingest.mutate()} disabled={running}>
+                {running ? "正在拉取…" : "拉取行情"}
               </Button>
             </div>
-            {ingest.isPending ? (
-              <p className="text-[11px] text-as-muted">正在下载并转换日线数据，通常需要几秒到几十秒。</p>
+            {running && job ? (
+              <div className="rounded-as border border-as-border bg-as-secondary/60 px-3 py-2 text-[11px] text-as-muted">
+                <div className="flex items-center justify-between gap-3 text-as-text">
+                  <span className="font-medium">{job.progress_step || "排队中"}</span>
+                  <span className="tabular-nums">
+                    {job.completed_symbols}/{job.total_symbols || "—"}
+                  </span>
+                </div>
+                {job.current_symbol ? (
+                  <p className="mt-1">当前标的 {job.current_symbol}</p>
+                ) : (
+                  <p className="mt-1">任务在 worker 中执行，完成后自动刷新数据状态。</p>
+                )}
+              </div>
             ) : (
               <p className="text-[11px] text-as-muted">
-                每次拉取写入新的不可变快照，不会覆盖旧数据。多标的请一次填齐，例如 SPY, QQQ。
+                每次拉取写入新的不可变快照，不会覆盖旧数据。多标的请一次填齐，例如 SPY, QQQ, IWM。
               </p>
             )}
           </div>
@@ -178,12 +232,14 @@ export default function SettingsPage() {
         <Card>
           <CardHeader title="API Key（可选，后续）" />
           <p className="text-sm leading-relaxed text-as-muted">
-            当前不需要 Key。Polygon 双源对账与模拟交易会在后续阶段接入，届时写入{" "}
-            <code className="text-as-text">.env</code>。
+            默认 Yahoo 即可。Polygon 已接线：写入{" "}
+            <code className="text-as-text">POLYGON_API_KEY</code> 后可用{" "}
+            <code className="text-as-text">provider=polygon</code> +{" "}
+            <code className="text-as-text">reconcile_with=yfinance</code>。
           </p>
           <ul className="mt-4 space-y-2 text-xs text-as-muted">
             <li>
-              <span className="text-as-text">POLYGON_API_KEY</span> — Polygon 美股（Phase 2）
+              <span className="text-as-text">POLYGON_API_KEY</span> — Polygon 美股主源（可选）
             </li>
             <li>
               <span className="text-as-text">ALPACA_API_KEY</span> +{" "}

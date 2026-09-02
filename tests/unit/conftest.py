@@ -4,6 +4,7 @@ import os
 
 os.environ.setdefault("STREET_DATABASE_URL", "sqlite+pysqlite:///:memory:")
 os.environ.setdefault("STREET_SYNC_BACKTESTS", "1")
+os.environ.setdefault("STREET_SYNC_INGESTS", "1")
 os.environ.setdefault("STREET_SKIP_MIGRATIONS", "1")
 
 import pytest
@@ -16,6 +17,7 @@ from sqlalchemy.pool import StaticPool
 @pytest.fixture()
 def client(monkeypatch):
     from services.api import db as db_module
+    from services.api import models as _models  # noqa: F401 — register all ORM tables
     from services.api.db import Base, get_db
     from services.api.main import app
     from services.api.settings import get_settings

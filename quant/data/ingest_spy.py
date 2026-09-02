@@ -7,7 +7,7 @@ import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import pandas as pd
 
@@ -148,6 +148,7 @@ def ingest(
     convert_lean: bool = True,
     mode: str = "full",
     reconcile_with: str | None = None,
+    on_progress: Callable[[str, int, int], None] | None = None,
 ) -> dict[str, Any]:
     """Download daily bars into an immutable snapshot. Never overwrite a prior snapshot.
 
@@ -159,6 +160,9 @@ def ingest(
     reconcile_with:
       Optional secondary provider (e.g. ``yfinance`` when primary is ``polygon``).
       Close mismatches become warnings; corporate-action disagreements block.
+
+    on_progress:
+      Optional ``(symbol, index_1based, total)`` callback for batch progress UIs.
     """
     if mode not in {"full", "incremental"}:
         raise ValueError(f"unsupported ingest mode: {mode!r} (expected 'full' or 'incremental')")
@@ -182,8 +186,11 @@ def ingest(
     last_caps = None
     fetch_windows: dict[str, dict[str, str | None]] = {}
     prior_snapshot_key = load_manifest(root).get("snapshot_key")
+    total = len(tickers)
 
-    for symbol in tickers:
+    for index, symbol in enumerate(tickers, start=1):
+        if on_progress is not None:
+            on_progress(symbol, index, total)
         fetch_start = start
         prior_frame: pd.DataFrame | None = None
         if mode == "incremental":

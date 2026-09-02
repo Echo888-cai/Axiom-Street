@@ -29,3 +29,6 @@ def test_alembic_baseline_creates_tables():
     assert "effective_from" in text3
     assert "effective_to" in text3
     assert "universe_snapshot" in text3
+    text4 = Path("services/api/alembic/versions/0004_ingest_jobs.py").read_text(encoding="utf-8")
+    assert "ingest_jobs" in text4
+    assert "completed_symbols" in text4

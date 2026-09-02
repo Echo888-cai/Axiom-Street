@@ -41,6 +41,7 @@ services:
       STREET_LEAN_IMAGE: quantconnect/lean:16355
       STREET_CORS_ORIGINS: http://localhost:3000
       STREET_SYNC_BACKTESTS: "false"
+      STREET_SYNC_INGESTS: "false"
       STREET_MAX_INFLIGHT_BACKTESTS: "2"
     ports:
       - "8000:8000"

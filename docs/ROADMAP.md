@@ -286,7 +286,9 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 **已交付（基础版）**：`ingest(..., mode="full"|"incremental")` + API `IngestRequest.mode`。增量仅拉取 last-bar 之后的窗口，与 prior 拼接后写入新快照；重叠日期数值变化记入 `vendor_restatement` warning。prior 缺失时 fail loud。
 
-仍待补强：定期全量校验任务（检测 vendor restatement 的 scheduled full reconcile）、大批量（500 标的）吞吐与进度报告。
+**进度/编排（已交付）**：`ingest_jobs` + Celery `data.ingest` + SSE `/data/ingest/{id}/events`；Settings 展示 `completed/total` 与当前标的。
+
+仍待补强：定期全量校验任务（Beat scheduled full reconcile）、500 标的吞吐压测与限速。
 
 **验收标准**：
 - 能一条命令摄取 500 支股票日线并生成对应 LEAN 数据；
