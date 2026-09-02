@@ -44,6 +44,9 @@ services:
       STREET_SYNC_INGESTS: "false"
       STREET_MARKET_RECONCILE_ENABLED: "true"
       STREET_MARKET_RECONCILE_INTERVAL_SECONDS: "86400"
+      STREET_INGEST_MAX_SYMBOLS: "500"
+      STREET_INGEST_RPS: "2"
+      STREET_INGEST_CONCURRENCY: "4"
       STREET_MAX_INFLIGHT_BACKTESTS: "2"
     ports:
       - "8000:8000"
@@ -80,6 +83,9 @@ services:
       STREET_MARKET_RECONCILE_ENABLED: "true"
       STREET_MARKET_RECONCILE_INTERVAL_SECONDS: "86400"
       STREET_MARKET_RECONCILE_PROVIDER: "auto"
+      STREET_INGEST_MAX_SYMBOLS: "500"
+      STREET_INGEST_RPS: "2"
+      STREET_INGEST_CONCURRENCY: "4"
       DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       # Bind the host paths at the same location so `docker run -v` from the

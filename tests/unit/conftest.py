@@ -6,6 +6,8 @@ os.environ.setdefault("STREET_DATABASE_URL", "sqlite+pysqlite:///:memory:")
 os.environ.setdefault("STREET_SYNC_BACKTESTS", "1")
 os.environ.setdefault("STREET_SYNC_INGESTS", "1")
 os.environ.setdefault("STREET_SKIP_MIGRATIONS", "1")
+os.environ.setdefault("STREET_INGEST_RPS", "0")
+os.environ.setdefault("STREET_INGEST_CONCURRENCY", "1")
 
 import pytest
 from fastapi.testclient import TestClient

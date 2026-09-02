@@ -88,7 +88,7 @@ Mature components over vanity engineering. We do not rewrite a backtester for sp
 |-------|--------|
 | 0–1 Foundation + SPY 200DMA path | Done |
 | 1.5 Trust hardening (fail-loud, Celery, trial ledger) | Done |
-| **2 Data platform** (PIT universes ✓, incremental ingest ✓, dual-source scaffold ✓) | **In progress** |
+| **2 Data platform** (PIT universes ✓, incremental ingest ✓, dual-source scaffold ✓, 500-name ingest ✓) | **In progress** |
 | 3 Validation engine | Next |
 | 4–8 Research · AI · Paper · Live · Portfolio | Sequenced after validation |
 
@@ -125,6 +125,7 @@ uvicorn services.api.main:app --reload --port 8000
 ```bash
 python -m quant.data.ingest_spy SPY
 python -m quant.data.ingest_spy SPY QQQ --mode incremental
+python -m quant.data.ingest_spy --symbols-file tickers.txt
 ```
 
 Configuration uses the `STREET_` env prefix (see `.env.example`).

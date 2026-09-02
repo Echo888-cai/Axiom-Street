@@ -16,6 +16,7 @@ from typing import Optional
 
 import pandas as pd
 
+from quant.data.rate_limit import pace
 from quant.data.symbols import normalize_symbols
 from quant.data.types import (
     CAPABILITIES_BY_SOURCE,
@@ -66,6 +67,7 @@ def fetch_yfinance(
 ) -> pd.DataFrame:
     import yfinance as yf
 
+    pace()
     ticker = yf.Ticker(symbol)
     hist = ticker.history(start=start, end=end, auto_adjust=False, actions=True)
     if hist.empty:
@@ -82,6 +84,7 @@ def fetch_stooq(
     """Stooq daily bars — no API key. Corporate actions often unavailable."""
     stooq_symbol = f"{symbol.lower()}.us"
     url = f"https://stooq.com/q/d/l/?s={stooq_symbol}&i=d"
+    pace()
     df = pd.read_csv(url)
     if df.empty or "Date" not in df.columns:
         raise RuntimeError(f"Stooq returned empty/invalid data for {symbol}")
@@ -124,7 +127,7 @@ def fetch_polygon(
     """
     import httpx
 
-    key = (api_key if api_key is not None else _polygon_api_key())
+    key = api_key if api_key is not None else _polygon_api_key()
     if not key:
         raise RuntimeError(
             "POLYGON_API_KEY is not set; refusing to call Polygon. "
@@ -132,16 +135,18 @@ def fetch_polygon(
         )
 
     end_day = end or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    agg_url = (
-        f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/day/"
-        f"{start}/{end_day}"
-    )
+    agg_url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/day/{start}/{end_day}"
     with httpx.Client(timeout=30.0) as client:
-        agg_resp = client.get(agg_url, params={"adjusted": "false", "sort": "asc", "limit": 50000, "apiKey": key})
+        pace()
+        agg_resp = client.get(
+            agg_url, params={"adjusted": "false", "sort": "asc", "limit": 50000, "apiKey": key}
+        )
         if agg_resp.status_code == 401 or agg_resp.status_code == 403:
             raise RuntimeError(f"Polygon authentication failed ({agg_resp.status_code})")
         if agg_resp.status_code >= 400:
-            raise RuntimeError(f"Polygon aggregates failed ({agg_resp.status_code}): {agg_resp.text[:200]}")
+            raise RuntimeError(
+                f"Polygon aggregates failed ({agg_resp.status_code}): {agg_resp.text[:200]}"
+            )
         payload = agg_resp.json()
         results = payload.get("results") or []
         if not results:
@@ -176,6 +181,7 @@ def _polygon_dividends(
 
     assert isinstance(client, httpx.Client)
     url = "https://api.polygon.io/v3/reference/dividends"
+    pace()
     resp = client.get(
         url,
         params={
@@ -204,6 +210,7 @@ def _polygon_splits(
 
     assert isinstance(client, httpx.Client)
     url = "https://api.polygon.io/v3/reference/splits"
+    pace()
     resp = client.get(
         url,
         params={

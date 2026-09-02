@@ -5,6 +5,8 @@ import hashlib
 import json
 import os
 import shutil
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -15,8 +17,19 @@ from quant.data.lean_converter import convert_to_lean
 from quant.data.manifest import load_manifest, save_manifest
 from quant.data.providers import fetch_daily, provider_status
 from quant.data.quality import validate_ohlcv
+from quant.data.rate_limit import (
+    ensure_ingest_symbol_count,
+    ingest_concurrency,
+    ingest_max_symbols,
+    ingest_rps,
+)
 from quant.data.reconcile import reconcile_frames
-from quant.data.symbols import list_market_symbols, normalize_symbols, snapshot_slug
+from quant.data.symbols import (
+    list_market_symbols,
+    load_symbols_file,
+    normalize_symbols,
+    snapshot_slug,
+)
 from quant.data.types import (
     DataQualityError,
     DataQualityReport,
@@ -140,6 +153,138 @@ def _merge_incremental(
     return combined, issues
 
 
+def _ingest_one_symbol(
+    symbol: str,
+    *,
+    root: Path,
+    start: str,
+    end: Optional[str],
+    provider_name: str,
+    mode: str,
+    reconcile_provider: str | None,
+    convert_lean: bool,
+) -> dict[str, Any]:
+    fetch_start = start
+    prior_frame: pd.DataFrame | None = None
+    prior_path = _prior_parquet_path(root, symbol)
+    if prior_path is not None:
+        prior_frame = pd.read_parquet(prior_path)
+        if prior_frame is not None and prior_frame.empty:
+            prior_frame = None
+
+    if mode == "incremental":
+        if prior_frame is None:
+            raise ValueError(
+                f"incremental ingest requires prior bars for {symbol}; "
+                "run mode='full' once before incremental updates."
+            )
+        last_ts = pd.to_datetime(prior_frame["timestamp"], utc=True).max()
+        fetch_start = (last_ts + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+
+    fetched = fetch_daily(symbol, provider=provider_name, start=fetch_start, end=end)
+    frame = fetched.frame
+    source = fetched.source
+    caps = fetched.capabilities
+
+    restatement_issues: list[QualityIssue] = []
+    if mode == "incremental":
+        assert prior_frame is not None
+        if frame.empty:
+            frame = prior_frame.copy()
+        else:
+            frame, restatement_issues = _merge_incremental(prior_frame, frame)
+    elif mode == "full" and prior_frame is not None and not frame.empty:
+        restatement_issues = _detect_restatements(prior_frame, frame)
+
+    expected_end = pd.Timestamp(end, tz="UTC") if end else None
+    report = validate_ohlcv(
+        frame, expected_end=expected_end.to_pydatetime() if expected_end is not None else None
+    )
+    report.issues.extend(restatement_issues)
+
+    recon_payload: dict[str, Any] | None = None
+    if reconcile_provider:
+        frame_start = pd.to_datetime(frame["timestamp"], utc=True).min().strftime("%Y-%m-%d")
+        frame_end = pd.to_datetime(frame["timestamp"], utc=True).max().strftime("%Y-%m-%d")
+        secondary = fetch_daily(
+            symbol, provider=reconcile_provider, start=frame_start, end=frame_end
+        )
+        recon = reconcile_frames(
+            frame,
+            secondary.frame,
+            primary_source=source,
+            secondary_source=secondary.source,
+        )
+        report.issues.extend(recon.issues)
+        recon_payload = {"symbol": symbol, **recon.to_dict()}
+
+    if report.has_blocking_issues:
+        raise DataQualityError(f"{symbol} 数据质量校验未通过，拒绝写入快照。", report.to_dict())
+    if convert_lean and not caps.corporate_actions:
+        raise ProviderCapabilityError(f"数据源 {source} 不提供分红数据，无法进行调整价回测。")
+
+    return {
+        "symbol": symbol,
+        "frame": frame,
+        "source": source,
+        "caps": caps,
+        "report": report,
+        "fetch_window": {"start": fetch_start, "end": end},
+        "reconcile_report": recon_payload,
+    }
+
+
+def _fetch_universe(
+    tickers: list[str],
+    *,
+    root: Path,
+    start: str,
+    end: Optional[str],
+    provider_name: str,
+    mode: str,
+    reconcile_provider: str | None,
+    convert_lean: bool,
+    on_progress: Callable[[str, int, int], None] | None,
+) -> list[dict[str, Any]]:
+    workers = ingest_concurrency()
+    completed = 0
+    lock = threading.Lock()
+    by_symbol: dict[str, dict[str, Any]] = {}
+
+    def run(symbol: str) -> None:
+        nonlocal completed
+        item = _ingest_one_symbol(
+            symbol,
+            root=root,
+            start=start,
+            end=end,
+            provider_name=provider_name,
+            mode=mode,
+            reconcile_provider=reconcile_provider,
+            convert_lean=convert_lean,
+        )
+        with lock:
+            by_symbol[symbol] = item
+            completed += 1
+            if on_progress is not None:
+                on_progress(symbol, completed, len(tickers))
+
+    if workers <= 1 or len(tickers) <= 1:
+        for symbol in tickers:
+            run(symbol)
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(run, symbol) for symbol in tickers]
+            try:
+                for fut in as_completed(futures):
+                    fut.result()
+            except Exception:
+                for fut in futures:
+                    fut.cancel()
+                raise
+    return [by_symbol[symbol] for symbol in tickers]
+
+
 def ingest(
     *,
     symbols: list[str] | str | None = None,
@@ -172,6 +317,7 @@ def ingest(
         raise ValueError(f"unsupported ingest mode: {mode!r} (expected 'full' or 'incremental')")
 
     tickers = normalize_symbols(symbols)
+    ensure_ingest_symbol_count(len(tickers))
     root = Path(data_root or os.getenv("STREET_DATA_ROOT") or _repo_data_root())
     provider_name = provider or os.getenv("STREET_DATA_PROVIDER") or "auto"
     reconcile_provider = reconcile_with or os.getenv("STREET_RECONCILE_WITH") or None
@@ -190,76 +336,28 @@ def ingest(
     last_caps = None
     fetch_windows: dict[str, dict[str, str | None]] = {}
     prior_snapshot_key = load_manifest(root).get("snapshot_key")
-    total = len(tickers)
 
-    for index, symbol in enumerate(tickers, start=1):
-        if on_progress is not None:
-            on_progress(symbol, index, total)
-        fetch_start = start
-        prior_frame: pd.DataFrame | None = None
-        prior_path = _prior_parquet_path(root, symbol)
-        if prior_path is not None:
-            prior_frame = pd.read_parquet(prior_path)
-            if prior_frame is not None and prior_frame.empty:
-                prior_frame = None
-
-        if mode == "incremental":
-            if prior_frame is None:
-                raise ValueError(
-                    f"incremental ingest requires prior bars for {symbol}; "
-                    "run mode='full' once before incremental updates."
-                )
-            last_ts = pd.to_datetime(prior_frame["timestamp"], utc=True).max()
-            fetch_start = (last_ts + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-
-        fetch_windows[symbol] = {"start": fetch_start, "end": end}
-        fetched = fetch_daily(symbol, provider=provider_name, start=fetch_start, end=end)
-        frame = fetched.frame
-        source = fetched.source
-        caps = fetched.capabilities
-        last_caps = caps
-        sources.append(source)
-        caps_ok = caps_ok and caps.corporate_actions
-
-        restatement_issues: list[QualityIssue] = []
-        if mode == "incremental":
-            assert prior_frame is not None
-            if frame.empty:
-                # No new bars — keep prior history as the new snapshot content.
-                frame = prior_frame.copy()
-            else:
-                frame, restatement_issues = _merge_incremental(prior_frame, frame)
-        elif mode == "full" and prior_frame is not None and not frame.empty:
-            # Scheduled/full re-pulls keep prior untouched but surface vendor revisions.
-            restatement_issues = _detect_restatements(prior_frame, frame)
-
-        expected_end = pd.Timestamp(end, tz="UTC") if end else None
-        report = validate_ohlcv(
-            frame, expected_end=expected_end.to_pydatetime() if expected_end is not None else None
-        )
-        report.issues.extend(restatement_issues)
-
-        if reconcile_provider:
-            frame_start = pd.to_datetime(frame["timestamp"], utc=True).min().strftime("%Y-%m-%d")
-            frame_end = pd.to_datetime(frame["timestamp"], utc=True).max().strftime("%Y-%m-%d")
-            secondary = fetch_daily(
-                symbol, provider=reconcile_provider, start=frame_start, end=frame_end
-            )
-            recon = reconcile_frames(
-                frame,
-                secondary.frame,
-                primary_source=source,
-                secondary_source=secondary.source,
-            )
-            report.issues.extend(recon.issues)
-            reconcile_reports.append({"symbol": symbol, **recon.to_dict()})
-
-        if report.has_blocking_issues:
-            raise DataQualityError(f"{symbol} 数据质量校验未通过，拒绝写入快照。", report.to_dict())
-        if convert_lean and not caps.corporate_actions:
-            raise ProviderCapabilityError(f"数据源 {source} 不提供分红数据，无法进行调整价回测。")
-        frames[symbol] = frame
-        reports.append(report)
+    fetched_rows = _fetch_universe(
+        tickers,
+        root=root,
+        start=start,
+        end=end,
+        provider_name=provider_name,
+        mode=mode,
+        reconcile_provider=reconcile_provider,
+        convert_lean=convert_lean,
+        on_progress=on_progress,
+    )
+    for item in fetched_rows:
+        symbol = item["symbol"]
+        frames[symbol] = item["frame"]
+        reports.append(item["report"])
+        sources.append(item["source"])
+        last_caps = item["caps"]
+        caps_ok = caps_ok and item["caps"].corporate_actions
+        fetch_windows[symbol] = item["fetch_window"]
+        if item["reconcile_report"] is not None:
+            reconcile_reports.append(item["reconcile_report"])
 
     combined = _combined_quality(reports)
     tmp = root / ".ingest_tmp"
@@ -460,12 +558,22 @@ def data_status(data_root: Optional[Path] = None) -> dict:
         "quality_report": quality,
         "latest_snapshot_dir": str(latest) if latest else None,
         "symbols": symbols,
+        "ingest_limits": {
+            "max_symbols": ingest_max_symbols(),
+            "rps": ingest_rps(),
+            "concurrency": ingest_concurrency(),
+        },
     }
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ingest daily bars into an immutable snapshot.")
-    parser.add_argument("symbols", nargs="*", default=["SPY"], help="Tickers, default SPY")
+    parser.add_argument("symbols", nargs="*", default=None, help="Tickers; default SPY if omitted")
+    parser.add_argument(
+        "--symbols-file",
+        default=None,
+        help="text file with one ticker per line (# comments allowed)",
+    )
     parser.add_argument("--start", default="2010-01-01")
     parser.add_argument("--end", default=None)
     parser.add_argument("--provider", default="auto")
@@ -482,8 +590,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--no-lean", action="store_true")
     args = parser.parse_args()
+    tickers = list(args.symbols or [])
+    if args.symbols_file:
+        tickers.extend(load_symbols_file(args.symbols_file))
     result = ingest(
-        symbols=args.symbols or ["SPY"],
+        symbols=tickers or ["SPY"],
         start=args.start,
         end=args.end,
         provider=args.provider,

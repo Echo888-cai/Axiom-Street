@@ -44,6 +44,23 @@ Celery Beat 每天对当前已发布 universe 做一次 `mode=full` 再拉（任
 
 已有 ingest 在跑时，定时任务会 skip（`ingest_in_progress`），避免并发写。Settings 可手动触发同一路径。
 
+## 吞吐与限速
+
+一条命令拉 500 只日线（含 LEAN zip）是 Phase 2 验收目标。出站请求**不会**无节流狂轰 vendor。
+
+| 变量 | 默认 | 作用 |
+|------|------|------|
+| `STREET_INGEST_MAX_SYMBOLS` | `500` | 超过则 fail loud（设 `0` 关闭上限） |
+| `STREET_INGEST_RPS` | `2` | 所有行情 HTTP 的 token bucket；`0` = 不限速（仅测试） |
+| `STREET_INGEST_CONCURRENCY` | `4` | 同时拉取的标的数；进度回调已加锁 |
+| `STREET_INGEST_BURST` | `max(1, rps)` | 桶容量 |
+
+Polygon 每个标的约 3 次 HTTP（K 线 + 分红 + 拆分），实际标的吞吐约为 `RPS/3`。
+
+```bash
+python -m quant.data.ingest_spy --symbols-file tickers.txt
+```
+
 规则：
 
 - 摄取**永不原地改写**旧快照
@@ -54,6 +71,7 @@ Celery Beat 每天对当前已发布 universe 做一次 `mode=full` 再拉（任
 ```bash
 python -m quant.data.ingest_spy SPY
 python -m quant.data.ingest_spy SPY QQQ --mode incremental
+python -m quant.data.ingest_spy --symbols-file tickers.txt
 # POST /api/v1/data/ingest
 #   {"symbols": ["SPY"], "provider": "polygon", "reconcile_with": "yfinance"}
 # POST /api/v1/data/reconcile   # 对当前 universe 全量再拉（与 Beat 同一路径）

@@ -49,6 +49,21 @@ def list_market_symbols(data_root: Path) -> list[str]:
     return sorted(path.stem.upper() for path in daily.glob("*.parquet"))
 
 
+def load_symbols_file(path: Path | str) -> list[str]:
+    """Load tickers from a text file (one per line; ``#`` comments allowed)."""
+    file_path = Path(path)
+    if not file_path.is_file():
+        raise FileNotFoundError(f"symbols file not found: {file_path}")
+    raw: list[str] = []
+    for line in file_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.split("#", 1)[0].strip()
+        if stripped:
+            raw.append(stripped)
+    if not raw:
+        raise ValueError(f"{file_path} contains no tickers")
+    return normalize_symbols(raw)
+
+
 def snapshot_slug(symbols: list[str]) -> str:
     joined = "-".join(symbol.lower() for symbol in symbols)
     if len(joined) <= 48:

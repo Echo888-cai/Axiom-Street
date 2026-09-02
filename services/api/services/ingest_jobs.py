@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quant.data.ingest_spy import data_status, ingest
+from quant.data.rate_limit import ensure_ingest_symbol_count
 from quant.data.symbols import normalize_symbols
 from quant.data.types import DataQualityError, ProviderCapabilityError
 from services.api import db as db_module
@@ -67,6 +69,7 @@ def create_ingest_job(
     convert_lean: bool = True,
 ) -> IngestJob:
     tickers = normalize_symbols(symbols)
+    ensure_ingest_symbol_count(len(tickers))
     job = IngestJob(
         status=IngestJobStatus.QUEUED,
         progress_step="Queued",
@@ -125,13 +128,16 @@ def execute_ingest_job(job_id: str) -> dict[str, Any]:
         job.error = None
         db.commit()
 
+        progress_lock = threading.Lock()
+
         def on_progress(symbol: str, index: int, total: int) -> None:
-            job.status = IngestJobStatus.RUNNING
-            job.current_symbol = symbol
-            job.completed_symbols = max(0, index - 1)
-            job.total_symbols = total
-            job.progress_step = f"Fetching {symbol} ({index}/{total})"
-            db.commit()
+            with progress_lock:
+                job.status = IngestJobStatus.RUNNING
+                job.current_symbol = symbol
+                job.completed_symbols = max(0, index - 1)
+                job.total_symbols = total
+                job.progress_step = f"Fetching {symbol} ({index}/{total})"
+                db.commit()
 
         job.status = IngestJobStatus.RUNNING
         job.progress_step = "Running"

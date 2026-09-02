@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     market_reconcile_interval_seconds: int = 86_400
     market_reconcile_provider: str = "auto"
     market_reconcile_with: str | None = None  # optional secondary, e.g. yfinance
+    ingest_max_symbols: int = 500
+    ingest_rps: float = 2.0
+    ingest_concurrency: int = 4
+    ingest_burst: float = 2.0
 
     @property
     def cors_origin_list(self) -> list[str]:

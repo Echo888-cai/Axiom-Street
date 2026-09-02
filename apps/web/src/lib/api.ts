@@ -403,6 +403,11 @@ export type DataStatus = {
     reconcile_with: string | null;
   };
   latest_ingest_job?: IngestJob | null;
+  ingest_limits?: {
+    max_symbols: number;
+    rps: number;
+    concurrency: number;
+  };
 };
 
 export { unwrapList };

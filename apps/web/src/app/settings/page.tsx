@@ -155,6 +155,7 @@ export default function SettingsPage() {
             />
             <Row label="LEAN 数据" value={status.data?.lean_ready ? "已转换" : "未转换"} />
             <Row label="全量校验" value={cadence} />
+            <Row label="吞吐" value={formatIngestLimits(status.data?.ingest_limits)} />
           </dl>
           {status.data?.quality_report?.issues && status.data.quality_report.issues.length > 0 ? (
             <div className="mt-4 rounded-as border border-as-border bg-as-secondary px-3 py-2 text-xs">
@@ -216,7 +217,7 @@ export default function SettingsPage() {
               </div>
             ) : (
               <p className="text-[11px] text-as-muted">
-                每次拉取写入新的不可变快照，不会覆盖旧数据。全量校验按当前标的池再拉一遍，用来发现 vendor 改历史。
+                每次拉取写入新的不可变快照，不会覆盖旧数据。全量校验按当前标的池再拉一遍，用来发现 vendor 改历史。一次最多 500 只（可调 STREET_INGEST_MAX_SYMBOLS）。
               </p>
             )}
           </div>
@@ -280,6 +281,17 @@ export default function SettingsPage() {
       </div>
     </div>
   );
+}
+
+function formatIngestLimits(cfg?: {
+  max_symbols: number;
+  rps: number;
+  concurrency: number;
+} | null): string {
+  if (!cfg) return "—";
+  const cap = cfg.max_symbols > 0 ? `上限 ${cfg.max_symbols} 标的` : "无上限";
+  const rps = cfg.rps > 0 ? `${cfg.rps} 次/秒` : "不限速";
+  return `${cap} · ${rps} · 并发 ${cfg.concurrency}`;
 }
 
 function formatReconcileCadence(cfg?: {
