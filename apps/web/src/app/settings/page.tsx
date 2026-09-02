@@ -175,6 +175,11 @@ export default function SettingsPage() {
           ) : status.data?.ready ? (
             <p className="mt-4 text-xs text-as-muted">质量校验通过，无阻断问题。</p>
           ) : null}
+          <ReconcileReports
+            reports={status.data?.reconcile_reports}
+            source={status.data?.reconcile_with}
+            ready={Boolean(status.data?.ready)}
+          />
           <div className="mt-5 space-y-2">
             <label className="block text-xs text-as-muted" htmlFor="ingest-symbols">
               标的（逗号分隔）
@@ -279,6 +284,55 @@ export default function SettingsPage() {
           </ul>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function ReconcileReports({
+  reports,
+  source,
+  ready,
+}: {
+  reports?: Array<{
+    symbol?: string;
+    primary_source?: string;
+    secondary_source?: string;
+    compared_bars?: number;
+    suspect_bars?: number;
+    issues?: Array<{ rule: string; severity: string; message: string; examples?: string[] }>;
+  }>;
+  source?: string | null;
+  ready: boolean;
+}) {
+  const hasReports = Boolean(reports && reports.length > 0);
+  if (!hasReports && !ready) return null;
+  if (!hasReports) {
+    return (
+      <p className="mt-3 text-[11px] text-as-muted">
+        尚未做双源对账。摄取时指定 reconcile_with（例如 yfinance）后，这里会列出 close 偏差超过 10 bps 的 bar。
+      </p>
+    );
+  }
+  return (
+    <div className="mt-4 rounded-as border border-as-border bg-as-secondary px-3 py-2 text-xs">
+      <div className="mb-1 font-medium text-as-text">
+        双源对账{source ? `（对账源 ${source}）` : ""}
+      </div>
+      <ul className="space-y-2 text-as-muted">
+        {(reports || []).map((row, index) => (
+          <li key={`${row.symbol || "row"}-${index}`}>
+            <span className="text-as-text tabular-nums">
+              {row.symbol || "—"} · 对比 {row.compared_bars ?? 0} 根 · 可疑 {row.suspect_bars ?? 0} 根
+            </span>
+            {(row.issues || []).map((issue) => (
+              <p key={`${issue.rule}-${issue.severity}`} className="mt-0.5">
+                {issue.severity === "blocking" ? "阻断" : "警告"} · {issue.message}
+                {issue.examples && issue.examples.length > 0 ? `（${issue.examples[0]}）` : ""}
+              </p>
+            ))}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

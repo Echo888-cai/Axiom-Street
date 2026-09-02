@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { labelStatus } from "@/lib/labels";
 import { SPY_200DMA_TEMPLATE } from "@/lib/spy-200dma";
+import { EQUAL_WEIGHT_CONFIG, EQUAL_WEIGHT_TEMPLATE } from "@/lib/equal-weight";
 import { toast } from "@/components/ui/toast";
 import { BuilderPanel } from "./builder-panel";
 import { VersionHistory } from "./version-history";
@@ -22,7 +23,7 @@ function friendlyError(message: string): string {
     return "需要 Docker（Colima）才能跑 LEAN 回测。请先执行 colima start，并确认 worker 容器在运行。";
   }
   if (message.includes("AfterMarketClose")) {
-    return "当前策略代码使用了已失效的 LEAN API。请点击「恢复模板代码」后再运行回测。";
+    return "当前策略代码使用了已失效的 LEAN API。请点击「恢复 SPY 200DMA」后再运行回测。";
   }
   return message;
 }
@@ -56,7 +57,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
   const [universeId, setUniverseId] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState("");
-  const [confirmRestore, setConfirmRestore] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState<"spy" | "equal" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -253,8 +254,11 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="ghost" onClick={() => setConfirmRestore(true)}>
-            恢复模板代码
+          <Button variant="ghost" onClick={() => setConfirmRestore("spy")}>
+            恢复 SPY 200DMA
+          </Button>
+          <Button variant="ghost" onClick={() => setConfirmRestore("equal")}>
+            加载等权横截面
           </Button>
           <Button variant="secondary" onClick={() => save.mutate()} disabled={save.isPending || !dirty}>
             {save.isPending ? "保存中…" : "保存版本"}
@@ -277,7 +281,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
       {code.includes("AfterMarketClose") ? (
         <p className="text-xs text-as-negative">
-          当前代码使用了已失效的 AfterMarketClose。请点击「恢复模板代码」，否则回测会失败。
+          当前代码使用了已失效的 AfterMarketClose。请点击「恢复 SPY 200DMA」，否则回测会失败。
         </p>
       ) : null}
 
@@ -327,16 +331,23 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
       </div>
 
       <ConfirmDialog
-        open={confirmRestore}
-        title="恢复模板代码？"
+        open={confirmRestore != null}
+        title={confirmRestore === "equal" ? "加载等权横截面模板？" : "恢复 SPY 200DMA 模板？"}
         description="会覆盖编辑器中的当前代码。未保存的修改将丢失，除非你先保存版本。"
-        confirmLabel="恢复模板"
+        confirmLabel="载入模板"
         onConfirm={() => {
-          setCode(SPY_200DMA_TEMPLATE);
-          setMessage("恢复 SPY 200 日均线模板");
-          toast("已载入最新模板", "info");
+          if (confirmRestore === "equal") {
+            setCode(EQUAL_WEIGHT_TEMPLATE);
+            setConfig(EQUAL_WEIGHT_CONFIG);
+            setMessage("加载等权横截面模板");
+            toast("已载入等权 1/N 模板", "info");
+          } else {
+            setCode(SPY_200DMA_TEMPLATE);
+            setMessage("恢复 SPY 200 日均线模板");
+            toast("已载入最新模板", "info");
+          }
         }}
-        onClose={() => setConfirmRestore(false)}
+        onClose={() => setConfirmRestore(null)}
       />
       <ConfirmDialog
         open={confirmDelete}

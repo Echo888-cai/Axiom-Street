@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from quant.data.ingest_spy import data_status, load_symbol_parquet
 from quant.data.quality import validate_ohlcv
 from quant.data.symbols import as_symbol_list, normalize_symbols
+from quant.data.universe import Membership
 from services.api.hashing import canonical_hash
 from services.api.models import (
     AuditLog,
@@ -205,6 +206,14 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
             universe_snapshot = [member.to_dict() for member in overlapping]
         elif payload.universe:
             universe = normalize_symbols(payload.universe)
+            universe_snapshot = [
+                Membership(
+                    symbol=symbol,
+                    effective_from=payload.start_date,
+                    effective_to=None,
+                ).to_dict()
+                for symbol in universe
+            ]
         else:
             universe = as_symbol_list(
                 market.get("symbols") or (snapshot.symbols if snapshot else None)

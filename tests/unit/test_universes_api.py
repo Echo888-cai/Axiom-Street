@@ -172,6 +172,26 @@ def test_create_backtest_empty_universe_window_is_422(client, monkeypatch):
     assert "没有成分" in res.json()["detail"]
 
 
+def test_create_backtest_with_ten_symbols_snapshots_memberships(client, monkeypatch):
+    from quant.strategy_sdk.equal_weight import DEFAULT_EQUAL_WEIGHT_UNIVERSE
+
+    _ready(monkeypatch)
+    strategy = client.post("/api/v1/strategies", json={"name": "ten"}).json()
+    created = client.post(
+        "/api/v1/backtests",
+        json={
+            "strategy_version_id": strategy["latest_version"]["id"],
+            "start_date": "2018-01-01",
+            "end_date": "2018-06-01",
+            "universe": list(DEFAULT_EQUAL_WEIGHT_UNIVERSE),
+        },
+    )
+    assert created.status_code == 201, created.text
+    snapshot = created.json()["universe_snapshot"]
+    assert snapshot is not None
+    assert [row["symbol"] for row in snapshot] == list(DEFAULT_EQUAL_WEIGHT_UNIVERSE)
+
+
 def test_universe_id_and_symbols_cannot_both_be_set(client, monkeypatch):
     _ready(monkeypatch)
     universe = client.post("/api/v1/universes", json={"name": "both"}).json()

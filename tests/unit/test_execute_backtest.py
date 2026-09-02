@@ -25,11 +25,13 @@ class _FakeEngine:
     def __init__(self, **_kwargs) -> None:
         self.risk_free_rate = 0.0
         self.fail: str | None = None
+        self.last_request = None
 
     def cancel_backtest(self, _backtest_id: str) -> None:
         return None
 
     def run_backtest(self, request, on_progress=None) -> BacktestEngineResult:
+        self.last_request = request
         if self.fail == "timeout":
             raise EngineTimeout("LEAN exceeded 5s")
         if self.fail == "cancel":
@@ -183,3 +185,28 @@ def test_execute_backtest_cancel(monkeypatch):
     bt = db.get(Backtest, __import__("uuid").UUID(backtest_id))
     assert bt.status == BacktestStatus.CANCELLED
     db.close()
+
+
+def test_execute_backtest_passes_ten_name_universe(monkeypatch):
+    from quant.strategy_sdk.equal_weight import DEFAULT_EQUAL_WEIGHT_UNIVERSE
+
+    Session = _session(monkeypatch)
+    fake = _FakeEngine()
+    monkeypatch.setattr("services.worker.tasks.LeanQuantEngine", lambda **_k: fake)
+    from services.worker.tasks import execute_backtest
+
+    backtest_id, _ = _seed(Session)
+    db = Session()
+    bt = db.get(Backtest, __import__("uuid").UUID(backtest_id))
+    bt.universe_snapshot = [
+        {"symbol": symbol, "effective_from": "2018-01-01", "effective_to": None}
+        for symbol in DEFAULT_EQUAL_WEIGHT_UNIVERSE
+    ]
+    db.commit()
+    db.close()
+
+    result = execute_backtest(backtest_id)
+    assert result["status"] == "COMPLETED"
+    assert fake.last_request is not None
+    assert fake.last_request.universe == list(DEFAULT_EQUAL_WEIGHT_UNIVERSE)
+    assert len(fake.last_request.memberships) == 10

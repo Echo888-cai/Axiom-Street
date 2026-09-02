@@ -43,7 +43,9 @@ def test_close_mismatch_above_threshold_is_suspect():
     assert report.compared_bars == 2
     assert report.suspect_bars == 1
     assert any(i.rule == "dual_source_close_mismatch" for i in report.issues)
-    assert all(i.severity == "warning" for i in report.issues if i.rule == "dual_source_close_mismatch")
+    assert all(
+        i.severity == "warning" for i in report.issues if i.rule == "dual_source_close_mismatch"
+    )
 
 
 def test_close_within_threshold_is_clean():
@@ -56,6 +58,36 @@ def test_close_within_threshold_is_clean():
     assert report.suspect_bars == 0
     assert report.issues == []
     assert CLOSE_BPS_THRESHOLD == 10.0
+
+
+def test_ingest_records_close_mismatch_warning(monkeypatch, tmp_path):
+    from quant.data.ingest_spy import data_status
+
+    primary = _frame({"2020-01-02": 100.0, "2020-01-03": 101.0})
+    secondary = _frame({"2020-01-02": 100.20, "2020-01-03": 101.0})
+
+    def fake_fetch(symbol: str, *, provider: str = "auto", start: str = "2010-01-01", end=None):
+        if provider == "polygon":
+            return FetchResult(primary.copy(), "polygon", YFINANCE_CAPABILITIES)
+        if provider == "yfinance":
+            return FetchResult(secondary.copy(), "yfinance", YFINANCE_CAPABILITIES)
+        raise AssertionError(f"unexpected provider {provider}")
+
+    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    result = ingest(
+        symbols=["SPY"],
+        data_root=tmp_path,
+        convert_lean=False,
+        provider="polygon",
+        reconcile_with="yfinance",
+    )
+    reports = result["reconcile_reports"]
+    assert reports[0]["suspect_bars"] == 1
+    issues = result["quality_report"]["issues"]
+    assert any(i["rule"] == "dual_source_close_mismatch" for i in issues)
+    status = data_status(tmp_path)
+    assert status["reconcile_with"] == "yfinance"
+    assert status["reconcile_reports"][0]["suspect_bars"] == 1
 
 
 def test_dividend_mismatch_is_blocking():

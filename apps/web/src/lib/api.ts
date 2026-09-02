@@ -408,6 +408,16 @@ export type DataStatus = {
     rps: number;
     concurrency: number;
   };
+  reconcile_with?: string | null;
+  reconcile_reports?: Array<{
+    symbol?: string;
+    primary_source?: string;
+    secondary_source?: string;
+    compared_bars?: number;
+    suspect_bars?: number;
+    has_blocking_issues?: boolean;
+    issues?: Array<{ rule: string; severity: string; message: string; examples?: string[] }>;
+  }>;
 };
 
 export { unwrapList };

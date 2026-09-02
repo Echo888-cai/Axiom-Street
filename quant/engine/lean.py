@@ -65,6 +65,23 @@ def docker_volume_args(
     return args
 
 
+def lean_runtime_parameters(request: BacktestRequest) -> dict[str, str]:
+    """Parameters injected into LEAN. ``universe`` is the PIT snapshot, not a guess."""
+    if not request.universe:
+        raise ValueError("BacktestRequest.universe must contain at least one symbol")
+    params = {str(key): str(value) for key, value in (request.parameters or {}).items()}
+    params.update(
+        {
+            "start_date": request.start_date.isoformat(),
+            "end_date": request.end_date.isoformat(),
+            "initial_capital": str(request.initial_capital),
+            "benchmark": request.benchmark,
+            "universe": ",".join(request.universe),
+        }
+    )
+    return params
+
+
 class LeanQuantEngine(QuantEngine):
     def __init__(
         self,
@@ -153,13 +170,7 @@ class LeanQuantEngine(QuantEngine):
 
         config = dict(LEAN_CONFIG_TEMPLATE)
         config["algorithm-type-name"] = request.strategy_class_name
-        config["parameters"] = {
-            **request.parameters,
-            "start_date": request.start_date.isoformat(),
-            "end_date": request.end_date.isoformat(),
-            "initial_capital": str(request.initial_capital),
-            "benchmark": request.benchmark,
-        }
+        config["parameters"] = lean_runtime_parameters(request)
         config_path = job_dir / "config.json"
         config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
 

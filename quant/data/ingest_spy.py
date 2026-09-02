@@ -558,6 +558,8 @@ def data_status(data_root: Optional[Path] = None) -> dict:
         "quality_report": quality,
         "latest_snapshot_dir": str(latest) if latest else None,
         "symbols": symbols,
+        "reconcile_with": manifest.get("reconcile_with"),
+        "reconcile_reports": manifest.get("reconcile_reports") or [],
         "ingest_limits": {
             "max_symbols": ingest_max_symbols(),
             "rps": ingest_rps(),

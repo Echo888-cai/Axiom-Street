@@ -56,14 +56,25 @@ export function BuilderPanel({
           }
         />
       </Field>
-      <Field label="均线周期" hint="记录假设；实际信号以代码为准">
-        <Input
-          type="number"
-          min={20}
-          value={Number(signal.lookback_period || 200)}
-          onChange={(e) => patch("signal", "lookback_period", Number(e.target.value) || 200)}
-        />
-      </Field>
+      {universe.universe_filter === "equal_weight" ? (
+        <p className="text-[11px] leading-relaxed text-as-muted">
+          每月等权再平衡；成交约定为收盘信号、下一根 K 线成交。回测时以标的池/快照为准，不读这里的演示列表。
+        </p>
+      ) : (
+        <>
+          <Field label="均线周期" hint="记录假设；实际信号以代码为准">
+            <Input
+              type="number"
+              min={20}
+              value={Number(signal.lookback_period || 200)}
+              onChange={(e) => patch("signal", "lookback_period", Number(e.target.value) || 200)}
+            />
+          </Field>
+          <p className="text-[11px] leading-relaxed text-as-muted">
+            入场：{String(signal.entry_signal || "close > SMA")}。成交约定为收盘信号、下一根 K 线成交。
+          </p>
+        </>
+      )}
       <Field label="滑点（bps）">
         <Input
           type="number"
@@ -81,9 +92,6 @@ export function BuilderPanel({
           onChange={(e) => patch("risk", "max_position_pct", (Number(e.target.value) || 100) / 100)}
         />
       </Field>
-      <p className="text-[11px] leading-relaxed text-as-muted">
-        入场：{String(signal.entry_signal || "close > SMA")}。成交约定为收盘信号、下一根 K 线成交。
-      </p>
     </div>
   );
 }

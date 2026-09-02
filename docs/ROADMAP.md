@@ -278,9 +278,9 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 ### 4.3 数据源升级与交叉对账
 
-**已交付（脚手架）**：`fetch_polygon`（无 key fail loud）+ `quant/data/reconcile.py`（close >10 bps → warning；分红/拆分冲突 → blocking）+ ingest/API `--reconcile-with`。
+**已交付（脚手架 + 报告）**：`fetch_polygon`（无 key fail loud）+ `quant/data/reconcile.py`（close >10 bps → warning；分红/拆分冲突 → blocking）+ ingest/API `--reconcile-with`。对账摘要写入快照 manifest，Settings「双源对账」展示可疑 bar。
 
-仍待补强：有真实 `POLYGON_API_KEY` 时的端到端 golden、对账报告前端呈现、默认生产路径切到 Polygon 主源。
+仍待补强：有真实 `POLYGON_API_KEY` 时的端到端 golden、默认生产路径切到 Polygon 主源。
 
 ### 4.4 增量摄取
 
@@ -291,6 +291,8 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 **定期全量校验（已交付）**：Celery Beat `data.reconcile_market`（默认 24h）对当前 universe 做 `mode=full` 再拉；与 prior 重叠 bar 的数值变化写入 `vendor_restatement` warning，**不改写**旧快照。手动入口 `POST /api/v1/data/reconcile`。关闭：`STREET_MARKET_RECONCILE_ENABLED=false`。
 
 **吞吐 / 限速（已交付）**：默认最多 500 标的；出站 HTTP 走 token bucket（`STREET_INGEST_RPS=2`）+ 并发拉取（`STREET_INGEST_CONCURRENCY=4`）。超过上限 fail loud，不静默截断。`python -m quant.data.ingest_spy --symbols-file tickers.txt`。
+
+**横截面基线（已交付）**：`EqualWeightUniverseAlgorithm`（1/N，月度再平衡，下一根 K 线成交）。LEAN 注入 `universe=` 参数；临时 `universe: [10 names]` 会写入 `universe_snapshot`。策略实验室可加载该模板。
 
 **验收标准**：
 - 能一条命令摄取 500 支股票日线并生成对应 LEAN 数据；
