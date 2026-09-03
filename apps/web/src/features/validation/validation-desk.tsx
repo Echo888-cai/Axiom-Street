@@ -15,7 +15,9 @@ import { WalkForwardForm } from "@/features/validation/walk-forward-form";
 import { SensitivityForm } from "@/features/validation/sensitivity-form";
 import { CostScanForm } from "@/features/validation/cost-form";
 import { BootstrapForm } from "@/features/validation/bootstrap-form";
-import { CostAlphaBars, SharpeSurfaceBars } from "@/features/validation/surface-bars";
+import { RegimeForm } from "@/features/validation/regime-form";
+import { SpaForm } from "@/features/validation/spa-form";
+import { CostAlphaBars, RegimeSharpeBars, SharpeSurfaceBars, SpaTStatBars } from "@/features/validation/surface-bars";
 
 function isInflight(row: ValidationRun): boolean {
   return row.status === "QUEUED" || row.status === "RUNNING";
@@ -50,6 +52,19 @@ function conclusion(row: ValidationRun) {
     return row.passed
       ? { tone: "green" as const, label: "Sharpe CI > 0" }
       : { tone: "amber" as const, label: "区间跨零" };
+  }
+  if (row.kind === "REGIME") {
+    if (row.passed && row.result.single_regime === true) {
+      return { tone: "amber" as const, label: "edge 集中" };
+    }
+    return row.passed
+      ? { tone: "green" as const, label: "跨制度稳健" }
+      : { tone: "amber" as const, label: "单一制度" };
+  }
+  if (row.kind === "SPA") {
+    return row.passed
+      ? { tone: "green" as const, label: "SPA_c 拒绝无 edge" }
+      : { tone: "amber" as const, label: "不能声称有 edge" };
   }
   return row.passed
     ? { tone: "green" as const, label: "通过" }
@@ -236,6 +251,119 @@ function BootstrapReport({ run }: { run: ValidationRun }) {
   );
 }
 
+function asSlices(result: Record<string, unknown>): Array<Record<string, unknown>> {
+  return Array.isArray(result.slices) ? (result.slices as Array<Record<string, unknown>>) : [];
+}
+
+function RegimeReport({ run }: { run: ValidationRun }) {
+  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
+  const concentrated =
+    typeof run.result.concentrated_in === "string" ? run.result.concentrated_in : null;
+  const slices = asSlices(run.result);
+  return (
+    <Card>
+      <CardHeader
+        title="最近一次制度稳定性"
+        hint={
+          <p className="text-xs text-as-muted">
+            按基准牛/熊、实现波动、FOMC 利率周期与指定压力窗口切片。互补制度 Sharpe 为负不能进入 VALIDATED。
+          </p>
+        }
+      />
+      {reason ? <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p> : null}
+      {run.result.single_regime === true ? (
+        <p className="mb-4 text-xs text-as-muted">
+          edge 集中在 {concentrated || "单一制度"}，互补制度未塌缩，已标注。
+        </p>
+      ) : null}
+      {slices.length ? (
+        <RegimeSharpeBars
+          slices={slices.map((row) => ({
+            key: typeof row.key === "string" ? row.key : "unknown",
+            axis: typeof row.axis === "string" ? row.axis : "",
+            label: typeof row.label === "string" ? row.label : String(row.key ?? ""),
+            n_obs: typeof row.n_obs === "number" ? row.n_obs : 0,
+            sharpe: typeof row.sharpe === "number" ? row.sharpe : null,
+            win_rate: typeof row.win_rate === "number" ? row.win_rate : null,
+            covered: row.covered === true,
+          }))}
+        />
+      ) : null}
+    </Card>
+  );
+}
+
+function asModels(result: Record<string, unknown>): Array<Record<string, unknown>> {
+  return Array.isArray(result.models) ? (result.models as Array<Record<string, unknown>>) : [];
+}
+
+function SpaReport({ run }: { run: ValidationRun }) {
+  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
+  const pRc = typeof run.result.p_reality_check === "number" ? run.result.p_reality_check : null;
+  const pLower = typeof run.result.p_spa_lower === "number" ? run.result.p_spa_lower : null;
+  const pConsistent =
+    typeof run.result.p_spa_consistent === "number" ? run.result.p_spa_consistent : null;
+  const pUpper = typeof run.result.p_spa_upper === "number" ? run.result.p_spa_upper : null;
+  const nModels = typeof run.result.n_models === "number" ? run.result.n_models : null;
+  const nObs = typeof run.result.n_obs === "number" ? run.result.n_obs : null;
+  const statistic = typeof run.result.statistic === "number" ? run.result.statistic : null;
+  const models = asModels(run.result);
+  return (
+    <Card>
+      <CardHeader
+        title="最近一次 Reality Check"
+        hint={
+          <p className="text-xs text-as-muted">
+            White RC 是未学生化的最大均值；Hansen SPA_c 是闸门。p ≥ α 表示不能声称最好的试验优于现金。
+          </p>
+        }
+      />
+      {reason ? <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p> : null}
+      <p className="mb-4 text-xs text-as-muted">
+        {nModels != null ? `${nModels} 条试验` : "试验数未记录"}
+        {nObs != null ? ` · ${nObs} 个共同交易日` : ""}
+        {statistic != null ? ` · T ${statistic.toFixed(2)}` : ""}
+      </p>
+      <dl className="mb-4 grid gap-3 text-xs text-as-muted sm:grid-cols-4">
+        <div>
+          <dt>White RC</dt>
+          <dd className="mt-1 tabular-nums text-as-text">
+            {pRc == null ? "—" : `p ${pRc.toFixed(3)}`}
+          </dd>
+        </div>
+        <div>
+          <dt>SPA_l</dt>
+          <dd className="mt-1 tabular-nums text-as-text">
+            {pLower == null ? "—" : `p ${pLower.toFixed(3)}`}
+          </dd>
+        </div>
+        <div>
+          <dt>SPA_c</dt>
+          <dd className="mt-1 tabular-nums text-as-text">
+            {pConsistent == null ? "—" : `p ${pConsistent.toFixed(3)}`}
+          </dd>
+        </div>
+        <div>
+          <dt>SPA_u</dt>
+          <dd className="mt-1 tabular-nums text-as-text">
+            {pUpper == null ? "—" : `p ${pUpper.toFixed(3)}`}
+          </dd>
+        </div>
+      </dl>
+      {models.length ? (
+        <SpaTStatBars
+          models={models.map((row) => ({
+            backtest_id: typeof row.backtest_id === "string" ? row.backtest_id : null,
+            t_stat: typeof row.t_stat === "number" ? row.t_stat : null,
+            mean: typeof row.mean === "number" ? row.mean : null,
+            is_best: row.is_best === true,
+          }))}
+        />
+      ) : null}
+    </Card>
+  );
+}
+
 function CostReport({ run }: { run: ValidationRun }) {
   const conclusionText =
     typeof run.result.conclusion === "string" ? run.result.conclusion : null;
@@ -298,6 +426,8 @@ export function ValidationDesk() {
   const latestSens = items.find((row) => row.kind === "SENSITIVITY");
   const latestCost = items.find((row) => row.kind === "COST");
   const latestBoot = items.find((row) => row.kind === "BOOTSTRAP");
+  const latestRegime = items.find((row) => row.kind === "REGIME");
+  const latestSpa = items.find((row) => row.kind === "SPA");
 
   return (
     <div className="space-y-6 as-enter">
@@ -311,12 +441,12 @@ export function ValidationDesk() {
         <dl className="mt-4 grid gap-3 text-xs text-as-muted sm:grid-cols-3">
           <div>
             <dt className="text-[11px] uppercase tracking-wide">已实现</dt>
-            <dd className="mt-1 text-as-text">{(gates?.available || ["DSR", "WALK_FORWARD", "PBO", "SENSITIVITY", "COST", "BOOTSTRAP"]).join(" · ")}</dd>
+            <dd className="mt-1 text-as-text">{(gates?.available || ["DSR", "WALK_FORWARD", "PBO", "SENSITIVITY", "COST", "BOOTSTRAP", "REGIME", "SPA"]).join(" · ")}</dd>
           </div>
           <div>
             <dt className="text-[11px] uppercase tracking-wide">VALIDATED 需要</dt>
             <dd className="mt-1 text-as-text">
-              {(gates?.validated_requires || ["WALK_FORWARD", "DSR", "PBO", "SENSITIVITY", "COST", "BOOTSTRAP"]).join(" · ")}
+              {(gates?.validated_requires || ["WALK_FORWARD", "DSR", "PBO", "SENSITIVITY", "COST", "BOOTSTRAP", "REGIME", "SPA"]).join(" · ")}
             </dd>
           </div>
           <div>
@@ -390,6 +520,38 @@ export function ValidationDesk() {
         <BootstrapReport run={latestBoot} />
       ) : null}
 
+      <Card>
+        <CardHeader
+          title="制度稳定性"
+          hint={
+            <p className="text-xs text-as-muted">
+              按市场状态分段看 Sharpe 与胜率。只在单一制度有效的策略会被标注；互补制度为负则不能进入 VALIDATED。
+            </p>
+          }
+        />
+        <RegimeForm />
+      </Card>
+
+      {latestRegime && (latestRegime.status === "COMPLETED" || latestRegime.error) ? (
+        <RegimeReport run={latestRegime} />
+      ) : null}
+
+      <Card>
+        <CardHeader
+          title="Reality Check / SPA"
+          hint={
+            <p className="text-xs text-as-muted">
+              对同一家族试验台账做 White Reality Check 与 Hansen SPA。闸门是 SPA_c，不是最好那条试验的原始 Sharpe。
+            </p>
+          }
+        />
+        <SpaForm />
+      </Card>
+
+      {latestSpa && (latestSpa.status === "COMPLETED" || latestSpa.error) ? (
+        <SpaReport run={latestSpa} />
+      ) : null}
+
       {isLoading ? (
         <Card className="h-40 animate-pulse bg-as-secondary" />
       ) : error ? (
@@ -401,7 +563,7 @@ export function ValidationDesk() {
           <EmptyState
             icon={BadgeCheck}
             title="还没有验证记录"
-            description="跑完一次回测后会写下 Deflated Sharpe 与 Bootstrap。Walk-forward、DSR、PBO、敏感性高原、成本与 Sharpe 区间都通过后，系统才会把策略标成已验证。"
+            description="跑完一次回测后会写下 Deflated Sharpe、Bootstrap 与制度切片。Walk-forward、DSR、PBO、敏感性高原、成本、Sharpe 区间、制度稳定性与 Hansen SPA_c 都通过后，系统才会把策略标成已验证。"
           />
         </Card>
       ) : (
@@ -431,6 +593,10 @@ export function ValidationDesk() {
                 const breakeven =
                   typeof row.result.breakeven_bps === "number" ? row.result.breakeven_bps : null;
                 const sharpeCi = asInterval(row.result.sharpe);
+                const concentrated =
+                  typeof row.result.concentrated_in === "string"
+                    ? row.result.concentrated_in
+                    : null;
                 const summary =
                   row.kind === "DSR"
                     ? `${dsr == null ? "—" : formatPct(dsr)}${n != null ? ` · N=${n}` : ""}`
@@ -454,6 +620,16 @@ export function ValidationDesk() {
                             ? sharpeCi
                               ? `${sharpeCi.observed.toFixed(2)} [${sharpeCi.low.toFixed(2)}, ${sharpeCi.high.toFixed(2)}]`
                               : "—"
+                            : row.kind === "REGIME"
+                              ? concentrated
+                                ? `集中 ${concentrated}`
+                                : row.passed
+                                  ? "跨制度"
+                                  : "未通过"
+                            : row.kind === "SPA"
+                              ? typeof row.result.p_spa_consistent === "number"
+                                ? `SPA_c ${row.result.p_spa_consistent.toFixed(3)}`
+                                : "—"
                             : oos == null
                               ? "—"
                               : `OOS Sharpe ${oos.toFixed(2)}`;

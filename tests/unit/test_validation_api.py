@@ -15,18 +15,23 @@ def test_validation_list_exposes_gates(client):
     assert "SENSITIVITY" in body["gates"]["validated_requires"]
     assert "COST" in body["gates"]["validated_requires"]
     assert "BOOTSTRAP" in body["gates"]["validated_requires"]
+    assert "REGIME" in body["gates"]["validated_requires"]
+    assert "SPA" in body["gates"]["validated_requires"]
     assert "DSR" in body["gates"]["available"]
     assert "WALK_FORWARD" in body["gates"]["available"]
     assert "PBO" in body["gates"]["available"]
     assert "SENSITIVITY" in body["gates"]["available"]
     assert "COST" in body["gates"]["available"]
     assert "BOOTSTRAP" in body["gates"]["available"]
+    assert "REGIME" in body["gates"]["available"]
+    assert "SPA" in body["gates"]["available"]
     assert "WALK_FORWARD" not in body["gates"]["missing"]
     assert "PBO" not in body["gates"]["missing"]
     assert "SENSITIVITY" not in body["gates"]["missing"]
     assert "COST" not in body["gates"]["missing"]
     assert "BOOTSTRAP" not in body["gates"]["missing"]
-    assert "REGIME" in body["gates"]["missing"]
+    assert "REGIME" not in body["gates"]["missing"]
+    assert "SPA" not in body["gates"]["missing"]
 
 
 def test_walk_forward_requires_completed_backtest(client):
@@ -304,6 +309,43 @@ def test_bootstrap_enqueues(client):
     assert body["status"] == "QUEUED"
     assert body["params"]["n_boot"] == 400
     assert body["params"]["method"] == "stationary"
+
+
+def test_regime_enqueues(client):
+    created = client.post("/api/v1/strategies", json={"name": "regime-ok"}).json()
+    version_id = created["latest_version"]["id"]
+    _completed_backtest(version_id)
+    res = client.post(
+        "/api/v1/validation/regime",
+        json={"strategy_version_id": version_id},
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["kind"] == "REGIME"
+    assert body["status"] == "QUEUED"
+    assert body["params"]["bear_drawdown"] == -0.2
+    listed = client.get("/api/v1/validation?kind=REGIME")
+    assert listed.status_code == 200
+    assert listed.json()["total"] == 1
+
+
+def test_spa_enqueues(client):
+    created = client.post("/api/v1/strategies", json={"name": "spa-ok"}).json()
+    version_id = created["latest_version"]["id"]
+    _completed_backtest(version_id)
+    res = client.post(
+        "/api/v1/validation/spa",
+        json={"strategy_version_id": version_id, "n_boot": 400, "seed": 1},
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["kind"] == "SPA"
+    assert body["status"] == "QUEUED"
+    assert body["params"]["n_boot"] == 400
+    assert body["params"]["alpha"] == 0.05
+    listed = client.get("/api/v1/validation?kind=SPA")
+    assert listed.status_code == 200
+    assert listed.json()["total"] == 1
 
 
 def test_sensitivity_and_cost_schema_defaults():

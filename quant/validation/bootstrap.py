@@ -210,6 +210,17 @@ def _resample_indices(
     return idx
 
 
+def resample_indices(
+    t: int,
+    mean_block: float,
+    rng: np.random.Generator,
+    *,
+    method: str,
+) -> np.ndarray:
+    """Circular block / stationary (geometric) index path of length ``t``."""
+    return _resample_indices(t, mean_block, rng, method=method)
+
+
 def _percentile_interval(
     observed: float, draws: np.ndarray, confidence_level: float
 ) -> Interval:

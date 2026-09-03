@@ -142,7 +142,7 @@ PostgreSQL：metrics · equity · trades · monthly_returns · rolling_windows
 
 ### Phase 3 新增
 
-`validation_runs`（walk-forward / DSR / PBO / 敏感性 / 成本 / bootstrap / regime 的运行与结论）
+`validation_runs`（walk-forward / DSR / PBO / 敏感性 / 成本 / bootstrap / regime / SPA 的运行与结论）
 
 ### Phase 6–7 新增
 

@@ -11,7 +11,9 @@ from services.api.schemas import (
     BootstrapCreate,
     CostScanCreate,
     PBOScanCreate,
+    RegimeCreate,
     SensitivityCreate,
+    SpaCreate,
     ValidationPage,
     ValidationRunOut,
     WalkForwardCreate,
@@ -70,6 +72,16 @@ def create_cost_scan(payload: CostScanCreate, db: Session = Depends(get_db)) -> 
 @router.post("/bootstrap", response_model=ValidationRunOut, status_code=201)
 def create_bootstrap(payload: BootstrapCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
     return validation_service.to_out(validation_service.create_bootstrap_run(db, payload))
+
+
+@router.post("/regime", response_model=ValidationRunOut, status_code=201)
+def create_regime(payload: RegimeCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(validation_service.create_regime_run(db, payload))
+
+
+@router.post("/spa", response_model=ValidationRunOut, status_code=201)
+def create_spa(payload: SpaCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(validation_service.create_spa_run(db, payload))
 
 
 @router.post("/walk-forward", response_model=ValidationRunOut, status_code=201)

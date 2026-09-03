@@ -25,18 +25,37 @@ def _ts(day: date) -> datetime:
     return datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
 
 
-def _long_equity(start: date, n: int, *, drift: float) -> list[dict]:
-    points: list[dict] = []
-    value = 100_000.0
+def _weekdays(start: date, end: date) -> list[date]:
+    days: list[date] = []
     day = start
-    i = 0
-    while len(points) < n:
+    while day <= end:
         if day.weekday() < 5:
-            points.append({"ts": _ts(day), "strategy_value": value})
-            noise = 0.004 * ((i % 5) - 2) / 2.0
-            value *= 1.0 + drift + noise
-            i += 1
+            days.append(day)
         day += timedelta(days=1)
+    return days
+
+
+def _two_year_market(*, strategy: str) -> list[dict]:
+    days = _weekdays(date(2018, 1, 2), date(2019, 12, 31))
+    crash_start = next(day for day in days if day >= date(2018, 7, 1))
+    bench = 100_000.0
+    strat = 100_000.0
+    points = [{"ts": _ts(days[0]), "strategy_value": strat, "benchmark_value": bench}]
+    for i, day in enumerate(days[1:]):
+        if day == crash_start:
+            bench_ret = -0.21
+        elif date(2018, 7, 1) <= day <= date(2018, 12, 31):
+            bench_ret = -0.008 + 0.006 * ((i % 5) - 2) / 2.0
+        elif day.year == 2019 and day.month <= 6:
+            bench_ret = 0.006 + 0.001 * ((i % 5) - 2) / 2.0
+        else:
+            bench_ret = 0.0015 + 0.0008 * ((i % 5) - 2) / 2.0
+        bench *= 1.0 + bench_ret
+        if strategy == "hold":
+            strat *= 1.0 + bench_ret
+        else:
+            strat *= 1.0 + 0.001 + 0.0006 * ((i % 7) - 3) / 3.0
+        points.append({"ts": _ts(day), "strategy_value": strat, "benchmark_value": bench})
     return points
 
 
@@ -72,41 +91,42 @@ def _add_gate(db, *, strategy_id, version_id, backtest_id, kind: ValidationKind)
     )
 
 
-def _seed(Session, *, n_points: int = 260, drift: float = 0.002):
+def _seed(Session, *, strategy: str = "robust"):
     db = Session()
-    strategy = Strategy(name="boot", status=StrategyStatus.BACKTESTED)
-    db.add(strategy)
+    row = Strategy(name="regime", status=StrategyStatus.BACKTESTED)
+    db.add(row)
     db.flush()
-    strategy.family_id = strategy.id
-    version = StrategyVersion(strategy_id=strategy.id, version=1, code="print(1)", config={})
+    row.family_id = row.id
+    version = StrategyVersion(strategy_id=row.id, version=1, code="print(1)", config={})
     db.add(version)
     db.flush()
     backtest = Backtest(
         id=uuid4(),
         strategy_version_id=version.id,
         start_date=date(2018, 1, 1),
-        end_date=date(2019, 6, 1),
+        end_date=date(2019, 12, 31),
         status=BacktestStatus.COMPLETED,
         universe_snapshot=[{"symbol": "SPY", "effective_from": "2018-01-01", "effective_to": None}],
     )
     db.add(backtest)
     db.flush()
-    for point in _long_equity(date(2018, 1, 2), n_points, drift=drift):
+    for point in _two_year_market(strategy=strategy):
         db.add(
             BacktestEquity(
                 backtest_id=backtest.id,
                 ts=point["ts"],
                 strategy_value=point["strategy_value"],
+                benchmark_value=point["benchmark_value"],
             )
         )
     run = ValidationRun(
-        strategy_id=strategy.id,
+        strategy_id=row.id,
         strategy_version_id=version.id,
         backtest_id=backtest.id,
-        kind=ValidationKind.BOOTSTRAP,
+        kind=ValidationKind.REGIME,
         status=ValidationRunStatus.QUEUED,
         progress_step="Queued",
-        params={"n_boot": 200, "confidence_level": 0.95, "method": "stationary", "seed": 3},
+        params={},
         result={},
         passed=False,
     )
@@ -117,59 +137,67 @@ def _seed(Session, *, n_points: int = 260, drift: float = 0.002):
         ValidationKind.PBO,
         ValidationKind.SENSITIVITY,
         ValidationKind.COST,
-        ValidationKind.REGIME,
+        ValidationKind.BOOTSTRAP,
         ValidationKind.SPA,
     ):
-        _add_gate(db, strategy_id=strategy.id, version_id=version.id, backtest_id=backtest.id, kind=kind)
+        _add_gate(db, strategy_id=row.id, version_id=version.id, backtest_id=backtest.id, kind=kind)
     db.commit()
-    ids = (str(run.id), strategy.id)
+    ids = (str(run.id), row.id)
     db.close()
     return ids
 
 
-def test_bootstrap_positive_drift_promotes(monkeypatch):
+def test_regime_robust_promotes(monkeypatch):
     Session = _session(monkeypatch)
-    from services.worker.tasks import execute_bootstrap
+    from services.worker.tasks import execute_regime
 
-    run_id, strategy_id = _seed(Session, drift=0.003)
-    result = execute_bootstrap(run_id)
+    run_id, strategy_id = _seed(Session, strategy="robust")
+    result = execute_regime(run_id)
     assert result["status"] == "COMPLETED"
     assert result["passed"] is True
     db = Session()
     run = db.get(ValidationRun, __import__("uuid").UUID(run_id))
     assert run.passed is True
-    assert run.result["sharpe"]["low"] > 0
-    assert run.result["method"] == "stationary"
+    assert run.result["single_regime"] is False
+    keys = {item["key"] for item in run.result["slices"]}
+    assert {"bull", "bear", "high_vol", "low_vol", "hike", "cut", "covid_2020_03"} <= keys
     strategy = db.get(Strategy, strategy_id)
     assert strategy.status == StrategyStatus.VALIDATED
     db.close()
 
 
-def test_bootstrap_zero_drift_does_not_promote(monkeypatch):
+def test_regime_buy_and_hold_does_not_promote(monkeypatch):
     Session = _session(monkeypatch)
-    from services.worker.tasks import execute_bootstrap
+    from services.worker.tasks import execute_regime
 
-    run_id, strategy_id = _seed(Session, drift=0.0)
-    result = execute_bootstrap(run_id)
+    run_id, strategy_id = _seed(Session, strategy="hold")
+    result = execute_regime(run_id)
     assert result["status"] == "COMPLETED"
     assert result["passed"] is False
     db = Session()
     run = db.get(ValidationRun, __import__("uuid").UUID(run_id))
     assert run.passed is False
-    assert run.result["sharpe"]["crosses_zero"] is True
+    assert "熊市" in run.result["reason"]
     strategy = db.get(Strategy, strategy_id)
     assert strategy.status == StrategyStatus.BACKTESTED
     db.close()
 
 
-def test_bootstrap_short_series_fails_loud(monkeypatch):
+def test_regime_missing_benchmark_fails_loud(monkeypatch):
     Session = _session(monkeypatch)
-    from services.worker.tasks import execute_bootstrap
+    from services.worker.tasks import execute_regime
 
-    run_id, strategy_id = _seed(Session, n_points=40, drift=0.003)
-    result = execute_bootstrap(run_id)
+    run_id, strategy_id = _seed(Session, strategy="robust")
+    db = Session()
+    run = db.get(ValidationRun, __import__("uuid").UUID(run_id))
+    db.query(BacktestEquity).filter(BacktestEquity.backtest_id == run.backtest_id).update(
+        {"benchmark_value": None}
+    )
+    db.commit()
+    db.close()
+    result = execute_regime(run_id)
     assert result["status"] == "FAILED"
-    assert "少于" in result["error"]
+    assert "基准净值" in result["error"]
     db = Session()
     strategy = db.get(Strategy, strategy_id)
     assert strategy.status == StrategyStatus.BACKTESTED

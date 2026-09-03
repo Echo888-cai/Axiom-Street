@@ -103,6 +103,8 @@ def _seed(
     sensitivity_passed: bool | None = True,
     cost_passed: bool | None = True,
     bootstrap_passed: bool | None = True,
+    regime_passed: bool | None = True,
+    spa_passed: bool | None = True,
     strategy_status: StrategyStatus = StrategyStatus.BACKTESTED,
 ):
     db = Session()
@@ -230,6 +232,36 @@ def _seed(
                 finished_at=datetime.now(timezone.utc),
             )
         )
+    if regime_passed is not None:
+        db.add(
+            ValidationRun(
+                strategy_id=strategy.id,
+                strategy_version_id=version.id,
+                backtest_id=backtest.id,
+                kind=ValidationKind.REGIME,
+                status=ValidationRunStatus.COMPLETED,
+                progress_step="Completed",
+                params={},
+                result={"passed": regime_passed},
+                passed=regime_passed,
+                finished_at=datetime.now(timezone.utc),
+            )
+        )
+    if spa_passed is not None:
+        db.add(
+            ValidationRun(
+                strategy_id=strategy.id,
+                strategy_version_id=version.id,
+                backtest_id=backtest.id,
+                kind=ValidationKind.SPA,
+                status=ValidationRunStatus.COMPLETED,
+                progress_step="Completed",
+                params={},
+                result={"passed": spa_passed},
+                passed=spa_passed,
+                finished_at=datetime.now(timezone.utc),
+            )
+        )
     db.commit()
     ids = (str(run.id), strategy.id)
     db.close()
@@ -328,6 +360,34 @@ def test_walk_forward_without_bootstrap_stays_backtested(monkeypatch):
     from services.worker.tasks import execute_walk_forward
 
     run_id, strategy_id = _seed(Session, dsr_passed=True, bootstrap_passed=None)
+    execute_walk_forward(run_id)
+    db = Session()
+    strategy = db.get(Strategy, strategy_id)
+    assert strategy.status == StrategyStatus.BACKTESTED
+    db.close()
+
+
+def test_walk_forward_without_regime_stays_backtested(monkeypatch):
+    Session = _session(monkeypatch)
+    fake = _WfEngine()
+    monkeypatch.setattr("services.worker.tasks.LeanQuantEngine", lambda **_k: fake)
+    from services.worker.tasks import execute_walk_forward
+
+    run_id, strategy_id = _seed(Session, dsr_passed=True, regime_passed=None)
+    execute_walk_forward(run_id)
+    db = Session()
+    strategy = db.get(Strategy, strategy_id)
+    assert strategy.status == StrategyStatus.BACKTESTED
+    db.close()
+
+
+def test_walk_forward_without_spa_stays_backtested(monkeypatch):
+    Session = _session(monkeypatch)
+    fake = _WfEngine()
+    monkeypatch.setattr("services.worker.tasks.LeanQuantEngine", lambda **_k: fake)
+    from services.worker.tasks import execute_walk_forward
+
+    run_id, strategy_id = _seed(Session, dsr_passed=True, spa_passed=None)
     execute_walk_forward(run_id)
     db = Session()
     strategy = db.get(Strategy, strategy_id)

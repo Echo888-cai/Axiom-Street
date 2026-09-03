@@ -433,6 +433,7 @@ class ValidationKind(str, enum.Enum):
     COST = "COST"
     BOOTSTRAP = "BOOTSTRAP"
     REGIME = "REGIME"
+    SPA = "SPA"
 
 
 class ValidationRunStatus(str, enum.Enum):

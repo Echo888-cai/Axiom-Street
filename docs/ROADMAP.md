@@ -310,7 +310,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 **目标：让系统能主动告诉用户"你这个策略大概率是过拟合的"。**
 **预估：5–6 周。这是本路线图中技术含量最高、最难被复制的部分，也是"顶级"二字的真正来源。**
-**当前进度（已开工）**：DSR 已按试验台账计算并展示在 tearsheet 顶部；Walk-forward（滚动/锚定）已接入；PBO 已接到真实 `lookback` 参数扫描（CSCV，不丢弃凑不齐的交易日）；参数敏感性（孤峰/高原）、成本敏感性（alpha 归零临界 bps）与 stationary bootstrap Sharpe 区间已接入。`VALIDATED` 仅能由系统在 Walk-forward 通过、同版本 DSR 过 95% 线、该版本 PBO ≤ 0.5、敏感性为高原、临界单边成本高于真实成本、且 Sharpe bootstrap 下界 > 0 后写入。Regime 尚未开工。
+**当前进度（Phase 3 闸门已齐）**：DSR、Walk-forward、PBO、参数敏感性、成本敏感性、stationary bootstrap Sharpe 区间、制度稳定性与 Hansen SPA_c 均已接入并挡住 `VALIDATED`。5.4 端到端验收：故意过拟合的 lookback 搜索必须给出 PBO > 0.5 且 DSR 低于未校正 PSR；SPY 200DMA golden 基线仍是 CAGR ~1.3% / Sharpe ~0.14——弱 edge，不是过拟合产物。下一阶段是 Phase 4 研究工作台，需显式开工。
 
 ### 5.1 为什么这是护城河
 
@@ -322,7 +322,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 - 滚动窗口：train N 年 → test M 年 → 前滑，覆盖全历史；
 - Anchored（扩张窗口）与 Rolling（固定窗口）两种模式；
-- **产品级约束**：策略状态机中，未通过 walk-forward 的策略不允许进入 `VALIDATED` 状态。客户端 `PATCH` 不能写入 `VALIDATED`；系统在最近一次 Walk-forward 通过、同版本 DSR ≥ 95%、同版本参数扫描 PBO ≤ 0.5、敏感性判定为高原、临界单边成本高于真实成本、且 Sharpe 的 stationary bootstrap 区间下界 > 0 后才提升。新的 Walk-forward / PBO / 敏感性 / 成本 / Bootstrap 失败会从 `VALIDATED` 降回 `BACKTESTED`；
+- **产品级约束**：策略状态机中，未通过 walk-forward 的策略不允许进入 `VALIDATED` 状态。客户端 `PATCH` 不能写入 `VALIDATED`；系统在最近一次 Walk-forward 通过、同版本 DSR ≥ 95%、同版本参数扫描 PBO ≤ 0.5、敏感性判定为高原、临界单边成本高于真实成本、Sharpe 的 stationary bootstrap 区间下界 > 0、制度切片在牛/熊、高/低波动、加息/降息上均未塌缩、且 Hansen SPA_c 拒绝无 edge 后才提升。新的 Walk-forward / PBO / 敏感性 / 成本 / Bootstrap / Regime / SPA 失败会从 `VALIDATED` 降回 `BACKTESTED`；
 - 前端呈现：每个 fold 的 IS/OOS Sharpe 对比条形图 + OOS 拼接后的净值曲线。
 
 > 已交付：`quant/validation/walk_forward.py`、`POST /api/v1/validation/walk-forward`、Celery `validation.walk_forward`、`/validation` 发起与报告。默认评分：拼接样本外 Sharpe（不是折 Sharpe 的均值）；样本内 Sharpe 均值 > 0.5 且拼接 OOS Sharpe < 0 视为过拟合塌缩。
@@ -370,9 +370,13 @@ PBO > 0.5 意味着"你的最优参数在样本外表现低于中位数的概率
 
 按市场状态分段检验：牛/熊、高波动/低波动、加息/降息周期，以及若干指定压力窗口（2008、2020-03、2022）。输出各制度下的 Sharpe 与胜率。一个只在单一制度有效的策略必须被明确标注。
 
+> 已交付：`quant/validation/regime.py`、`POST /api/v1/validation/regime`、Celery `validation.regime`、回测完成时自动写入。牛/熊 = 基准 20% 峰谷（不是策略自身曲线）；高/低波动 = 21 日实现波动相对样本中位数；利率周期按 FOMC 加息/降息生效日（不是实时利率源）。压力窗口只报告、不闸门。缺少基准净值则失败而不是用策略曲线冒充市场。互补制度 Sharpe 为负不能进入 `VALIDATED`；edge 集中但互补 ≥ 0 时通过并标注。各轴至少 60 个交易日，否则拒绝判定。扫描回测不写 REGIME。
+
 #### 5.2.8 多重检验校正（跨策略）
 
 White's Reality Check 与 Hansen's SPA test，用于回答"在我筛过的这一批策略里，最好的那个是否真的有 edge"。这是 Phase 5 AI 大批量生成策略后的必备闸门。
+
+> 已交付：`quant/validation/spa.py`、`POST /api/v1/validation/spa`、Celery `validation.spa`、`/validation` 发起与报告。对同一家族、同一数据快照的样本内试验做联合 stationary bootstrap（禁止 iid）。默认相对现金（收益相对 0）。Hansen SPA_c 为闸门：p < 0.05 且 T > 0 才通过；同时报告 White RC 与 SPA_l / SPA_u。至少 2 条可区分试验、252 个共同交易日；超过 64 条拒绝截断而不是悄悄丢掉。不在回测或参数扫描完成后自动写入——扫描窗口短于 252 根，K=1 的全样本回测也不能伪造通过。
 
 ### 5.3 验证作为一等实体
 
@@ -385,6 +389,8 @@ White's Reality Check 与 Hansen's SPA test，用于回答"在我筛过的这一
 - 用 SPY 200DMA 跑，结论应为"edge 微弱但非过拟合产物"（其真实 CAGR 仅 1.3%，golden test 已证实——这是很好的诚实基线）；
 - 未通过验证的策略在 UI 上无法被标记为 `VALIDATED`；
 - 所有统计量都有单元测试，且用文献中的已知数值案例做校验。
+
+> 已交付：`tests/unit/test_validation_pipeline.py`。过拟合 lookback 搜索（价格 vs SMA，双均线族）跑完 PBO 后必须 PBO > 0.5，且按试验台账重算的 DSR < PSR、过不了 95% 线；客户端 PATCH `VALIDATED` 仍是 409。200DMA 风格的弱一致 drift 必须 PBO ≤ 0.5 且不得仅凭 PBO 晋升。Golden `expectations.json` 锁定 CAGR 1.308%、Sharpe 0.136。Bailey DSR / CSCV 文献已知值仍在 `tests/unit/test_deflated_sharpe.py` 与 `test_pbo.py`。
 
 ---
 

@@ -197,6 +197,14 @@ def test_execute_backtest_persists_round_trips(monkeypatch):
     assert boot.passed is False
     assert boot.error is not None
     assert "少于" in boot.error["message"]
+    regime = (
+        db.query(ValidationRun)
+        .filter(ValidationRun.backtest_id == bt.id, ValidationRun.kind == ValidationKind.REGIME)
+        .one()
+    )
+    assert regime.passed is False
+    assert regime.error is None
+    assert "不能进入 VALIDATED" in str(regime.result.get("reason", ""))
     db.close()
 
 

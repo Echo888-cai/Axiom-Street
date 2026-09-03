@@ -1,4 +1,4 @@
-"""Phase 3 validation runs. DSR, walk-forward, PBO, sensitivity, cost, and bootstrap gate VALIDATED."""
+"""Phase 3 validation runs. DSR, walk-forward, PBO, sensitivity, cost, bootstrap, regime, and SPA gate VALIDATED."""
 
 from __future__ import annotations
 
@@ -39,9 +39,17 @@ from quant.validation.cost import (
 )
 from quant.validation.cost import MAX_GRID as COST_MAX_GRID
 from quant.validation.cost import MIN_GRID as COST_MIN_GRID
+from quant.validation.regime import (
+    BEAR_DRAWDOWN,
+    MIN_AXIS_OBS,
+    VOL_WINDOW,
+    RegimeError,
+    score_regime,
+)
 from quant.validation.sensitivity import DEFAULT_LOOKBACK_GRID
 from quant.validation.sensitivity import MAX_GRID as SENS_MAX_GRID
 from quant.validation.sensitivity import MIN_GRID as SENS_MIN_GRID
+from quant.validation.spa import SpaError
 from quant.validation.walk_forward import WalkForwardError, WalkForwardSpec, build_folds
 from services.api.models import (
     AuditLog,
@@ -61,7 +69,9 @@ from services.api.schemas import (
     BootstrapCreate,
     CostScanCreate,
     PBOScanCreate,
+    RegimeCreate,
     SensitivityCreate,
+    SpaCreate,
     ValidationRunOut,
     WalkForwardCreate,
 )
@@ -83,6 +93,8 @@ _VALIDATED_KINDS = (
     ValidationKind.SENSITIVITY,
     ValidationKind.COST,
     ValidationKind.BOOTSTRAP,
+    ValidationKind.REGIME,
+    ValidationKind.SPA,
 )
 _LIVE_STATUSES = {
     StrategyStatus.PAPER,
@@ -213,7 +225,7 @@ def equity_payload(db: Session, backtest_id: UUID) -> list[dict[str, Any]]:
         .order_by(BacktestEquity.ts.asc())
         .all()
     )
-    return [{"ts": row.ts, "strategy_value": row.strategy_value} for row in points]
+    return [{"ts": row.ts, "strategy_value": row.strategy_value, "benchmark_value": row.benchmark_value} for row in points]
 
 
 def record_bootstrap_for_backtest(
@@ -276,6 +288,50 @@ def record_bootstrap_for_backtest(
     db.add(run)
     return payload
 
+
+def record_regime_for_backtest(
+    db: Session,
+    backtest: Backtest,
+    equity: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Slice the completed backtest by market regime. No extra LEAN run.
+
+    Missing benchmark or uncovered axes fail loud into the validation row.
+    Scan backtests should not call this.
+    """
+    strategy_id = None
+    version = backtest.strategy_version
+    if version is not None:
+        strategy_id = version.strategy_id
+    params: dict[str, Any] = {
+        "bear_drawdown": BEAR_DRAWDOWN,
+        "vol_window": VOL_WINDOW,
+        "min_axis_obs": MIN_AXIS_OBS,
+    }
+    run = ValidationRun(
+        strategy_id=strategy_id,
+        strategy_version_id=backtest.strategy_version_id,
+        backtest_id=backtest.id,
+        kind=ValidationKind.REGIME,
+        status=ValidationRunStatus.COMPLETED,
+        progress_step="Completed",
+        params=params,
+        result={},
+        passed=False,
+        finished_at=datetime.now(timezone.utc),
+    )
+    points = equity if equity is not None else equity_payload(db, backtest.id)
+    try:
+        result = score_regime(points)
+    except RegimeError as exc:
+        run.error = {"code": "regime_failed", "message": str(exc)}
+        db.add(run)
+        return {}
+    payload = result.to_dict()
+    run.result = payload
+    run.passed = result.passed
+    db.add(run)
+    return payload
 
 
 def count_inflight_engine_jobs(db: Session) -> int:
@@ -351,11 +407,13 @@ def validation_gates() -> dict[str, Any]:
     return {
         "validated_requires": [kind.value for kind in _VALIDATED_KINDS],
         "available": [kind.value for kind in _VALIDATED_KINDS],
-        "missing": ["REGIME"],
+        "missing": [],
         "note": (
             "VALIDATED 由系统持有：Walk-forward 通过、同版本 DSR 过 95% 线、"
             "参数扫描 PBO ≤ 0.5、敏感性为高原而非孤峰、临界单边成本高于真实成本、"
-            "且 Sharpe 的 stationary bootstrap 区间下界 > 0。"
+            "Sharpe 的 stationary bootstrap 区间下界 > 0、"
+            "牛/熊、高/低波动、加息/降息均未塌缩、"
+            "且 Hansen SPA_c 在试验台账上拒绝「没有优于基准的模型」。"
             "客户端不能把策略标成已验证。"
         ),
     }
@@ -944,6 +1002,160 @@ def create_bootstrap_run(db: Session, payload: BootstrapCreate) -> ValidationRun
     db.commit()
     db.refresh(run)
     _enqueue_bootstrap(str(run.id))
+    db.refresh(run)
+    return run
+
+
+def _enqueue_regime(run_id: str) -> None:
+    settings = get_settings()
+    if settings.sync_backtests:
+        from services.worker.tasks import execute_regime
+
+        execute_regime(run_id)
+        return
+    from services.worker.tasks import run_regime_task
+
+    run_regime_task.apply_async(
+        args=[run_id],
+        time_limit=180,
+        soft_time_limit=150,
+    )
+
+
+def create_regime_run(db: Session, payload: RegimeCreate) -> ValidationRun:
+    version = get_version(db, payload.strategy_version_id)
+    template = _template_backtest(db, version, payload.backtest_id)
+    run = ValidationRun(
+        strategy_id=version.strategy_id,
+        strategy_version_id=version.id,
+        backtest_id=template.id,
+        kind=ValidationKind.REGIME,
+        status=ValidationRunStatus.QUEUED,
+        progress_step="Queued",
+        params={
+            "bear_drawdown": BEAR_DRAWDOWN,
+            "vol_window": VOL_WINDOW,
+            "min_axis_obs": MIN_AXIS_OBS,
+        },
+        result={},
+        passed=False,
+    )
+    db.add(run)
+    db.flush()
+    db.add(
+        AuditLog(
+            actor="local",
+            action="Regime Started",
+            object_type="validation_run",
+            object_id=str(run.id),
+            after={"backtest_id": str(template.id)},
+        )
+    )
+    db.commit()
+    db.refresh(run)
+    _enqueue_regime(str(run.id))
+    db.refresh(run)
+    return run
+
+
+def _spa_seed(template: Backtest, seed: int | None) -> int:
+    if seed is not None:
+        return int(seed)
+    return int(template.id.int % (2**32 - 1))
+
+
+def load_spa_paths(
+    db: Session,
+    *,
+    family_id: UUID,
+    snapshot_id: UUID | None,
+) -> list[tuple[str | None, list[dict[str, Any]]]]:
+    """In-sample trials for one family + snapshot. OOS fold rows are excluded."""
+    query = select(ExperimentTrial).where(
+        ExperimentTrial.strategy_family == family_id,
+        or_(ExperimentTrial.is_oos.is_(False), ExperimentTrial.is_oos.is_(None)),
+        ExperimentTrial.backtest_id.is_not(None),
+    )
+    if snapshot_id is not None:
+        query = query.where(ExperimentTrial.data_snapshot_id == snapshot_id)
+    trials = list(db.scalars(query).all())
+    snapshots = {row.data_snapshot_id for row in trials}
+    if snapshot_id is None and len(snapshots) > 1:
+        raise SpaError("试验台账混有不同数据快照，拒绝跨快照做 Reality Check。")
+    paths: list[tuple[str | None, list[dict[str, Any]]]] = []
+    seen: set[UUID] = set()
+    for trial in trials:
+        if trial.backtest_id is None or trial.backtest_id in seen:
+            continue
+        backtest = db.get(Backtest, trial.backtest_id)
+        if backtest is None or backtest.status != BacktestStatus.COMPLETED:
+            continue
+        points = equity_payload(db, backtest.id)
+        if len(points) < 2:
+            continue
+        seen.add(backtest.id)
+        paths.append((str(backtest.id), points))
+    return paths
+
+
+def _enqueue_spa(run_id: str) -> None:
+    settings = get_settings()
+    if settings.sync_backtests:
+        from services.worker.tasks import execute_spa
+
+        execute_spa(run_id)
+        return
+    from services.worker.tasks import run_spa_task
+
+    run_spa_task.apply_async(
+        args=[run_id],
+        time_limit=180,
+        soft_time_limit=150,
+    )
+
+
+def create_spa_run(db: Session, payload: SpaCreate) -> ValidationRun:
+    version = get_version(db, payload.strategy_version_id)
+    template = _template_backtest(db, version, payload.backtest_id)
+    strategy = db.get(Strategy, version.strategy_id)
+    family_id = (strategy.family_id or strategy.id) if strategy is not None else version.strategy_id
+    run = ValidationRun(
+        strategy_id=version.strategy_id,
+        strategy_version_id=version.id,
+        backtest_id=template.id,
+        kind=ValidationKind.SPA,
+        status=ValidationRunStatus.QUEUED,
+        progress_step="Queued",
+        params={
+            "n_boot": payload.n_boot,
+            "alpha": payload.alpha,
+            "seed": payload.seed,
+            "family_id": str(family_id),
+            "data_snapshot_id": str(template.data_snapshot_id)
+            if template.data_snapshot_id
+            else None,
+        },
+        result={},
+        passed=False,
+    )
+    db.add(run)
+    db.flush()
+    db.add(
+        AuditLog(
+            actor="local",
+            action="SPA Started",
+            object_type="validation_run",
+            object_id=str(run.id),
+            after={
+                "backtest_id": str(template.id),
+                "n_boot": payload.n_boot,
+                "alpha": payload.alpha,
+            },
+        )
+    )
+    db.commit()
+    db.refresh(run)
+    _enqueue_spa(str(run.id))
     db.refresh(run)
     return run
 

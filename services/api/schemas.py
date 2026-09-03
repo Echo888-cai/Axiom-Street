@@ -361,6 +361,19 @@ class BootstrapCreate(BaseModel):
     seed: Optional[int] = None
 
 
+class RegimeCreate(BaseModel):
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+
+
+class SpaCreate(BaseModel):
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+    n_boot: int = Field(default=1000, ge=200, le=5000)
+    alpha: float = Field(default=0.05, ge=0.01, le=0.2)
+    seed: Optional[int] = None
+
+
 class WalkForwardCreate(BaseModel):
     strategy_version_id: UUID
     backtest_id: Optional[UUID] = None

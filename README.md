@@ -89,7 +89,7 @@ Mature components over vanity engineering. We do not rewrite a backtester for sp
 | 0–1 Foundation + SPY 200DMA path | Done |
 | 1.5 Trust hardening (fail-loud, Celery, trial ledger) | Done |
 | **2 Data platform** (PIT universes ✓, incremental ingest ✓, dual-source ✓, 500-name ingest ✓, 1/N 横截面 ✓, 退市 effective_to ✓, 价格/流动性规则池 ✓) | **In progress** |
-| 3 Validation engine | Next |
+| 3 Validation engine | Done — DSR / WF / PBO / sensitivity / cost / bootstrap / regime / SPA_c gate `VALIDATED` |
 | 4–8 Research · AI · Paper · Live · Portfolio | Sequenced after validation |
 
 Do not treat backtest numbers as investment advice until Phase 2–3 close the remaining trust gaps.

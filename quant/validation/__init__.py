@@ -19,6 +19,22 @@ from quant.validation.cost import (
     classify_cost_curve,
     interpolate_breakeven,
 )
+from quant.validation.regime import (
+    BEAR_DRAWDOWN,
+    MIN_AXIS_OBS,
+    MIN_STRESS_OBS,
+    STRESS_WINDOWS,
+    VOL_WINDOW,
+    RegimeError,
+    RegimeResult,
+    RegimeSlice,
+    label_bull_bear,
+    label_rate,
+    label_vol,
+    rate_regime,
+    score_regime,
+    series_from_equity,
+)
 from quant.validation.sensitivity import (
     DEFAULT_LOOKBACK_GRID,
     DROP_TOLERANCE,
@@ -26,6 +42,12 @@ from quant.validation.sensitivity import (
     SensitivityError,
     SensitivityResult,
     classify_surface,
+)
+from quant.validation.spa import (
+    SpaError,
+    SpaResult,
+    panel_from_equity_paths,
+    spa_test,
 )
 from quant.validation.walk_forward import (
     MIN_FOLDS,
@@ -41,6 +63,7 @@ from quant.validation.walk_forward import (
 )
 
 __all__ = [
+    "BEAR_DRAWDOWN",
     "BOOTSTRAP_MIN_OBS",
     "DEFAULT_CONFIDENCE",
     "DEFAULT_N_BOOT",
@@ -48,15 +71,24 @@ __all__ = [
     "DEFAULT_LOOKBACK_GRID",
     "DEFAULT_REALISTIC_BPS",
     "DROP_TOLERANCE",
+    "MIN_AXIS_OBS",
     "MIN_FOLDS",
     "MIN_PLATEAU_WIDTH",
+    "MIN_STRESS_OBS",
     "SLIPPAGE_PARAMETER",
+    "STRESS_WINDOWS",
+    "VOL_WINDOW",
     "BootstrapError",
     "BootstrapResult",
     "CostSensitivityError",
     "CostSensitivityResult",
+    "RegimeError",
+    "RegimeResult",
+    "RegimeSlice",
     "SensitivityError",
     "SensitivityResult",
+    "SpaError",
+    "SpaResult",
     "WalkForwardError",
     "WalkForwardFold",
     "WalkForwardScore",
@@ -68,8 +100,17 @@ __all__ = [
     "classify_cost_curve",
     "classify_surface",
     "interpolate_breakeven",
+    "label_bull_bear",
+    "label_rate",
+    "label_vol",
+    "panel_from_equity_paths",
     "polits_white_mean_block",
+    "rate_regime",
+    "score_regime",
     "score_walk_forward",
+    "series_from_equity",
     "slice_equity",
+    "spa_test",
     "stitch_oos_equity",
 ]
+

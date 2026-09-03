@@ -274,6 +274,25 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  createRegime: (body: {
+    strategy_version_id: string;
+    backtest_id?: string;
+  }) =>
+    request<ValidationRun>("/api/v1/validation/regime", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  createSpa: (body: {
+    strategy_version_id: string;
+    backtest_id?: string;
+    n_boot?: number;
+    alpha?: number;
+    seed?: number;
+  }) =>
+    request<ValidationRun>("/api/v1/validation/spa", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   listBacktests: (params?: { strategy_id?: string; status?: string }) => {
     const search = new URLSearchParams();
     if (params?.strategy_id) search.set("strategy_id", params.strategy_id);
