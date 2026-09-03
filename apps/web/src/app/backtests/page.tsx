@@ -25,7 +25,7 @@ export default function BacktestsPage() {
   const [filter, setFilter] = useState("ALL");
   const { data, isLoading, error } = useQuery({
     queryKey: ["backtests"],
-    queryFn: api.listBacktests,
+    queryFn: () => api.listBacktests(),
     refetchInterval: 3000,
   });
 

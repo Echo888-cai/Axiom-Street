@@ -1,11 +1,10 @@
 """Market data providers.
 
-Default path needs no API keys:
-  1) yfinance (Yahoo)
-  2) Stooq CSV fallback
+Default path:
+  * ``POLYGON_API_KEY`` set → Polygon primary, yfinance as dual-source reconcile
+  * otherwise yfinance, then Stooq CSV fallback
 
-Polygon is wired as an optional primary source. When selected without
-``POLYGON_API_KEY``, the call fails loud — never silently degrades.
+Polygon never silently degrades: missing key or HTTP failure raises.
 """
 
 from __future__ import annotations
@@ -112,6 +111,49 @@ def fetch_stooq(
 def _polygon_api_key() -> str | None:
     key = (os.getenv("POLYGON_API_KEY") or "").strip()
     return key or None
+
+
+def polygon_configured() -> bool:
+    return bool(_polygon_api_key())
+
+
+def resolve_primary_provider(provider: str | None = None) -> str:
+    """Resolve ``auto`` to Polygon when a key is present; never invent a source."""
+    requested = (provider or os.getenv("STREET_DATA_PROVIDER") or "auto").strip().lower()
+    if not requested:
+        requested = "auto"
+    if requested == "auto" and polygon_configured():
+        return "polygon"
+    return requested
+
+
+def resolve_reconcile_with(primary: str, reconcile_with: str | None = None) -> str | None:
+    """Default Polygon ingest to yfinance reconcile.
+
+    An explicit empty ``reconcile_with`` argument disables dual-source.
+    An empty ``STREET_RECONCILE_WITH`` env value is treated as unset, so the
+    Polygon default still applies.
+    """
+    if reconcile_with is not None:
+        value = str(reconcile_with).strip().lower()
+        if not value:
+            return None
+        if value in {"auto", primary}:
+            raise ValueError(
+                "reconcile_with must name a concrete secondary provider distinct from primary"
+            )
+        return value
+    env = os.getenv("STREET_RECONCILE_WITH")
+    if env is not None and str(env).strip():
+        value = str(env).strip().lower()
+        if value in {"auto", primary}:
+            raise ValueError(
+                "reconcile_with must name a concrete secondary provider distinct from primary"
+            )
+        return value
+    if primary == "polygon":
+        return "yfinance"
+    return None
 
 
 def fetch_polygon(
@@ -291,16 +333,29 @@ def capabilities_for(source: str) -> ProviderCapabilities:
 
 
 def provider_status() -> dict:
-    polygon_key = bool(_polygon_api_key())
+    polygon_key = polygon_configured()
+    primary = resolve_primary_provider("auto")
+    reconcile = resolve_reconcile_with(primary)
+    if primary == "polygon":
+        active = "polygon"
+        if reconcile:
+            active = f"polygon (reconcile_with={reconcile})"
+    else:
+        active = "auto (yfinance → stooq)"
     return {
-        "active": "auto (yfinance → stooq)",
-        "requires_api_key": False,
+        "active": active,
+        "primary": primary,
+        "reconcile_with": reconcile,
+        "requires_api_key": primary == "polygon",
         "optional_providers": {
             "polygon": {
                 "env": ["POLYGON_API_KEY"],
                 "wired": True,
                 "configured": polygon_key,
-                "role": "optional primary; pair with yfinance via reconcile_with",
+                "role": (
+                    "default primary when POLYGON_API_KEY is set; "
+                    "yfinance is the dual-source reconcile"
+                ),
             },
             "alpaca": {
                 "env": ["ALPACA_API_KEY", "ALPACA_API_SECRET"],

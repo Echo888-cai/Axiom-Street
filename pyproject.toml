@@ -48,7 +48,7 @@ include = ["quant*", "services*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-  "golden: requires Docker and pinned LEAN image",
+  "golden: requires Docker and pinned LEAN image (dual-source Polygon golden skips without POLYGON_API_KEY)",
   "integration: requires running postgres/redis",
 ]
 asyncio_mode = "auto"

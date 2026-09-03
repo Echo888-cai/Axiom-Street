@@ -39,6 +39,8 @@ class _FakeEngine:
         if on_progress:
             on_progress("Running algorithm")
         ts = datetime(2018, 1, 3, tzinfo=timezone.utc)
+        ts2 = datetime(2018, 1, 4, tzinfo=timezone.utc)
+        ts3 = datetime(2018, 1, 5, tzinfo=timezone.utc)
         return BacktestEngineResult(
             engine_version="quantconnect/lean:16355",
             data_version="abc",
@@ -47,15 +49,29 @@ class _FakeEngine:
                 "total_return": 0.1,
                 "final_equity": 110_000.0,
                 "trade_count": 1,
+                "skewness": 0.0,
+                "kurtosis": 0.0,
                 "extras": {},
             },
             equity=[
                 {
                     "ts": ts,
-                    "strategy_value": 110_000.0,
+                    "strategy_value": 100_000.0,
                     "benchmark_value": 100_000.0,
                     "drawdown": 0.0,
-                }
+                },
+                {
+                    "ts": ts2,
+                    "strategy_value": 105_000.0,
+                    "benchmark_value": 101_000.0,
+                    "drawdown": 0.0,
+                },
+                {
+                    "ts": ts3,
+                    "strategy_value": 110_000.0,
+                    "benchmark_value": 102_000.0,
+                    "drawdown": 0.0,
+                },
             ],
             trades=[
                 {
@@ -111,9 +127,7 @@ def _seed(Session):
         end_date=date(2018, 6, 1),
         status=BacktestStatus.QUEUED,
         progress_step="Queued",
-        universe_snapshot=[
-            {"symbol": "SPY", "effective_from": "2018-01-01", "effective_to": None}
-        ],
+        universe_snapshot=[{"symbol": "SPY", "effective_from": "2018-01-01", "effective_to": None}],
     )
     db.add(backtest)
     db.flush()
@@ -124,6 +138,17 @@ def _seed(Session):
             strategy_family=strategy.family_id,
             parameters={},
             parameter_hash="x",
+        )
+    )
+    db.add(
+        ExperimentTrial(
+            backtest_id=None,
+            strategy_id=strategy.id,
+            strategy_family=strategy.family_id,
+            parameters={"oos": True},
+            parameter_hash="oos",
+            observed_sharpe=9.99,
+            is_oos=True,
         )
     )
     db.commit()
@@ -155,6 +180,12 @@ def test_execute_backtest_persists_round_trips(monkeypatch):
     assert trial.observed_sharpe == 1.25
     strategy = db.get(Strategy, strategy_id)
     assert strategy.status == StrategyStatus.BACKTESTED
+    assert metrics.deflated_sharpe is not None
+    from services.api.models import ValidationRun
+
+    run = db.query(ValidationRun).filter(ValidationRun.backtest_id == bt.id).one()
+    assert run.kind.value == "DSR"
+    assert run.result["n_trials"] == 1
     db.close()
 
 

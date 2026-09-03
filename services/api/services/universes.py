@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
+from quant.data.fundamentals import load_fundamentals_map
 from quant.data.ingest_spy import load_symbol_parquet
 from quant.data.symbols import list_market_symbols, normalize_symbols
 from quant.data.universe import (
@@ -160,7 +161,14 @@ def create_universe(
     db.add_all(rows)
     _commit_or_conflict(db)
     if universe_kind is UniverseKind.RULE:
-        return rebuild_rule_universe(db, universe.id)
+        try:
+            return rebuild_rule_universe(db, universe.id)
+        except HTTPException:
+            doomed = db.get(Universe, universe.id)
+            if doomed is not None:
+                db.delete(doomed)
+                db.commit()
+            raise
     return get_universe(db, universe.id)
 
 
@@ -446,10 +454,11 @@ def rebuild_rule_universe(db: Session, universe_id: UUID) -> Universe:
             detail="还没有行情快照，无法按流动性规则生成成分。请先拉取标的。",
         )
     frames = {symbol: load_symbol_parquet(data_root, symbol) for symbol in symbols}
+    fund_map = load_fundamentals_map(data_root, symbols)
     try:
-        derived = evaluate_universe(frames, rules)
+        derived = evaluate_universe(frames, rules, fund_map)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     for row in list(universe.members):
         db.delete(row)
     db.flush()

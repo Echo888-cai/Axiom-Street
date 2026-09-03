@@ -1,14 +1,16 @@
 # 市场数据源
 
-## 当前（Phase 2）
+## 当前（Phase 2 已关闭）
 
 | 优先级 | 数据源 | Key | 能力 | 状态 |
 |--------|--------|-----|------|------|
-| 1 | Yahoo Finance (`yfinance`) | — | OHLCV + 分红 + 拆分 | 默认主路径 |
-| 2 | Stooq | — | 仅 OHLCV | auto 回退；无分红时 fail loud |
-| 3 | Polygon | `POLYGON_API_KEY` | OHLCV + 分红 + 拆分 | **已接线**；无 key 时显式失败 |
+| 1 | Polygon | `POLYGON_API_KEY` | OHLCV + 分红 + 拆分 + 股本/SIC | **有 key 时默认主源**；无 key 显式失败 |
+| 2 | Yahoo Finance (`yfinance`) | — | OHLCV + 分红 + 拆分 + 股本/GICS | 无 Polygon key 时的默认主路径；有 key 时作对账源 |
+| 3 | Stooq | — | 仅 OHLCV | auto 回退；无分红时 fail loud |
 
 Stooq 不声明 `dividends`/`splits`。能力不足时摄取与 Adjusted 回测**直接失败**。
+
+基本面：股本按 filing/vendor as-of 正向填充；板块/行业只从分类拉取日生效。**不会**用当前市值回填历史。
 
 ## 摄取模式
 
@@ -20,7 +22,9 @@ Stooq 不声明 `dividends`/`splits`。能力不足时摄取与 Adjusted 回测*
 ## 双源对账
 
 ```bash
-# Polygon 为主、yfinance 为对账源（需 POLYGON_API_KEY）
+# 有 POLYGON_API_KEY 时 auto = Polygon 主源 + yfinance 对账
+python -m quant.data.ingest_spy SPY
+# 显式指定
 python -m quant.data.ingest_spy SPY --provider polygon --reconcile-with yfinance
 ```
 

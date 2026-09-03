@@ -1,4 +1,5 @@
 import {
+  BadgeCheck,
   Beaker,
   FileBarChart2,
   FlaskConical,
@@ -15,6 +16,7 @@ export const NAV_ITEMS = [
   { href: "/", label: "首页", icon: Home },
   { href: "/strategies", label: "策略实验室", icon: FlaskConical },
   { href: "/backtests", label: "回测", icon: LineChart },
+  { href: "/validation", label: "验证", icon: BadgeCheck },
   { href: "/universes", label: "标的池", icon: Layers },
   { href: "/experiments", label: "实验", icon: Beaker },
   { href: "/paper", label: "模拟交易", icon: Newspaper },

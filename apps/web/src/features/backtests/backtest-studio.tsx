@@ -205,6 +205,22 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6 as-stagger">
+            <MetricTile
+              label="Deflated Sharpe"
+              value={m?.deflated_sharpe == null ? "—" : formatPct(m.deflated_sharpe as number)}
+              hint={
+                m?.dsr_n_trials != null
+                  ? `N=${m.dsr_n_trials} 次试验 · 阈值 95%`
+                  : "来自试验台账的多重检验修正"
+              }
+              tone={
+                typeof m?.deflated_sharpe === "number"
+                  ? m.deflated_sharpe >= 0.95
+                    ? "pos"
+                    : "neg"
+                  : undefined
+              }
+            />
             <MetricTile label="总收益" value={formatPct(m?.total_return)} tone={metricTone(m?.total_return)} />
             <MetricTile label="年化 CAGR" value={formatPct(m?.cagr)} tone={metricTone(m?.cagr)} />
             <MetricTile label="夏普" value={formatNumber(m?.sharpe)} />

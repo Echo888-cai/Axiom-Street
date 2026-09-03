@@ -14,7 +14,7 @@ from services.api.db import Base, SessionLocal, engine
 from services.api.health import collect_health
 from services.api.models import User
 from services.api.observability import RequestIdMiddleware, configure_logging
-from services.api.routers import audit, backtests, data, strategies, universes, versions
+from services.api.routers import audit, backtests, data, strategies, universes, validation, versions
 from services.api.schemas import HealthOut
 from services.api.settings import get_settings
 
@@ -74,6 +74,7 @@ app.include_router(backtests.router, prefix="/api/v1")
 app.include_router(versions.router, prefix="/api/v1")
 app.include_router(data.router, prefix="/api/v1")
 app.include_router(universes.router, prefix="/api/v1")
+app.include_router(validation.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 
 

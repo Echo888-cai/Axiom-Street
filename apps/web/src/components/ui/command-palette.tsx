@@ -29,7 +29,7 @@ export function CommandPalette({
   const [active, setActive] = useState(0);
 
   const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.listStrategies });
-  const backtests = useQuery({ queryKey: ["backtests"], queryFn: api.listBacktests });
+  const backtests = useQuery({ queryKey: ["backtests"], queryFn: () => api.listBacktests() });
 
   useEffect(() => {
     if (!open) return;

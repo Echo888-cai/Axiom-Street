@@ -5,8 +5,10 @@ from datetime import date, datetime, timezone
 import pandas as pd
 import pytest
 
+from quant.data.fundamentals import Fundamentals
 from quant.data.universe_rules import (
     evaluate_symbol,
+    evaluate_universe,
     parse_rules,
     passing_dates,
 )
@@ -72,3 +74,66 @@ def test_open_ended_when_last_bar_still_passes():
     assert len(members) == 1
     assert members[0].effective_from == date(2020, 1, 2)
     assert members[0].effective_to is None
+
+
+def _fundamentals(
+    *,
+    shares: list[tuple[date, float]] | None = None,
+    sector: str | None = None,
+    industry: str | None = None,
+    classified_as_of: date | None = None,
+) -> Fundamentals:
+    share_rows = pd.DataFrame(
+        [{"as_of": day, "shares_outstanding": qty} for day, qty in (shares or [])]
+    )
+    return Fundamentals(
+        symbol="XYZ",
+        source="test",
+        shares=share_rows,
+        sector=sector,
+        industry=industry,
+        sic=None,
+        classified_as_of=classified_as_of,
+    )
+
+
+def test_market_cap_is_shares_times_close():
+    rules = parse_rules({"min_market_cap_usd": 1500, "lookback_days": 1})
+    frame = _frame([(2, 10.0, 1.0), (3, 20.0, 1.0)])
+    fund = _fundamentals(shares=[(date(2020, 1, 2), 100.0)])
+    # 100*10=1000 fail; 100*20=2000 pass
+    assert passing_dates(frame, rules, fund, symbol="XYZ") == [date(2020, 1, 3)]
+
+
+def test_market_cap_does_not_use_future_shares():
+    rules = parse_rules({"min_market_cap_usd": 1, "lookback_days": 1})
+    frame = _frame([(2, 10.0, 1.0), (3, 10.0, 1.0)])
+    fund = _fundamentals(shares=[(date(2020, 1, 3), 100.0)])
+    assert passing_dates(frame, rules, fund, symbol="XYZ") == [date(2020, 1, 3)]
+
+
+def test_sector_does_not_apply_before_classification_as_of():
+    rules = parse_rules({"sectors": ["Technology"], "lookback_days": 1})
+    frame = _frame([(2, 10.0, 1.0), (3, 10.0, 1.0), (6, 10.0, 1.0)])
+    fund = _fundamentals(sector="Technology", classified_as_of=date(2020, 1, 6))
+    assert passing_dates(frame, rules, fund, symbol="XYZ") == [date(2020, 1, 6)]
+
+
+def test_missing_fundamentals_fail_loud():
+    rules = parse_rules({"min_market_cap_usd": 1e9})
+    frame = _frame([(2, 10.0, 1.0)])
+    with pytest.raises(ValueError, match="缺少时点股本"):
+        evaluate_universe({"XYZ": frame}, rules, {})
+
+
+def test_sector_without_sector_field_does_not_invent_gics():
+    rules = parse_rules({"sectors": ["Technology"]})
+    frame = _frame([(2, 10.0, 1.0)])
+    fund = _fundamentals(industry="ELECTRONIC COMPUTERS", classified_as_of=date(2020, 1, 2))
+    with pytest.raises(ValueError, match="没有 sector"):
+        evaluate_universe({"XYZ": frame}, rules, {"XYZ": fund})
+
+
+def test_parse_rules_rejects_sector_string():
+    with pytest.raises(ValueError, match="字符串列表"):
+        parse_rules({"sectors": "tech"})

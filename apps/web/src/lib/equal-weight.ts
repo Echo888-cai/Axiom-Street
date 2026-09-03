@@ -37,12 +37,17 @@ class EqualWeightUniverseAlgorithm(QCAlgorithm):
         if not tickers:
             raise ValueError("universe parameter is empty")
 
+        raw_slippage = self.GetParameter("slippage_bps")
+        slippage_bps = float(raw_slippage) if raw_slippage else 5.0
+        raw_fee = self.GetParameter("fee_usd")
+        fee_usd = float(raw_fee) if raw_fee else 1.0
+
         self._symbols = []
         for ticker in tickers:
             equity = self.AddEquity(ticker, Resolution.Daily)
             equity.SetDataNormalizationMode(DataNormalizationMode.Adjusted)
-            equity.SetSlippageModel(ConstantSlippageModel(0.0005))
-            equity.SetFeeModel(ConstantFeeModel(1.0))
+            equity.SetSlippageModel(ConstantSlippageModel(slippage_bps / 10000.0))
+            equity.SetFeeModel(ConstantFeeModel(fee_usd))
             self._symbols.append(equity.Symbol)
 
         self.SetBenchmark(tickers[0])

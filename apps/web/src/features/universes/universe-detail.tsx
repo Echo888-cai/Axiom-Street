@@ -130,6 +130,9 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
     ? [
         row.rules?.min_price != null ? `最低价 ${row.rules.min_price}` : null,
         row.rules?.min_adv_usd != null ? `最低 ADV$ ${row.rules.min_adv_usd}` : null,
+        row.rules?.min_market_cap_usd != null ? `最低市值$ ${row.rules.min_market_cap_usd}` : null,
+        row.rules?.sectors?.length ? `板块 ${row.rules.sectors.join("/")}` : null,
+        row.rules?.industries?.length ? `行业 ${row.rules.industries.join("/")}` : null,
         `回看 ${row.rules?.lookback_days ?? 21} 个交易日`,
       ]
         .filter(Boolean)
@@ -180,7 +183,8 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
         <Card>
           <p className="text-sm text-as-text">{ruleHint}</p>
           <p className="mt-2 text-xs text-as-muted">
-            用当前快照里每只标的的收盘价与成交额滚动均值做时点筛选。未过线的交易日不进入成分；不能手工改区间。
+            用当前快照里每只标的的收盘价、成交额滚动均值、时点股本×收盘价、以及分类 as-of
+            之后的板块/行业做筛选。未过线的交易日不进入成分；缺少基本面会失败而不是静默剔除。
           </p>
         </Card>
       ) : (

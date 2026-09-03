@@ -34,12 +34,17 @@ class Spy200DmaAlgorithm(QCAlgorithm):
         self.spy.SetDataNormalizationMode(DataNormalizationMode.Adjusted)
         self.SetBenchmark("SPY")
 
-        self.sma = self.SMA(self.spy.Symbol, 200, Resolution.Daily)
-        self.SetWarmUp(200)
+        raw_lookback = self.GetParameter("lookback")
+        lookback = int(raw_lookback) if raw_lookback else 200
+        self.sma = self.SMA(self.spy.Symbol, lookback, Resolution.Daily)
+        self.SetWarmUp(lookback)
 
-        # 5 bps slippage + flat fee
-        self.spy.SetSlippageModel(ConstantSlippageModel(0.0005))
-        self.spy.SetFeeModel(ConstantFeeModel(1.0))
+        raw_slippage = self.GetParameter("slippage_bps")
+        slippage_bps = float(raw_slippage) if raw_slippage else 5.0
+        raw_fee = self.GetParameter("fee_usd")
+        fee_usd = float(raw_fee) if raw_fee else 1.0
+        self.spy.SetSlippageModel(ConstantSlippageModel(slippage_bps / 10000.0))
+        self.spy.SetFeeModel(ConstantFeeModel(fee_usd))
 
         # Pending target from prior bar close; executed next bar.
         self._pending_target = None

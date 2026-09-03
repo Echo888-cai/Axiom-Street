@@ -359,3 +359,115 @@ def test_rule_universe_builds_from_snapshot(client, monkeypatch, tmp_path):
     )
     assert blocked.status_code == 400
     get_settings.cache_clear()
+
+
+def test_rule_universe_market_cap_fails_without_fundamentals(client, monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+
+    from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
+    from services.api.settings import get_settings
+
+    monkeypatch.setenv("STREET_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+
+    def fake_fetch(symbol: str, **_k):
+        rows = [
+            {
+                "timestamp": datetime(2020, 1, 2, tzinfo=timezone.utc),
+                "open": 100,
+                "high": 100,
+                "low": 100,
+                "close": 100,
+                "volume": 1000,
+                "dividends": 0.0,
+                "stock_splits": 0.0,
+                "exchange_timezone": "America/New_York",
+                "symbol": symbol,
+            }
+        ]
+        return FetchResult(pd.DataFrame(rows), "yfinance", YFINANCE_CAPABILITIES)
+
+    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    ingest = client.post(
+        "/api/v1/data/ingest",
+        json={"symbols": ["SPY"], "provider": "yfinance", "convert_lean": False},
+    )
+    assert ingest.status_code == 202, ingest.text
+    created = client.post(
+        "/api/v1/universes",
+        json={
+            "name": "大盘股",
+            "kind": "RULE",
+            "rules": {"min_market_cap_usd": 1_000_000, "lookback_days": 1},
+        },
+    )
+    assert created.status_code == 409, created.text
+    assert "基本面" in created.json()["detail"]
+    get_settings.cache_clear()
+
+
+def test_rule_universe_builds_from_market_cap(client, monkeypatch, tmp_path):
+    from datetime import date, datetime, timezone
+
+    from quant.data.fundamentals import Fundamentals
+    from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
+    from services.api.settings import get_settings
+
+    monkeypatch.setenv("STREET_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+
+    def fake_fetch(symbol: str, **_k):
+        close = 100.0 if symbol == "SPY" else 10.0
+        rows = []
+        for day in (2, 3, 6):
+            rows.append(
+                {
+                    "timestamp": datetime(2020, 1, day, tzinfo=timezone.utc),
+                    "open": close,
+                    "high": close,
+                    "low": close,
+                    "close": close,
+                    "volume": 1000,
+                    "dividends": 0.0,
+                    "stock_splits": 0.0,
+                    "exchange_timezone": "America/New_York",
+                    "symbol": symbol,
+                }
+            )
+        return FetchResult(pd.DataFrame(rows), "yfinance", YFINANCE_CAPABILITIES)
+
+    def fake_fundamentals(symbol: str, **_k):
+        shares = 1_000_000.0 if symbol == "SPY" else 1_000.0
+        return Fundamentals(
+            symbol=symbol,
+            source="yfinance",
+            shares=pd.DataFrame([{"as_of": date(2020, 1, 2), "shares_outstanding": shares}]),
+            sector="Technology" if symbol == "SPY" else "Energy",
+            industry="Software",
+            sic=None,
+            classified_as_of=date(2020, 1, 2),
+        )
+
+    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest_spy.fetch_fundamentals", fake_fundamentals)
+    ingest = client.post(
+        "/api/v1/data/ingest",
+        json={"symbols": ["SPY", "XOM"], "provider": "yfinance", "convert_lean": False},
+    )
+    assert ingest.status_code == 202, ingest.text
+    created = client.post(
+        "/api/v1/universes",
+        json={
+            "name": "科技大盘",
+            "kind": "RULE",
+            "rules": {
+                "min_market_cap_usd": 10_000_000,
+                "sectors": ["Technology"],
+                "lookback_days": 1,
+            },
+        },
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert {row["symbol"] for row in body["members"]} == {"SPY"}
+    get_settings.cache_clear()

@@ -143,6 +143,10 @@ class BacktestMetricsOut(ORMModel):
     var_95: Optional[float] = None
     cvar_95: Optional[float] = None
     omega_ratio: Optional[float] = None
+    deflated_sharpe: Optional[float] = None
+    probabilistic_sharpe: Optional[float] = None
+    dsr_n_trials: Optional[int] = None
+    dsr_sr_star: Optional[float] = None
     extras: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -318,3 +322,65 @@ class UniversePage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class PBOScanCreate(BaseModel):
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    parameter_key: str = "lookback"
+    values: list[int] = Field(default_factory=lambda: [100, 150, 200, 250])
+
+
+class SensitivityCreate(BaseModel):
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    parameter_key: str = "lookback"
+    values: list[int] = Field(default_factory=lambda: [100, 150, 200, 250, 300])
+
+
+class CostScanCreate(BaseModel):
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    costs_bps: list[float] = Field(default_factory=lambda: [0.0, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0])
+    realistic_one_way_bps: float = Field(default=5.0, ge=0, le=200)
+
+
+class WalkForwardCreate(BaseModel):
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    train_years: int = Field(default=3, ge=1, le=20)
+    test_years: int = Field(default=1, ge=1, le=10)
+    mode: str = "rolling"
+    embargo_days: int = Field(default=1, ge=1, le=30)
+
+
+class ValidationRunOut(ORMModel):
+    id: UUID
+    strategy_id: Optional[UUID] = None
+    strategy_version_id: Optional[UUID] = None
+    backtest_id: Optional[UUID] = None
+    kind: str
+    status: str = "COMPLETED"
+    progress_step: Optional[str] = None
+    params: Dict[str, Any] = Field(default_factory=dict)
+    result: Dict[str, Any] = Field(default_factory=dict)
+    passed: bool
+    error: Dict[str, Any] | None = None
+    created_at: datetime
+    finished_at: Optional[datetime] = None
+
+
+class ValidationPage(BaseModel):
+    items: list[ValidationRunOut]
+    total: int
+    limit: int
+    offset: int
+    gates: Dict[str, Any] = Field(default_factory=dict)

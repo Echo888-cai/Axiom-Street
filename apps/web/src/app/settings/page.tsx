@@ -96,7 +96,7 @@ export default function SettingsPage() {
     <div className="space-y-6 as-enter">
       <PageHeader
         title="设置"
-        description="本地单用户工作区。行情默认走 Yahoo Finance。不支持分红的数据源（如 Stooq）会拒绝调整价回测，不会静默降级。"
+        description="本地单用户工作区。有 POLYGON_API_KEY 时默认 Polygon 主源并对账 yfinance；否则走 Yahoo Finance。不支持分红的数据源（如 Stooq）会拒绝调整价回测，不会静默降级。"
       />
 
       <div className="grid gap-4 md:grid-cols-2 as-stagger">
@@ -119,6 +119,10 @@ export default function SettingsPage() {
           <dl className="space-y-3 text-sm">
             <Row label="标的" value={symbolsLabel} />
             <Row label="数据源" value={String(m.source || "—")} />
+            <Row
+              label="默认主源"
+              value={String((status.data?.providers as { active?: string } | undefined)?.active || "—")}
+            />
             <Row label="K 线数量" value={String(m.rows ?? "—")} />
             <Row
               label="区间"
@@ -263,14 +267,12 @@ export default function SettingsPage() {
         <Card>
           <CardHeader title="API Key（可选，后续）" />
           <p className="text-sm leading-relaxed text-as-muted">
-            默认 Yahoo 即可。Polygon 已接线：写入{" "}
-            <code className="text-as-text">POLYGON_API_KEY</code> 后可用{" "}
-            <code className="text-as-text">provider=polygon</code> +{" "}
-            <code className="text-as-text">reconcile_with=yfinance</code>。
+            有 <code className="text-as-text">POLYGON_API_KEY</code> 时默认 Polygon
+            主源，并对账 yfinance。没有 key 时仍走 Yahoo。市值/行业来自摄取时的基本面快照，不会用今天的市值回填历史。
           </p>
           <ul className="mt-4 space-y-2 text-xs text-as-muted">
             <li>
-              <span className="text-as-text">POLYGON_API_KEY</span> — Polygon 美股主源（可选）
+              <span className="text-as-text">POLYGON_API_KEY</span> — 有 key 即为默认主源（对账 yfinance）
             </li>
             <li>
               <span className="text-as-text">ALPACA_API_KEY</span> +{" "}
@@ -310,7 +312,7 @@ function ReconcileReports({
   if (!hasReports) {
     return (
       <p className="mt-3 text-[11px] text-as-muted">
-        尚未做双源对账。摄取时指定 reconcile_with（例如 yfinance）后，这里会列出 close 偏差超过 10 bps 的 bar。
+        尚未做双源对账。有 POLYGON_API_KEY 时默认会对账 yfinance；也可在摄取时指定 reconcile_with。close 偏差超过 10 bps 的 bar 会列在这里。
       </p>
     );
   }

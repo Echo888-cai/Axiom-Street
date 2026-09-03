@@ -8,7 +8,12 @@ import pandas as pd
 import pytest
 
 from quant.data.ingest_spy import ingest
-from quant.data.providers import fetch_polygon, provider_status
+from quant.data.providers import (
+    fetch_polygon,
+    provider_status,
+    resolve_primary_provider,
+    resolve_reconcile_with,
+)
 from quant.data.reconcile import CLOSE_BPS_THRESHOLD, reconcile_frames
 from quant.data.types import YFINANCE_CAPABILITIES, DataQualityError, FetchResult
 
@@ -111,6 +116,32 @@ def test_provider_status_marks_polygon_wired():
     poly = status["optional_providers"]["polygon"]
     assert poly["wired"] is True
     assert "POLYGON_API_KEY" in poly["env"]
+
+
+def test_auto_provider_uses_polygon_when_key_present(monkeypatch):
+    monkeypatch.setenv("POLYGON_API_KEY", "test-key")
+    assert resolve_primary_provider("auto") == "polygon"
+    assert resolve_reconcile_with("polygon") == "yfinance"
+    status = provider_status()
+    assert status["primary"] == "polygon"
+    assert status["reconcile_with"] == "yfinance"
+
+
+def test_auto_provider_stays_yahoo_without_key(monkeypatch):
+    monkeypatch.delenv("POLYGON_API_KEY", raising=False)
+    assert resolve_primary_provider("auto") == "auto"
+    assert resolve_reconcile_with("auto") is None
+
+
+def test_explicit_empty_reconcile_disables_default(monkeypatch):
+    monkeypatch.setenv("POLYGON_API_KEY", "test-key")
+    assert resolve_reconcile_with("polygon", "") is None
+
+
+def test_empty_env_keeps_polygon_yfinance_default(monkeypatch):
+    monkeypatch.setenv("POLYGON_API_KEY", "test-key")
+    monkeypatch.setenv("STREET_RECONCILE_WITH", "")
+    assert resolve_reconcile_with("polygon") == "yfinance"
 
 
 def test_ingest_reconcile_blocks_on_corp_action_mismatch(monkeypatch, tmp_path):

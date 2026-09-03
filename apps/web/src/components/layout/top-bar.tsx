@@ -16,7 +16,7 @@ export function TopBar() {
 
   const backtests = useQuery({
     queryKey: ["backtests"],
-    queryFn: api.listBacktests,
+    queryFn: () => api.listBacktests(),
     refetchInterval: 8000,
   });
 

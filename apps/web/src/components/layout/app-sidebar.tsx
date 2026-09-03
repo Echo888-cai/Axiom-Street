@@ -39,8 +39,8 @@ function StatusRow({
 }
 
 const SECTIONS = [
-  { label: "研究", hrefs: ["/", "/strategies", "/backtests", "/universes"] },
-  { label: "稍后", hrefs: ["/experiments", "/paper", "/live", "/risk", "/reports"] },
+  { label: "研究", hrefs: ["/", "/strategies", "/backtests", "/validation", "/universes", "/experiments"] },
+  { label: "稍后", hrefs: ["/paper", "/live", "/risk", "/reports"] },
   { label: "系统", hrefs: ["/settings"] },
 ];
 

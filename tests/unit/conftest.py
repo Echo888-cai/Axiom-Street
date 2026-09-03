@@ -8,6 +8,9 @@ os.environ.setdefault("STREET_SYNC_INGESTS", "1")
 os.environ.setdefault("STREET_SKIP_MIGRATIONS", "1")
 os.environ.setdefault("STREET_INGEST_RPS", "0")
 os.environ.setdefault("STREET_INGEST_CONCURRENCY", "1")
+# Unit tests must not pick Polygon just because the developer has a key locally.
+os.environ.pop("POLYGON_API_KEY", None)
+os.environ.pop("STREET_RECONCILE_WITH", None)
 
 import pytest
 from fastapi.testclient import TestClient
@@ -47,9 +50,37 @@ def client(monkeypatch):
         "services.worker.tasks.execute_backtest",
         lambda _id: {"status": "QUEUED", "mocked": True},
     )
+    monkeypatch.setattr(
+        "services.worker.tasks.execute_walk_forward",
+        lambda _id: {"status": "QUEUED", "mocked": True},
+    )
+    monkeypatch.setattr(
+        "services.worker.tasks.execute_pbo_scan",
+        lambda _id: {"status": "QUEUED", "mocked": True},
+    )
+    monkeypatch.setattr(
+        "services.worker.tasks.execute_sensitivity_scan",
+        lambda _id: {"status": "QUEUED", "mocked": True},
+    )
+    monkeypatch.setattr(
+        "services.worker.tasks.execute_cost_scan",
+        lambda _id: {"status": "QUEUED", "mocked": True},
+    )
 
     with TestClient(app) as test_client:
         yield test_client
 
     app.dependency_overrides.clear()
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _no_live_fundamentals(monkeypatch):
+    """Unit tests never hit vendor fundamentals APIs unless they opt in."""
+    from quant.data.fundamentals import FundamentalsFetchError
+
+    def _blocked(symbol: str, **_k):
+        raise FundamentalsFetchError(f"{symbol} fundamentals mocked offline")
+
+    monkeypatch.setattr("quant.data.ingest_spy.fetch_fundamentals", _blocked)
+    monkeypatch.setattr("quant.data.fundamentals.fetch_fundamentals", _blocked)

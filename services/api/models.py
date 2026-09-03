@@ -193,6 +193,10 @@ class BacktestMetrics(Base):
     var_95: Mapped[Optional[float]] = mapped_column(Float)
     cvar_95: Mapped[Optional[float]] = mapped_column(Float)
     omega_ratio: Mapped[Optional[float]] = mapped_column(Float)
+    deflated_sharpe: Mapped[Optional[float]] = mapped_column(Float)
+    probabilistic_sharpe: Mapped[Optional[float]] = mapped_column(Float)
+    dsr_n_trials: Mapped[Optional[int]] = mapped_column(Integer)
+    dsr_sr_star: Mapped[Optional[float]] = mapped_column(Float)
     extras: Mapped[dict] = mapped_column(JSON, default=dict)
 
     backtest: Mapped[Backtest] = relationship(back_populates="metrics")
@@ -419,3 +423,50 @@ class UniverseMember(Base):
     effective_to: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
     universe: Mapped[Universe] = relationship(back_populates="members")
+
+
+class ValidationKind(str, enum.Enum):
+    DSR = "DSR"
+    PBO = "PBO"
+    WALK_FORWARD = "WALK_FORWARD"
+    SENSITIVITY = "SENSITIVITY"
+    COST = "COST"
+    BOOTSTRAP = "BOOTSTRAP"
+    REGIME = "REGIME"
+
+
+class ValidationRunStatus(str, enum.Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class ValidationRun(Base):
+    __tablename__ = "validation_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    strategy_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("strategy_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    backtest_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("backtests.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    kind: Mapped[ValidationKind] = mapped_column(
+        _enum(ValidationKind, "validation_kind"), nullable=False
+    )
+    status: Mapped[ValidationRunStatus] = mapped_column(
+        _enum(ValidationRunStatus, "validation_run_status"),
+        default=ValidationRunStatus.COMPLETED,
+        nullable=False,
+    )
+    progress_step: Mapped[Optional[str]] = mapped_column(String(128))
+    params: Mapped[dict] = mapped_column(JSON, default=dict)
+    result: Mapped[dict] = mapped_column(JSON, default=dict)
+    passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    error: Mapped[Optional[dict]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

@@ -33,7 +33,6 @@ from services.api.services import universes as universe_service
 from services.api.services.strategies import get_version
 from services.api.settings import get_settings
 
-_INFLIGHT = {BacktestStatus.QUEUED, BacktestStatus.STARTING, BacktestStatus.RUNNING}
 _TERMINAL = {BacktestStatus.COMPLETED, BacktestStatus.FAILED, BacktestStatus.CANCELLED}
 
 
@@ -243,11 +242,9 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
             },
         )
 
-    inflight = int(
-        db.scalar(select(func.count()).select_from(Backtest).where(Backtest.status.in_(_INFLIGHT)))
-        or 0
-    )
-    if inflight >= settings.max_inflight_backtests:
+    from services.api.services.validation import count_inflight_engine_jobs
+
+    if count_inflight_engine_jobs(db) >= settings.max_inflight_backtests:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="并发回测已达上限，请等待正在运行的任务完成后再提交。",

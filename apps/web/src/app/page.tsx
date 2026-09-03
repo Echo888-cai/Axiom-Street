@@ -11,7 +11,7 @@ export default function HomePage() {
   });
   const backtests = useQuery({
     queryKey: ["backtests"],
-    queryFn: api.listBacktests,
+    queryFn: () => api.listBacktests(),
   });
 
   return (

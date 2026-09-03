@@ -39,7 +39,7 @@ services:
       STREET_DATA_ROOT: /data
       STREET_JOBS_ROOT: /jobs
       STREET_LEAN_IMAGE: quantconnect/lean:16355
-      STREET_CORS_ORIGINS: http://localhost:3000
+      STREET_CORS_ORIGINS: http://localhost:3000,http://localhost:3001
       STREET_SYNC_BACKTESTS: "false"
       STREET_SYNC_INGESTS: "false"
       STREET_MARKET_RECONCILE_ENABLED: "true"

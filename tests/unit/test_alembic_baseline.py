@@ -34,3 +34,13 @@ def test_alembic_baseline_creates_tables():
     assert "completed_symbols" in text4
     text5 = Path("services/api/alembic/versions/0005_universe_rules.py").read_text(encoding="utf-8")
     assert "rules" in text5
+    text6 = Path("services/api/alembic/versions/0006_validation_runs.py").read_text(
+        encoding="utf-8"
+    )
+    assert "validation_runs" in text6
+    assert "deflated_sharpe" in text6
+    text7 = Path("services/api/alembic/versions/0007_validation_run_status.py").read_text(
+        encoding="utf-8"
+    )
+    assert "progress_step" in text7
+    assert 'sa.Column("status"' in text7

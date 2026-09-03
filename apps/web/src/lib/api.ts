@@ -107,6 +107,11 @@ export type BacktestMetrics = {
   sortino: number | null;
   calmar: number | null;
   commission: number | null;
+  deflated_sharpe: number | null;
+  probabilistic_sharpe: number | null;
+  dsr_n_trials: number | null;
+  dsr_sr_star: number | null;
+  extras?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
@@ -187,8 +192,84 @@ export const api = {
     request<void>(`/api/v1/strategies/${id}`, { method: "DELETE" }),
   getTrialStats: (id: string) =>
     request<TrialStats>(`/api/v1/strategies/${id}/trial-stats`),
-  listBacktests: () =>
-    request<Page<Backtest> | Backtest[]>("/api/v1/backtests").then(unwrapList),
+  listValidation: (params?: { strategy_id?: string; kind?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.strategy_id) search.set("strategy_id", params.strategy_id);
+    if (params?.kind) search.set("kind", params.kind);
+    const q = search.toString();
+    return request<{
+      items: ValidationRun[];
+      total: number;
+      limit: number;
+      offset: number;
+      gates: {
+        validated_requires?: string[];
+        available?: string[];
+        missing?: string[];
+        note?: string;
+      };
+    }>(`/api/v1/validation${q ? `?${q}` : ""}`);
+  },
+  getValidationRun: (id: string) => request<ValidationRun>(`/api/v1/validation/${id}`),
+  createWalkForward: (body: {
+    strategy_version_id: string;
+    backtest_id?: string;
+    start_date?: string;
+    end_date?: string;
+    train_years?: number;
+    test_years?: number;
+    mode?: "rolling" | "anchored";
+    embargo_days?: number;
+  }) =>
+    request<ValidationRun>("/api/v1/validation/walk-forward", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+    createPboScan: (body: {
+    strategy_version_id: string;
+    backtest_id?: string;
+    start_date?: string;
+    end_date?: string;
+    parameter_key?: string;
+    values: number[];
+  }) =>
+    request<ValidationRun>("/api/v1/validation/pbo", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  createSensitivityScan: (body: {
+    strategy_version_id: string;
+    backtest_id?: string;
+    start_date?: string;
+    end_date?: string;
+    parameter_key?: string;
+    values: number[];
+  }) =>
+    request<ValidationRun>("/api/v1/validation/sensitivity", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  createCostScan: (body: {
+    strategy_version_id: string;
+    backtest_id?: string;
+    start_date?: string;
+    end_date?: string;
+    costs_bps: number[];
+    realistic_one_way_bps?: number;
+  }) =>
+    request<ValidationRun>("/api/v1/validation/cost", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  listBacktests: (params?: { strategy_id?: string; status?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.strategy_id) search.set("strategy_id", params.strategy_id);
+    if (params?.status) search.set("status", params.status);
+    const q = search.toString();
+    return request<Page<Backtest> | Backtest[]>(`/api/v1/backtests${q ? `?${q}` : ""}`).then(
+      unwrapList,
+    );
+  },
   getBacktest: (id: string) => request<Backtest>(`/api/v1/backtests/${id}`),
   cancelBacktest: (id: string) =>
     request<Backtest>(`/api/v1/backtests/${id}/cancel`, { method: "POST" }),
@@ -253,7 +334,14 @@ export const api = {
     name: string;
     description?: string;
     kind?: string;
-    rules?: { min_price?: number; min_adv_usd?: number; lookback_days?: number };
+    rules?: {
+      min_price?: number;
+      min_adv_usd?: number;
+      lookback_days?: number;
+      min_market_cap_usd?: number;
+      sectors?: string[];
+      industries?: string[];
+    };
   }) =>
     request<Universe>("/api/v1/universes", {
       method: "POST",
@@ -329,6 +417,22 @@ export type TrialStats = {
   }>;
 };
 
+export type ValidationRun = {
+  id: string;
+  strategy_id: string | null;
+  strategy_version_id: string | null;
+  backtest_id: string | null;
+  kind: string;
+  status: string;
+  progress_step: string | null;
+  params: Record<string, unknown>;
+  result: Record<string, unknown>;
+  passed: boolean;
+  error: { code?: string; message?: string } | null;
+  created_at: string;
+  finished_at: string | null;
+};
+
 export type UniverseMember = {
   id: string;
   universe_id: string;
@@ -346,6 +450,9 @@ export type Universe = {
     min_price?: number;
     min_adv_usd?: number;
     lookback_days?: number;
+    min_market_cap_usd?: number;
+    sectors?: string[];
+    industries?: string[];
   } | null;
   created_at: string;
   updated_at: string;

@@ -73,11 +73,15 @@ def test_incremental_fetches_only_after_last_bar(monkeypatch, tmp_path: Path):
 
 def test_incremental_restatement_warns_and_writes_new_snapshot(monkeypatch, tmp_path: Path):
     def full_fetch(symbol: str, *, start: str = "2010-01-01", end=None, **_k):
-        return FetchResult(_bars(symbol, [2, 3, 6, 7], close_base=100.0), "yfinance", YFINANCE_CAPABILITIES)
+        return FetchResult(
+            _bars(symbol, [2, 3, 6, 7], close_base=100.0), "yfinance", YFINANCE_CAPABILITIES
+        )
 
     monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", full_fetch)
     first = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False, mode="full")
-    prior_path = tmp_path / "snapshots" / first["snapshot_key"] / "market/equities/US/daily/SPY.parquet"
+    prior_path = (
+        tmp_path / "snapshots" / first["snapshot_key"] / "market/equities/US/daily/SPY.parquet"
+    )
     prior_bytes = prior_path.read_bytes()
 
     def revised_fetch(symbol: str, *, start: str = "2010-01-01", end=None, **_k):

@@ -1,6 +1,6 @@
 # Axiom Street — 成长为顶级量化研究产品的路线图
 
-> 本文档是施工蓝图。审查基准：2026-08-31；当前执行阶段 = **Phase 2 数据平台**。
+> 本文档是施工蓝图。审查基准：2026-08-31；当前执行阶段 = **Phase 3 统计验证引擎**。
 >
 > **文档体系**
 > - `docs/VISION.md` — 产品愿景与核心信念（**冲突时以愿景为准**）
@@ -272,19 +272,19 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 ### 4.2 标的池（Universe）作为一等实体
 
-**已交付（静态 + 时点）**：`universes` / `universe_members`（`effective_from` / `effective_to`）。摄取时若最后一根 K 线早于 14 个自然日，会把仍开放的成分写成 inclusive 退出日，**不覆盖**已有 `effective_to`。手动入口 `POST /api/v1/universes/sync-delistings`。
+**已交付（静态 + 时点 + 规则）**：`universes` / `universe_members`（`effective_from` / `effective_to`）。摄取时若最后一根 K 线早于 14 个自然日，会把仍开放的成分写成 inclusive 退出日，**不覆盖**已有 `effective_to`。手动入口 `POST /api/v1/universes/sync-delistings`。
 
-仍待补强：市值/行业等基本面规则（需要独立 fundamentals 源，当前不做静默近似）。
+价格与流动性规则：`kind=RULE` + `rules.min_price` / `min_adv_usd`（成交额滚动均值，默认 21 个交易日）。`POST /universes/{id}/rebuild` 替换派生成分，不覆盖 STATIC 池。
 
-价格与流动性规则（已交付）：`kind=RULE` + `rules.min_price` / `min_adv_usd`（成交额滚动均值，默认 21 个交易日）。从当前快照 parquet 生成时点成分；未过线的交易日不在池中。`POST /universes/{id}/rebuild` 替换派生成分，不覆盖 STATIC 池。
+市值 / 行业规则：`min_market_cap_usd` = 时点股本 × 当日未调整收盘价；`sectors` / `industries` 只从分类 as-of 日起生效。**不会**用今天的市值或 GICS 回填历史。缺少基本面时重建失败，不会把缺失标的静默踢出池外。Polygon 的 ticker overview 没有 GICS sector，只有 SIC；用 `sectors` 筛 Polygon 分类会 fail loud，应改用 `industries`。
 
 时点正确的成分历史是消除**生存者偏差**的唯一手段。当前的静态 map file `20000101,spy` 无法支持退市股票轮转。若做多股票策略而不解决这一点，所有回测结果都会系统性偏高。
 
 ### 4.3 数据源升级与交叉对账
 
-**已交付（脚手架 + 报告）**：`fetch_polygon`（无 key fail loud）+ `quant/data/reconcile.py`（close >10 bps → warning；分红/拆分冲突 → blocking）+ ingest/API `--reconcile-with`。对账摘要写入快照 manifest，Settings「双源对账」展示可疑 bar。
+**已交付**：`fetch_polygon`（无 key fail loud）+ `quant/data/reconcile.py`（close >10 bps → warning；分红/拆分冲突 → blocking）+ ingest/API `--reconcile-with`。对账摘要写入快照 manifest，Settings「双源对账」展示可疑 bar。
 
-仍待补强：有真实 `POLYGON_API_KEY` 时的端到端 golden、默认生产路径切到 Polygon 主源。
+有 `POLYGON_API_KEY` 时，`provider=auto` **默认 Polygon 主源**，并对账 yfinance。`tests/golden/test_dual_source_polygon.py` 在有 key 时跑端到端对账；无 key 则 skip。无 key 时仍走 yfinance → Stooq，Polygon 不会被静默当成 fallback。
 
 ### 4.4 增量摄取
 
@@ -310,6 +310,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 **目标：让系统能主动告诉用户"你这个策略大概率是过拟合的"。**
 **预估：5–6 周。这是本路线图中技术含量最高、最难被复制的部分，也是"顶级"二字的真正来源。**
+**当前进度（已开工）**：DSR 已按试验台账计算并展示在 tearsheet 顶部；Walk-forward（滚动/锚定）已接入；PBO 已接到真实 `lookback` 参数扫描（CSCV，不丢弃凑不齐的交易日）；参数敏感性（孤峰/高原）与成本敏感性（alpha 归零临界 bps）已接入。`VALIDATED` 仅能由系统在 Walk-forward 通过、同版本 DSR 过 95% 线、该版本 PBO ≤ 0.5、敏感性为高原、且临界单边成本高于真实成本后写入。Bootstrap / regime 尚未开工。
 
 ### 5.1 为什么这是护城河
 
@@ -321,8 +322,10 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 - 滚动窗口：train N 年 → test M 年 → 前滑，覆盖全历史；
 - Anchored（扩张窗口）与 Rolling（固定窗口）两种模式；
-- **产品级约束**：策略状态机中，未通过 walk-forward 的策略不允许进入 `VALIDATED` 状态（`StrategyStatus` 枚举已定义 `VALIDATED`，但目前没有任何逻辑守卫它——`PATCH /strategies/{id}` 可以随意改状态）；
+- **产品级约束**：策略状态机中，未通过 walk-forward 的策略不允许进入 `VALIDATED` 状态。客户端 `PATCH` 不能写入 `VALIDATED`；系统在最近一次 Walk-forward 通过、同版本 DSR ≥ 95%、同版本参数扫描 PBO ≤ 0.5、敏感性判定为高原、且临界单边成本高于真实成本后才提升。新的 Walk-forward / PBO / 敏感性 / 成本失败会从 `VALIDATED` 降回 `BACKTESTED`；
 - 前端呈现：每个 fold 的 IS/OOS Sharpe 对比条形图 + OOS 拼接后的净值曲线。
+
+> 已交付：`quant/validation/walk_forward.py`、`POST /api/v1/validation/walk-forward`、Celery `validation.walk_forward`、`/validation` 发起与报告。默认评分：拼接样本外 Sharpe（不是折 Sharpe 的均值）；样本内 Sharpe 均值 > 0.5 且拼接 OOS Sharpe < 0 视为过拟合塌缩。
 
 #### 5.2.2 Deflated Sharpe Ratio（DSR）
 
@@ -341,15 +344,21 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 PBO > 0.5 意味着"你的最优参数在样本外表现低于中位数的概率超过一半"——应触发红色警示。
 
+> 已交付：`POST /api/v1/validation/pbo`、Celery `validation.pbo`、`/experiments` 发起 lookback 网格。每个格子写 `Backtest` + `experiment_trials`。策略必须 `GetParameter("lookback")`；净值无法区分则拒绝。CSCV 取能整除 T 的最大偶数 S∈{16…4} 且每份 ≥10 根，否则失败而不是丢交易日。`VALIDATED` 需要 PBO ≤ 0.5。
+
 #### 5.2.4 参数敏感性与稳健性平台
 
 对参数做网格扰动，绘制 Sharpe 响应曲面。核心判断：最优点是**孤峰**（knife-edge，过拟合特征）还是**高原**（plateau，稳健特征）。这是从业者最直观有效的过拟合识别手段之一，实现成本也低。
+
+> 已交付：`quant/validation/sensitivity.py`、`POST /api/v1/validation/sensitivity`、Celery `validation.sensitivity`、`/validation` 发起与报告。默认扫描 lookback；峰值周围连续 ≥3 个点落在 0.5 Sharpe 带宽内判定为高原。净值无法区分则失败。`VALIDATED` 需要高原。
 
 #### 5.2.5 成本敏感性与盈亏平衡成本
 
 逐步提高手续费与滑点，求出 alpha 归零的临界成本。输出一句话结论："该策略在单边成本超过 X bps 时失效"。若 X 低于该标的的真实成本量级，策略即刻判死。
 
 （注意：这依赖 P0-1 的手续费修复，否则成本基线本身是错的。）
+
+> 已交付：`quant/validation/cost.py`、`POST /api/v1/validation/cost`、Celery `validation.cost`。网格把单边成本全部计入 `slippage_bps`（`fee_usd=0`），对 `alpha_capm` 线性插值求临界 bps。默认真实成本 5 bps 与填单约定一致；临界 ≤ 真实则判死。网格必须含 0 bps。策略必须 `GetParameter("slippage_bps")`。
 
 #### 5.2.6 Bootstrap 置信区间
 

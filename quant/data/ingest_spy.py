@@ -13,9 +13,20 @@ from typing import Any, Callable, Optional
 
 import pandas as pd
 
+from quant.data.fundamentals import (
+    Fundamentals,
+    FundamentalsFetchError,
+    fetch_fundamentals,
+    save_fundamentals,
+)
 from quant.data.lean_converter import convert_to_lean
 from quant.data.manifest import load_manifest, save_manifest
-from quant.data.providers import fetch_daily, provider_status
+from quant.data.providers import (
+    fetch_daily,
+    provider_status,
+    resolve_primary_provider,
+    resolve_reconcile_with,
+)
 from quant.data.quality import validate_ohlcv
 from quant.data.rate_limit import (
     ensure_ingest_symbol_count,
@@ -59,6 +70,7 @@ def _publish_latest(root: Path, snap_dir: Path) -> None:
         "market": snap_dir / "market",
         "lean": snap_dir / "lean",
         "corporate_actions": snap_dir / "corporate_actions",
+        "fundamentals": snap_dir / "fundamentals",
         "manifest.json": snap_dir / "manifest.json",
     }
     for name, src in mapping.items():
@@ -224,6 +236,21 @@ def _ingest_one_symbol(
     if convert_lean and not caps.corporate_actions:
         raise ProviderCapabilityError(f"数据源 {source} 不提供分红数据，无法进行调整价回测。")
 
+    fundamentals: Fundamentals | None = None
+    try:
+        fundamentals = fetch_fundamentals(symbol, provider=source, start=fetch_start)
+    except FundamentalsFetchError as exc:
+        report.issues.append(
+            QualityIssue(
+                rule="fundamentals_unavailable",
+                severity="warning",
+                message=(
+                    f"{symbol} 基本面不可用，市值/行业规则将无法使用该标的"
+                    f"（不会用当前市值回填历史）: {exc}"
+                ),
+            )
+        )
+
     return {
         "symbol": symbol,
         "frame": frame,
@@ -232,6 +259,7 @@ def _ingest_one_symbol(
         "report": report,
         "fetch_window": {"start": fetch_start, "end": end},
         "reconcile_report": recon_payload,
+        "fundamentals": fundamentals,
     }
 
 
@@ -320,19 +348,14 @@ def ingest(
     tickers = normalize_symbols(symbols)
     ensure_ingest_symbol_count(len(tickers))
     root = Path(data_root or os.getenv("STREET_DATA_ROOT") or _repo_data_root())
-    provider_name = provider or os.getenv("STREET_DATA_PROVIDER") or "auto"
-    reconcile_provider = reconcile_with or os.getenv("STREET_RECONCILE_WITH") or None
-    if reconcile_provider:
-        reconcile_provider = reconcile_provider.strip().lower() or None
-        if reconcile_provider in {"auto", provider_name}:
-            raise ValueError(
-                "reconcile_with must name a concrete secondary provider distinct from primary"
-            )
+    provider_name = resolve_primary_provider(provider)
+    reconcile_provider = resolve_reconcile_with(provider_name, reconcile_with)
 
     frames: dict[str, pd.DataFrame] = {}
     reports: list[DataQualityReport] = []
     sources: list[str] = []
     reconcile_reports: list[dict[str, Any]] = []
+    fundamentals_by_symbol: dict[str, Fundamentals] = {}
     caps_ok = True
     last_caps = None
     fetch_windows: dict[str, dict[str, str | None]] = {}
@@ -359,6 +382,8 @@ def ingest(
         fetch_windows[symbol] = item["fetch_window"]
         if item["reconcile_report"] is not None:
             reconcile_reports.append(item["reconcile_report"])
+        if item.get("fundamentals") is not None:
+            fundamentals_by_symbol[symbol] = item["fundamentals"]
 
     last_bars: dict[str, date] = {}
     for symbol, frame in frames.items():
@@ -395,6 +420,15 @@ def ingest(
         ts_max = pd.to_datetime(frame["timestamp"].max(), utc=True)
         min_ts = ts_min if min_ts is None else min(min_ts, ts_min)
         max_ts = ts_max if max_ts is None else max(max_ts, ts_max)
+
+    fund_dir = tmp / "fundamentals"
+    if fundamentals_by_symbol:
+        fund_dir.mkdir(parents=True, exist_ok=True)
+        for symbol, fund in fundamentals_by_symbol.items():
+            path = save_fundamentals(tmp, fund)
+            hasher.update(symbol.encode("utf-8"))
+            hasher.update(b"fundamentals")
+            hasher.update(path.read_bytes())
 
     digest = hasher.hexdigest()
     end_stamp = max_ts.strftime("%Y%m%d") if max_ts is not None else "unknown"
@@ -446,6 +480,12 @@ def ingest(
         "quality_report": combined.to_dict(),
         "parquet": "market/equities/US/daily/" + ",".join(f"{s}.parquet" for s in tickers),
         "corporate_actions": "corporate_actions/" + ",".join(f"{s}.parquet" for s in tickers),
+        "fundamentals_symbols": sorted(fundamentals_by_symbol),
+        "fundamentals": (
+            "fundamentals/" + ",".join(f"{s}.parquet" for s in sorted(fundamentals_by_symbol))
+            if fundamentals_by_symbol
+            else None
+        ),
         "providers": provider_status(),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -576,6 +616,7 @@ def data_status(data_root: Optional[Path] = None) -> dict:
             "rps": ingest_rps(),
             "concurrency": ingest_concurrency(),
         },
+        "fundamentals_symbols": manifest.get("fundamentals_symbols") or [],
     }
 
 
