@@ -351,6 +351,16 @@ class CostScanCreate(BaseModel):
     realistic_one_way_bps: float = Field(default=5.0, ge=0, le=200)
 
 
+class BootstrapCreate(BaseModel):
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+    n_boot: int = Field(default=2000, ge=200, le=5000)
+    confidence_level: float = Field(default=0.95, ge=0.8, lt=1.0)
+    method: str = "stationary"
+    mean_block_length: Optional[float] = Field(default=None, gt=0)
+    seed: Optional[int] = None
+
+
 class WalkForwardCreate(BaseModel):
     strategy_version_id: UUID
     backtest_id: Optional[UUID] = None

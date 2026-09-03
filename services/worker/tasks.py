@@ -143,6 +143,7 @@ def reconcile_orphan_backtests(*, worker_restart: bool = False) -> int:
                         ValidationKind.PBO,
                         ValidationKind.SENSITIVITY,
                         ValidationKind.COST,
+                        ValidationKind.BOOTSTRAP,
                     ]
                 ),
                 ValidationRun.status.in_(
@@ -175,7 +176,7 @@ def reconcile_orphan_backtests(*, worker_restart: bool = False) -> int:
     return count
 
 
-def execute_backtest(backtest_id: str) -> dict:
+def execute_backtest(backtest_id: str, *, record_gates: bool = True) -> dict:
     settings = get_settings()
     structlog.contextvars.bind_contextvars(backtest_id=backtest_id)
     db = SessionLocal()
@@ -392,14 +393,25 @@ def execute_backtest(backtest_id: str) -> dict:
             strategy.status = StrategyStatus.BACKTESTED
 
         db.flush()
-        from services.api.services.validation import record_dsr_for_backtest
-
-        record_dsr_for_backtest(
-            db,
-            backtest,
-            metrics,
-            n_obs=max(len(result.equity) - 1, 0),
+        from services.api.services.validation import (
+            maybe_apply_validated,
+            record_bootstrap_for_backtest,
+            record_dsr_for_backtest,
         )
+
+        if record_gates:
+            record_dsr_for_backtest(
+                db,
+                backtest,
+                metrics,
+                n_obs=max(len(result.equity) - 1, 0),
+            )
+            record_bootstrap_for_backtest(db, backtest, result.equity)
+            maybe_apply_validated(
+                db,
+                strategy_id=version.strategy_id,
+                strategy_version_id=version.id,
+            )
 
         db.commit()
         log.info("backtest_completed", engine_version=result.engine_version)
@@ -494,7 +506,7 @@ def _run_scan_backtest(
         )
     )
     db.commit()
-    executed = execute_backtest(str(backtest.id))
+    executed = execute_backtest(str(backtest.id), record_gates=False)
     if executed.get("status") != "COMPLETED":
         message = executed.get("error") or executed.get("message") or "参数扫描回测失败"
         raise _ScanFailed("scan_backtest_failed", str(message))
@@ -966,6 +978,72 @@ def execute_cost_scan(run_id: str) -> dict:
 def run_cost_scan_task(run_id: str) -> dict:
     return execute_cost_scan(run_id)
 
+
+
+def execute_bootstrap(run_id: str) -> dict:
+    """Stationary bootstrap on an existing completed backtest equity path. No LEAN."""
+    from quant.validation.bootstrap import BootstrapError, bootstrap_from_equity
+    from services.api.services.validation import _bootstrap_seed, equity_payload
+
+    structlog.contextvars.bind_contextvars(validation_run_id=run_id)
+    db = SessionLocal()
+    try:
+        run = db.get(ValidationRun, UUID(run_id))
+        if not run:
+            return {"error": "not_found"}
+        run.status = ValidationRunStatus.RUNNING
+        run.progress_step = "Resampling returns"
+        db.commit()
+        if run.backtest_id is None:
+            return _fail_walk_forward(db, run, "backtest_missing", "Bootstrap 需要一次已完成的回测")
+        backtest = db.get(Backtest, run.backtest_id)
+        if backtest is None or backtest.status != BacktestStatus.COMPLETED:
+            return _fail_walk_forward(db, run, "backtest_missing", "Bootstrap 需要一次已完成的回测")
+        params = dict(run.params or {})
+        try:
+            n_boot = int(params.get("n_boot") or 2000)
+            confidence = float(params.get("confidence_level") or 0.95)
+            method = str(params.get("method") or "stationary")
+            raw_block = params.get("mean_block_length")
+            mean_block = float(raw_block) if raw_block is not None else None
+            seed = params.get("seed")
+            resolved_seed = _bootstrap_seed(backtest, int(seed) if seed is not None else None)
+        except (TypeError, ValueError) as exc:
+            return _fail_walk_forward(db, run, "params_invalid", f"Bootstrap 参数无法解析：{exc}")
+        points = equity_payload(db, backtest.id)
+        try:
+            result = bootstrap_from_equity(
+                points,
+                n_boot=n_boot,
+                confidence_level=confidence,
+                method=method,
+                mean_block_length=mean_block,
+                seed=resolved_seed,
+            )
+        except BootstrapError as exc:
+            return _fail_walk_forward(db, run, "bootstrap_failed", str(exc))
+        payload = result.to_dict()
+        run.params = {
+            **params,
+            "seed": resolved_seed,
+            "mean_block_length": result.mean_block_length,
+        }
+        return _finish_validation(
+            db,
+            run,
+            payload,
+            passed=result.passed,
+            log_event="bootstrap_completed",
+            sharpe_low=result.sharpe.low,
+        )
+    finally:
+        db.close()
+        structlog.contextvars.unbind_contextvars("validation_run_id")
+
+
+@celery_app.task(name="validation.bootstrap")
+def run_bootstrap_task(run_id: str) -> dict:
+    return execute_bootstrap(run_id)
 
 
 @celery_app.task(name="data.ingest")

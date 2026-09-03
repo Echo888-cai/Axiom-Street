@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from services.api.db import get_db
 from services.api.models import ValidationKind
 from services.api.schemas import (
+    BootstrapCreate,
     CostScanCreate,
     PBOScanCreate,
     SensitivityCreate,
@@ -64,6 +65,11 @@ def create_sensitivity_scan(
 @router.post("/cost", response_model=ValidationRunOut, status_code=201)
 def create_cost_scan(payload: CostScanCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
     return validation_service.to_out(validation_service.create_cost_scan(db, payload))
+
+
+@router.post("/bootstrap", response_model=ValidationRunOut, status_code=201)
+def create_bootstrap(payload: BootstrapCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(validation_service.create_bootstrap_run(db, payload))
 
 
 @router.post("/walk-forward", response_model=ValidationRunOut, status_code=201)

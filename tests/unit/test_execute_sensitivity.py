@@ -171,6 +171,7 @@ def _seed(Session, *, values: list[int] | None = None):
         ValidationKind.DSR,
         ValidationKind.PBO,
         ValidationKind.COST,
+        ValidationKind.BOOTSTRAP,
     ):
         _add_gate(db, strategy_id=strategy.id, version_id=version.id, backtest_id=backtest.id, kind=kind)
     db.commit()

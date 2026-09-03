@@ -11,7 +11,7 @@ When a rule below conflicts with a feature request, the rule wins. When the visi
 
 ## Current scope
 
-- **Active phase: Phase 3 — Statistical validation.** DSR, walk-forward, PBO (lookback parameter scan via CSCV), parameter sensitivity (plateau vs knife-edge), and cost sensitivity (alpha breakeven in bps) now gate `VALIDATED`. Bootstrap / regime are not started. See `docs/ROADMAP.md`.
+- **Active phase: Phase 3 — Statistical validation.** DSR, walk-forward, PBO (lookback parameter scan via CSCV), parameter sensitivity (plateau vs knife-edge), cost sensitivity (alpha breakeven in bps), and stationary-bootstrap Sharpe CIs now gate `VALIDATED`. Regime is not started. See `docs/ROADMAP.md`.
 - Do not start Phase 4 (research workbench) or Phase 5 (AI Copilot) until remaining Phase 3 validation gates can sit in front of `VALIDATED`. One phase at a time.
 - Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
 - **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.

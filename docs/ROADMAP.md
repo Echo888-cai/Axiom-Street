@@ -310,7 +310,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 **目标：让系统能主动告诉用户"你这个策略大概率是过拟合的"。**
 **预估：5–6 周。这是本路线图中技术含量最高、最难被复制的部分，也是"顶级"二字的真正来源。**
-**当前进度（已开工）**：DSR 已按试验台账计算并展示在 tearsheet 顶部；Walk-forward（滚动/锚定）已接入；PBO 已接到真实 `lookback` 参数扫描（CSCV，不丢弃凑不齐的交易日）；参数敏感性（孤峰/高原）与成本敏感性（alpha 归零临界 bps）已接入。`VALIDATED` 仅能由系统在 Walk-forward 通过、同版本 DSR 过 95% 线、该版本 PBO ≤ 0.5、敏感性为高原、且临界单边成本高于真实成本后写入。Bootstrap / regime 尚未开工。
+**当前进度（已开工）**：DSR 已按试验台账计算并展示在 tearsheet 顶部；Walk-forward（滚动/锚定）已接入；PBO 已接到真实 `lookback` 参数扫描（CSCV，不丢弃凑不齐的交易日）；参数敏感性（孤峰/高原）、成本敏感性（alpha 归零临界 bps）与 stationary bootstrap Sharpe 区间已接入。`VALIDATED` 仅能由系统在 Walk-forward 通过、同版本 DSR 过 95% 线、该版本 PBO ≤ 0.5、敏感性为高原、临界单边成本高于真实成本、且 Sharpe bootstrap 下界 > 0 后写入。Regime 尚未开工。
 
 ### 5.1 为什么这是护城河
 
@@ -322,7 +322,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 - 滚动窗口：train N 年 → test M 年 → 前滑，覆盖全历史；
 - Anchored（扩张窗口）与 Rolling（固定窗口）两种模式；
-- **产品级约束**：策略状态机中，未通过 walk-forward 的策略不允许进入 `VALIDATED` 状态。客户端 `PATCH` 不能写入 `VALIDATED`；系统在最近一次 Walk-forward 通过、同版本 DSR ≥ 95%、同版本参数扫描 PBO ≤ 0.5、敏感性判定为高原、且临界单边成本高于真实成本后才提升。新的 Walk-forward / PBO / 敏感性 / 成本失败会从 `VALIDATED` 降回 `BACKTESTED`；
+- **产品级约束**：策略状态机中，未通过 walk-forward 的策略不允许进入 `VALIDATED` 状态。客户端 `PATCH` 不能写入 `VALIDATED`；系统在最近一次 Walk-forward 通过、同版本 DSR ≥ 95%、同版本参数扫描 PBO ≤ 0.5、敏感性判定为高原、临界单边成本高于真实成本、且 Sharpe 的 stationary bootstrap 区间下界 > 0 后才提升。新的 Walk-forward / PBO / 敏感性 / 成本 / Bootstrap 失败会从 `VALIDATED` 降回 `BACKTESTED`；
 - 前端呈现：每个 fold 的 IS/OOS Sharpe 对比条形图 + OOS 拼接后的净值曲线。
 
 > 已交付：`quant/validation/walk_forward.py`、`POST /api/v1/validation/walk-forward`、Celery `validation.walk_forward`、`/validation` 发起与报告。默认评分：拼接样本外 Sharpe（不是折 Sharpe 的均值）；样本内 Sharpe 均值 > 0.5 且拼接 OOS Sharpe < 0 视为过拟合塌缩。
@@ -363,6 +363,8 @@ PBO > 0.5 意味着"你的最优参数在样本外表现低于中位数的概率
 #### 5.2.6 Bootstrap 置信区间
 
 用 stationary bootstrap / block bootstrap（保留收益自相关结构，不能用简单 iid 重抽样）给出 Sharpe、CAGR、MaxDD 的置信区间。让用户看到"Sharpe = 1.2 [95% CI: 0.3, 2.1]"——区间跨零则无统计显著性。
+
+> 已交付：`quant/validation/bootstrap.py`、`POST /api/v1/validation/bootstrap`、Celery `validation.bootstrap`、回测完成时自动写入。Politis & Romano (1994) geometric blocks；块长用 Politis & White (2004) 的 AR(1) plug-in。拒绝 iid。Sharpe 95% 分位区间下界 ≤ 0 不能进入 `VALIDATED`。不足 252 个交易日失败而不是报窄区间。扫描回测不写 BOOTSTRAP，避免短窗污染闸门。
 
 #### 5.2.7 制度（Regime）稳定性
 

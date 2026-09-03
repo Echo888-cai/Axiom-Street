@@ -181,11 +181,22 @@ def test_execute_backtest_persists_round_trips(monkeypatch):
     strategy = db.get(Strategy, strategy_id)
     assert strategy.status == StrategyStatus.BACKTESTED
     assert metrics.deflated_sharpe is not None
-    from services.api.models import ValidationRun
+    from services.api.models import ValidationKind, ValidationRun
 
-    run = db.query(ValidationRun).filter(ValidationRun.backtest_id == bt.id).one()
-    assert run.kind.value == "DSR"
-    assert run.result["n_trials"] == 1
+    dsr = (
+        db.query(ValidationRun)
+        .filter(ValidationRun.backtest_id == bt.id, ValidationRun.kind == ValidationKind.DSR)
+        .one()
+    )
+    assert dsr.result["n_trials"] == 1
+    boot = (
+        db.query(ValidationRun)
+        .filter(ValidationRun.backtest_id == bt.id, ValidationRun.kind == ValidationKind.BOOTSTRAP)
+        .one()
+    )
+    assert boot.passed is False
+    assert boot.error is not None
+    assert "少于" in boot.error["message"]
     db.close()
 
 

@@ -14,16 +14,19 @@ def test_validation_list_exposes_gates(client):
     assert "PBO" in body["gates"]["validated_requires"]
     assert "SENSITIVITY" in body["gates"]["validated_requires"]
     assert "COST" in body["gates"]["validated_requires"]
+    assert "BOOTSTRAP" in body["gates"]["validated_requires"]
     assert "DSR" in body["gates"]["available"]
     assert "WALK_FORWARD" in body["gates"]["available"]
     assert "PBO" in body["gates"]["available"]
     assert "SENSITIVITY" in body["gates"]["available"]
     assert "COST" in body["gates"]["available"]
+    assert "BOOTSTRAP" in body["gates"]["available"]
     assert "WALK_FORWARD" not in body["gates"]["missing"]
     assert "PBO" not in body["gates"]["missing"]
     assert "SENSITIVITY" not in body["gates"]["missing"]
     assert "COST" not in body["gates"]["missing"]
-    assert "BOOTSTRAP" in body["gates"]["missing"]
+    assert "BOOTSTRAP" not in body["gates"]["missing"]
+    assert "REGIME" in body["gates"]["missing"]
 
 
 def test_walk_forward_requires_completed_backtest(client):
@@ -273,6 +276,34 @@ def test_cost_enqueues(client):
     assert body["status"] == "QUEUED"
     assert body["params"]["costs_bps"] == [0, 1, 5, 10]
     assert body["params"]["realistic_one_way_bps"] == 5
+
+
+def test_bootstrap_rejects_iid(client):
+    created = client.post("/api/v1/strategies", json={"name": "boot-iid"}).json()
+    version_id = created["latest_version"]["id"]
+    _completed_backtest(version_id)
+    res = client.post(
+        "/api/v1/validation/bootstrap",
+        json={"strategy_version_id": version_id, "method": "iid"},
+    )
+    assert res.status_code == 400, res.text
+    assert "iid" in res.json()["detail"]
+
+
+def test_bootstrap_enqueues(client):
+    created = client.post("/api/v1/strategies", json={"name": "boot-ok"}).json()
+    version_id = created["latest_version"]["id"]
+    _completed_backtest(version_id)
+    res = client.post(
+        "/api/v1/validation/bootstrap",
+        json={"strategy_version_id": version_id, "n_boot": 400, "seed": 1},
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["kind"] == "BOOTSTRAP"
+    assert body["status"] == "QUEUED"
+    assert body["params"]["n_boot"] == 400
+    assert body["params"]["method"] == "stationary"
 
 
 def test_sensitivity_and_cost_schema_defaults():

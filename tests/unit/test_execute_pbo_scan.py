@@ -207,6 +207,20 @@ def _seed(Session, *, values: list[int] | None = None):
             finished_at=datetime.now(timezone.utc),
         )
     )
+    db.add(
+        ValidationRun(
+            strategy_id=strategy.id,
+            strategy_version_id=version.id,
+            backtest_id=backtest.id,
+            kind=ValidationKind.BOOTSTRAP,
+            status=ValidationRunStatus.COMPLETED,
+            progress_step="Completed",
+            params={"n_boot": 400},
+            result={"passed": True},
+            passed=True,
+            finished_at=datetime.now(timezone.utc),
+        )
+    )
     db.commit()
     ids = (str(run.id), strategy.id, version.id)
     db.close()

@@ -1,4 +1,4 @@
-"""Phase 3 validation runs. DSR, walk-forward, PBO, sensitivity, and cost gate VALIDATED."""
+"""Phase 3 validation runs. DSR, walk-forward, PBO, sensitivity, cost, and bootstrap gate VALIDATED."""
 
 from __future__ import annotations
 
@@ -22,6 +22,15 @@ from quant.metrics.pbo import (
     strategy_reads_lookback,
     strategy_reads_parameter,
 )
+from quant.validation.bootstrap import (
+    DEFAULT_CONFIDENCE,
+    DEFAULT_N_BOOT,
+    BootstrapError,
+    bootstrap_from_equity,
+)
+from quant.validation.bootstrap import (
+    METHODS as BOOTSTRAP_METHODS,
+)
 from quant.validation.cost import (
     DEFAULT_COSTS_BPS,
     DEFAULT_REALISTIC_BPS,
@@ -37,6 +46,7 @@ from quant.validation.walk_forward import WalkForwardError, WalkForwardSpec, bui
 from services.api.models import (
     AuditLog,
     Backtest,
+    BacktestEquity,
     BacktestMetrics,
     BacktestStatus,
     ExperimentTrial,
@@ -48,6 +58,7 @@ from services.api.models import (
     ValidationRunStatus,
 )
 from services.api.schemas import (
+    BootstrapCreate,
     CostScanCreate,
     PBOScanCreate,
     SensitivityCreate,
@@ -71,6 +82,7 @@ _VALIDATED_KINDS = (
     ValidationKind.PBO,
     ValidationKind.SENSITIVITY,
     ValidationKind.COST,
+    ValidationKind.BOOTSTRAP,
 )
 _LIVE_STATUSES = {
     StrategyStatus.PAPER,
@@ -188,6 +200,84 @@ def record_dsr_for_backtest(
     }
 
 
+def _bootstrap_seed(backtest: Backtest, seed: int | None) -> int:
+    if seed is not None:
+        return int(seed)
+    return int(backtest.id.int % (2**32 - 1))
+
+
+def equity_payload(db: Session, backtest_id: UUID) -> list[dict[str, Any]]:
+    points = (
+        db.query(BacktestEquity)
+        .filter(BacktestEquity.backtest_id == backtest_id)
+        .order_by(BacktestEquity.ts.asc())
+        .all()
+    )
+    return [{"ts": row.ts, "strategy_value": row.strategy_value} for row in points]
+
+
+def record_bootstrap_for_backtest(
+    db: Session,
+    backtest: Backtest,
+    equity: list[dict[str, Any]] | None = None,
+    *,
+    n_boot: int = DEFAULT_N_BOOT,
+    confidence_level: float = DEFAULT_CONFIDENCE,
+    method: str = "stationary",
+    mean_block_length: float | None = None,
+    seed: int | None = None,
+) -> dict[str, Any]:
+    """Stationary-bootstrap CIs from the backtest equity path.
+
+    Missing or short series fail loud into the validation row — they do not
+    invent a passing interval. Scan backtests should not call this.
+    """
+    strategy_id = None
+    version = backtest.strategy_version
+    if version is not None:
+        strategy_id = version.strategy_id
+    resolved_seed = _bootstrap_seed(backtest, seed)
+    params: dict[str, Any] = {
+        "n_boot": n_boot,
+        "confidence_level": confidence_level,
+        "method": method,
+        "mean_block_length": mean_block_length,
+        "seed": resolved_seed,
+    }
+    run = ValidationRun(
+        strategy_id=strategy_id,
+        strategy_version_id=backtest.strategy_version_id,
+        backtest_id=backtest.id,
+        kind=ValidationKind.BOOTSTRAP,
+        status=ValidationRunStatus.COMPLETED,
+        progress_step="Completed",
+        params=params,
+        result={},
+        passed=False,
+        finished_at=datetime.now(timezone.utc),
+    )
+    points = equity if equity is not None else equity_payload(db, backtest.id)
+    try:
+        result = bootstrap_from_equity(
+            points,
+            n_boot=n_boot,
+            confidence_level=confidence_level,
+            method=method,
+            mean_block_length=mean_block_length,
+            seed=resolved_seed,
+        )
+    except BootstrapError as exc:
+        run.error = {"code": "bootstrap_failed", "message": str(exc)}
+        db.add(run)
+        return {}
+    payload = result.to_dict()
+    run.result = payload
+    run.passed = result.passed
+    db.add(run)
+    return payload
+
+
+
 def count_inflight_engine_jobs(db: Session) -> int:
     backtests = int(
         db.scalar(select(func.count()).select_from(Backtest).where(Backtest.status.in_(_BT_INFLIGHT)))
@@ -261,10 +351,11 @@ def validation_gates() -> dict[str, Any]:
     return {
         "validated_requires": [kind.value for kind in _VALIDATED_KINDS],
         "available": [kind.value for kind in _VALIDATED_KINDS],
-        "missing": ["BOOTSTRAP", "REGIME"],
+        "missing": ["REGIME"],
         "note": (
             "VALIDATED 由系统持有：Walk-forward 通过、同版本 DSR 过 95% 线、"
-            "参数扫描 PBO ≤ 0.5、敏感性为高原而非孤峰、且临界单边成本高于真实成本。"
+            "参数扫描 PBO ≤ 0.5、敏感性为高原而非孤峰、临界单边成本高于真实成本、"
+            "且 Sharpe 的 stationary bootstrap 区间下界 > 0。"
             "客户端不能把策略标成已验证。"
         ),
     }
@@ -791,3 +882,68 @@ def create_cost_scan(db: Session, payload: CostScanCreate) -> ValidationRun:
     _enqueue_cost_scan(str(run.id), n_values=len(costs))
     db.refresh(run)
     return run
+
+
+def _enqueue_bootstrap(run_id: str) -> None:
+    settings = get_settings()
+    if settings.sync_backtests:
+        from services.worker.tasks import execute_bootstrap
+
+        execute_bootstrap(run_id)
+        return
+    from services.worker.tasks import run_bootstrap_task
+
+    run_bootstrap_task.apply_async(
+        args=[run_id],
+        time_limit=180,
+        soft_time_limit=150,
+    )
+
+
+def create_bootstrap_run(db: Session, payload: BootstrapCreate) -> ValidationRun:
+    version = get_version(db, payload.strategy_version_id)
+    method = payload.method.strip().lower()
+    if method not in BOOTSTRAP_METHODS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="只支持 stationary / block Bootstrap，拒绝 iid 重抽样。",
+        )
+    template = _template_backtest(db, version, payload.backtest_id)
+    run = ValidationRun(
+        strategy_id=version.strategy_id,
+        strategy_version_id=version.id,
+        backtest_id=template.id,
+        kind=ValidationKind.BOOTSTRAP,
+        status=ValidationRunStatus.QUEUED,
+        progress_step="Queued",
+        params={
+            "n_boot": payload.n_boot,
+            "confidence_level": payload.confidence_level,
+            "method": method,
+            "mean_block_length": payload.mean_block_length,
+            "seed": payload.seed,
+        },
+        result={},
+        passed=False,
+    )
+    db.add(run)
+    db.flush()
+    db.add(
+        AuditLog(
+            actor="local",
+            action="Bootstrap Started",
+            object_type="validation_run",
+            object_id=str(run.id),
+            after={
+                "backtest_id": str(template.id),
+                "n_boot": payload.n_boot,
+                "method": method,
+            },
+        )
+    )
+    db.commit()
+    db.refresh(run)
+    _enqueue_bootstrap(str(run.id))
+    db.refresh(run)
+    return run
+

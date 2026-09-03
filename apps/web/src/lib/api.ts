@@ -261,6 +261,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  createBootstrap: (body: {
+    strategy_version_id: string;
+    backtest_id?: string;
+    n_boot?: number;
+    confidence_level?: number;
+    method?: "stationary" | "block";
+    mean_block_length?: number;
+    seed?: number;
+  }) =>
+    request<ValidationRun>("/api/v1/validation/bootstrap", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   listBacktests: (params?: { strategy_id?: string; status?: string }) => {
     const search = new URLSearchParams();
     if (params?.strategy_id) search.set("strategy_id", params.strategy_id);

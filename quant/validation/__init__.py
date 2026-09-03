@@ -1,3 +1,15 @@
+from quant.validation.bootstrap import (
+    DEFAULT_CONFIDENCE,
+    DEFAULT_N_BOOT,
+    BootstrapError,
+    BootstrapResult,
+    bootstrap_from_equity,
+    bootstrap_metrics,
+    polits_white_mean_block,
+)
+from quant.validation.bootstrap import (
+    MIN_OBS as BOOTSTRAP_MIN_OBS,
+)
 from quant.validation.cost import (
     DEFAULT_COSTS_BPS,
     DEFAULT_REALISTIC_BPS,
@@ -29,6 +41,9 @@ from quant.validation.walk_forward import (
 )
 
 __all__ = [
+    "BOOTSTRAP_MIN_OBS",
+    "DEFAULT_CONFIDENCE",
+    "DEFAULT_N_BOOT",
     "DEFAULT_COSTS_BPS",
     "DEFAULT_LOOKBACK_GRID",
     "DEFAULT_REALISTIC_BPS",
@@ -36,6 +51,8 @@ __all__ = [
     "MIN_FOLDS",
     "MIN_PLATEAU_WIDTH",
     "SLIPPAGE_PARAMETER",
+    "BootstrapError",
+    "BootstrapResult",
     "CostSensitivityError",
     "CostSensitivityResult",
     "SensitivityError",
@@ -45,10 +62,13 @@ __all__ = [
     "WalkForwardScore",
     "WalkForwardSpec",
     "add_years",
+    "bootstrap_from_equity",
+    "bootstrap_metrics",
     "build_folds",
     "classify_cost_curve",
     "classify_surface",
     "interpolate_breakeven",
+    "polits_white_mean_block",
     "score_walk_forward",
     "slice_equity",
     "stitch_oos_equity",

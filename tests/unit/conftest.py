@@ -66,6 +66,10 @@ def client(monkeypatch):
         "services.worker.tasks.execute_cost_scan",
         lambda _id: {"status": "QUEUED", "mocked": True},
     )
+    monkeypatch.setattr(
+        "services.worker.tasks.execute_bootstrap",
+        lambda _id: {"status": "QUEUED", "mocked": True},
+    )
 
     with TestClient(app) as test_client:
         yield test_client

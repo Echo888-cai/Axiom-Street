@@ -14,6 +14,7 @@ import { FoldSharpeBars } from "@/features/validation/fold-sharpe-bars";
 import { WalkForwardForm } from "@/features/validation/walk-forward-form";
 import { SensitivityForm } from "@/features/validation/sensitivity-form";
 import { CostScanForm } from "@/features/validation/cost-form";
+import { BootstrapForm } from "@/features/validation/bootstrap-form";
 import { CostAlphaBars, SharpeSurfaceBars } from "@/features/validation/surface-bars";
 
 function isInflight(row: ValidationRun): boolean {
@@ -44,6 +45,11 @@ function conclusion(row: ValidationRun) {
     return row.passed
       ? { tone: "green" as const, label: "成本可承受" }
       : { tone: "amber" as const, label: "临界成本过低" };
+  }
+  if (row.kind === "BOOTSTRAP") {
+    return row.passed
+      ? { tone: "green" as const, label: "Sharpe CI > 0" }
+      : { tone: "amber" as const, label: "区间跨零" };
   }
   return row.passed
     ? { tone: "green" as const, label: "通过" }
@@ -143,6 +149,93 @@ function SensitivityReport({ run }: { run: ValidationRun }) {
   );
 }
 
+function asInterval(raw: unknown): { observed: number; low: number; high: number } | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as { observed?: unknown; low?: unknown; high?: unknown };
+  if (
+    typeof row.observed !== "number" ||
+    typeof row.low !== "number" ||
+    typeof row.high !== "number"
+  ) {
+    return null;
+  }
+  return { observed: row.observed, low: row.low, high: row.high };
+}
+
+function IntervalRow({
+  label,
+  interval,
+  format,
+}: {
+  label: string;
+  interval: { observed: number; low: number; high: number };
+  format: (n: number) => string;
+}) {
+  const span = interval.high - interval.low;
+  const absBound = Math.max(Math.abs(interval.low), Math.abs(interval.high), Math.abs(interval.observed), 1e-9);
+  const left = ((interval.low + absBound) / (2 * absBound)) * 100;
+  const width = Math.max(4, (span / (2 * absBound)) * 100);
+  const obsLeft = ((interval.observed + absBound) / (2 * absBound)) * 100;
+  const crosses = interval.low <= 0 && interval.high >= 0;
+  return (
+    <div className="grid gap-2 sm:grid-cols-[6.5rem_1fr_9rem] sm:items-center">
+      <div className="text-[11px] text-as-muted">{label}</div>
+      <div className="relative h-2 rounded-full bg-as-secondary">
+        <div
+          className={`absolute top-0 h-2 rounded-full ${crosses ? "bg-as-negative/70" : "bg-as-primary"}`}
+          style={{ left: `${left}%`, width: `${width}%` }}
+        />
+        <div
+          className="absolute top-[-2px] h-3 w-0.5 bg-as-text"
+          style={{ left: `${obsLeft}%` }}
+          title={`观测 ${format(interval.observed)}`}
+        />
+      </div>
+      <div className="tabular-nums text-[11px] text-as-muted">
+        {format(interval.observed)} [{format(interval.low)}, {format(interval.high)}]
+      </div>
+    </div>
+  );
+}
+
+function BootstrapReport({ run }: { run: ValidationRun }) {
+  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
+  const sharpe = asInterval(run.result.sharpe);
+  const cagr = asInterval(run.result.cagr);
+  const maxDd = asInterval(run.result.max_drawdown);
+  const nBoot = typeof run.result.n_boot === "number" ? run.result.n_boot : null;
+  const meanBlock =
+    typeof run.result.mean_block_length === "number" ? run.result.mean_block_length : null;
+  const level =
+    typeof run.result.confidence_level === "number" ? run.result.confidence_level : 0.95;
+  return (
+    <Card>
+      <CardHeader
+        title="最近一次 Bootstrap"
+        hint={
+          <p className="text-xs text-as-muted">
+            Stationary bootstrap {level * 100}% 分位区间。Sharpe 下界 ≤ 0 不能进入 VALIDATED。
+            {nBoot != null ? ` · ${nBoot} 次重抽样` : ""}
+            {meanBlock != null ? ` · 平均块长 ${meanBlock.toFixed(1)}` : ""}
+          </p>
+        }
+      />
+      {reason ? <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p> : null}
+      <div className="space-y-3">
+        {sharpe ? (
+          <IntervalRow label="Sharpe" interval={sharpe} format={(n) => n.toFixed(2)} />
+        ) : null}
+        {cagr ? (
+          <IntervalRow label="CAGR" interval={cagr} format={(n) => formatPct(n)} />
+        ) : null}
+        {maxDd ? (
+          <IntervalRow label="MaxDD" interval={maxDd} format={(n) => formatPct(n)} />
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
 function CostReport({ run }: { run: ValidationRun }) {
   const conclusionText =
     typeof run.result.conclusion === "string" ? run.result.conclusion : null;
@@ -204,6 +297,7 @@ export function ValidationDesk() {
   const latestWalk = items.find((row) => row.kind === "WALK_FORWARD");
   const latestSens = items.find((row) => row.kind === "SENSITIVITY");
   const latestCost = items.find((row) => row.kind === "COST");
+  const latestBoot = items.find((row) => row.kind === "BOOTSTRAP");
 
   return (
     <div className="space-y-6 as-enter">
@@ -217,12 +311,12 @@ export function ValidationDesk() {
         <dl className="mt-4 grid gap-3 text-xs text-as-muted sm:grid-cols-3">
           <div>
             <dt className="text-[11px] uppercase tracking-wide">已实现</dt>
-            <dd className="mt-1 text-as-text">{(gates?.available || ["DSR", "WALK_FORWARD", "PBO", "SENSITIVITY", "COST"]).join(" · ")}</dd>
+            <dd className="mt-1 text-as-text">{(gates?.available || ["DSR", "WALK_FORWARD", "PBO", "SENSITIVITY", "COST", "BOOTSTRAP"]).join(" · ")}</dd>
           </div>
           <div>
             <dt className="text-[11px] uppercase tracking-wide">VALIDATED 需要</dt>
             <dd className="mt-1 text-as-text">
-              {(gates?.validated_requires || ["WALK_FORWARD", "DSR", "PBO", "SENSITIVITY", "COST"]).join(" · ")}
+              {(gates?.validated_requires || ["WALK_FORWARD", "DSR", "PBO", "SENSITIVITY", "COST", "BOOTSTRAP"]).join(" · ")}
             </dd>
           </div>
           <div>
@@ -280,6 +374,22 @@ export function ValidationDesk() {
         <CostReport run={latestCost} />
       ) : null}
 
+      <Card>
+        <CardHeader
+          title="Bootstrap 置信区间"
+          hint={
+            <p className="text-xs text-as-muted">
+              对已完成回测的日收益做 stationary bootstrap。区间跨零则无统计显著性。
+            </p>
+          }
+        />
+        <BootstrapForm />
+      </Card>
+
+      {latestBoot && (latestBoot.status === "COMPLETED" || latestBoot.error) ? (
+        <BootstrapReport run={latestBoot} />
+      ) : null}
+
       {isLoading ? (
         <Card className="h-40 animate-pulse bg-as-secondary" />
       ) : error ? (
@@ -291,7 +401,7 @@ export function ValidationDesk() {
           <EmptyState
             icon={BadgeCheck}
             title="还没有验证记录"
-            description="跑完一次回测后会写下 Deflated Sharpe。Walk-forward、DSR、PBO、敏感性高原与成本闸门都通过后，系统才会把策略标成已验证。"
+            description="跑完一次回测后会写下 Deflated Sharpe 与 Bootstrap。Walk-forward、DSR、PBO、敏感性高原、成本与 Sharpe 区间都通过后，系统才会把策略标成已验证。"
           />
         </Card>
       ) : (
@@ -320,6 +430,7 @@ export function ValidationDesk() {
                 const shape = typeof row.result.shape === "string" ? row.result.shape : null;
                 const breakeven =
                   typeof row.result.breakeven_bps === "number" ? row.result.breakeven_bps : null;
+                const sharpeCi = asInterval(row.result.sharpe);
                 const summary =
                   row.kind === "DSR"
                     ? `${dsr == null ? "—" : formatPct(dsr)}${n != null ? ` · N=${n}` : ""}`
@@ -339,9 +450,13 @@ export function ValidationDesk() {
                             : breakeven == null
                               ? "—"
                               : `${breakeven.toFixed(1)} bps`
-                          : oos == null
-                            ? "—"
-                            : `OOS Sharpe ${oos.toFixed(2)}`;
+                          : row.kind === "BOOTSTRAP"
+                            ? sharpeCi
+                              ? `${sharpeCi.observed.toFixed(2)} [${sharpeCi.low.toFixed(2)}, ${sharpeCi.high.toFixed(2)}]`
+                              : "—"
+                            : oos == null
+                              ? "—"
+                              : `OOS Sharpe ${oos.toFixed(2)}`;
                 return (
                   <tr key={row.id} className="border-b border-as-border last:border-0">
                     <td className="px-5 py-3 font-medium">{row.kind}</td>
