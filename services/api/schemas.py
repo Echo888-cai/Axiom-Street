@@ -71,6 +71,7 @@ class BacktestCreate(BaseModel):
     data_snapshot_id: Optional[UUID] = None
     universe: Optional[list[str]] = None
     universe_id: Optional[UUID] = None
+    force: bool = False
 
 
 class BacktestOut(ORMModel):
@@ -100,6 +101,8 @@ class BacktestOut(ORMModel):
     data_snapshot_id: Optional[UUID] = None
     universe_id: Optional[UUID] = None
     universe_snapshot: Optional[list[Dict[str, Any]]] = None
+    result_fingerprint: Optional[str] = None
+    cache_hit: bool = False
 
 
 class BacktestMetricsOut(ORMModel):
@@ -407,3 +410,80 @@ class ValidationPage(BaseModel):
     limit: int
     offset: int
     gates: Dict[str, Any] = Field(default_factory=dict)
+
+
+class SyntaxCheckIn(BaseModel):
+    code: str
+
+
+class SyntaxCheckOut(BaseModel):
+    ok: bool
+    message: Optional[str] = None
+    line: Optional[int] = None
+    column: Optional[int] = None
+
+
+class LspPositionIn(BaseModel):
+    code: str
+    line: int
+    column: int
+
+
+class LspCompletion(BaseModel):
+    label: str
+    insert: str
+    kind: str
+    detail: Optional[str] = None
+
+
+class LspCompleteOut(BaseModel):
+    items: list[LspCompletion]
+    syntax: SyntaxCheckOut
+    error: Optional[str] = None
+
+
+class LspHoverOut(BaseModel):
+    contents: Optional[str] = None
+    error: Optional[str] = None
+
+
+class ResearchNoteCreate(BaseModel):
+    strategy_id: UUID
+    strategy_version_id: Optional[UUID] = None
+    backtest_id: Optional[UUID] = None
+    title: Optional[str] = None
+    hypothesis: Optional[str] = None
+    method: Optional[str] = None
+    conclusion: Optional[str] = None
+    failure_modes: Optional[str] = None
+
+
+class ResearchNoteUpdate(BaseModel):
+    strategy_version_id: Optional[UUID] = None
+    backtest_id: Optional[UUID] = None
+    title: Optional[str] = None
+    hypothesis: Optional[str] = None
+    method: Optional[str] = None
+    conclusion: Optional[str] = None
+    failure_modes: Optional[str] = None
+
+
+class ResearchNoteOut(ORMModel):
+    id: UUID
+    strategy_id: UUID
+    strategy_version_id: Optional[UUID] = None
+    backtest_id: Optional[UUID] = None
+    title: str
+    hypothesis: str
+    method: str
+    conclusion: str
+    failure_modes: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ResearchNotePage(BaseModel):
+    items: list[ResearchNoteOut]
+    total: int
+    limit: int
+    offset: int

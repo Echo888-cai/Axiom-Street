@@ -30,6 +30,11 @@ export function CommandPalette({
 
   const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.listStrategies });
   const backtests = useQuery({ queryKey: ["backtests"], queryFn: () => api.listBacktests() });
+  const notes = useQuery({
+    queryKey: ["research-notes", "all"],
+    queryFn: () => api.listResearchNotes(),
+    enabled: open,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -83,8 +88,22 @@ export function CommandPalette({
         }`,
         group: "回测",
       }));
-    return [...nav, ...s, ...b];
-  }, [query, strategies.data, backtests.data]);
+    const n: Hit[] = (notes.data?.items || [])
+      .filter(
+        (item) =>
+          !q ||
+          item.title.toLowerCase().includes(q) ||
+          item.hypothesis.toLowerCase().includes(q),
+      )
+      .slice(0, 5)
+      .map((item) => ({
+        href: `/reports?strategy_id=${item.strategy_id}`,
+        title: item.title,
+        meta: "研究笔记",
+        group: "笔记",
+      }));
+    return [...nav, ...s, ...b, ...n];
+  }, [query, strategies.data, backtests.data, notes.data]);
 
   useEffect(() => {
     setActive(0);
@@ -97,7 +116,7 @@ export function CommandPalette({
 
   if (!open) return null;
 
-  const groups = ["导航", "策略", "回测"].filter((g) => hits.some((h) => h.group === g));
+  const groups = ["导航", "策略", "回测", "笔记"].filter((g) => hits.some((h) => h.group === g));
 
   return (
     <div className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-[14vh]">

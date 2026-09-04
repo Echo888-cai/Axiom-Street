@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     sync_ingests: bool = False
     max_inflight_backtests: int = 2
     worker_concurrency: int = 2
+    lean_pool_size: int = 2
+    lean_pool_warm: bool = False
+    scan_parallelism: int = 2
     # Periodic full market re-pull to detect vendor restatements (seconds).
     market_reconcile_enabled: bool = True
     market_reconcile_interval_seconds: int = 86_400

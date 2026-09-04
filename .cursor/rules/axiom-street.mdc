@@ -11,8 +11,8 @@ When a rule below conflicts with a feature request, the rule wins. When the visi
 
 ## Current scope
 
-- **Active phase: Phase 3 — Statistical validation (gates complete).** DSR, walk-forward, PBO (lookback parameter scan via CSCV), parameter sensitivity (plateau vs knife-edge), cost sensitivity (alpha breakeven in bps), stationary-bootstrap Sharpe CIs, regime stability, and Hansen SPA_c gate `VALIDATED`. 5.4 pipeline acceptance is in place. Do not start Phase 4 (research workbench) or Phase 5 (AI Copilot) until asked. See `docs/ROADMAP.md`.
-- Do not start Phase 4 (research workbench) or Phase 5 (AI Copilot) until remaining Phase 3 validation gates can sit in front of `VALIDATED`. One phase at a time.
+- **Active phase: Phase 4 — Research workbench.** Tearsheet depth, version diff, research notes, and lab interaction. Do not start Phase 5 (AI Copilot). Validation gates from Phase 3 remain in front of `VALIDATED`. See `docs/ROADMAP.md`.
+- Do not start Phase 5 (AI Copilot) until Phase 4 workbench quality is in place. One phase at a time.
 - Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
 - **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.
 - Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.

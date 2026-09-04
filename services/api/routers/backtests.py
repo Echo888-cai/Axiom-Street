@@ -5,7 +5,8 @@ import json
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
@@ -162,6 +163,31 @@ def get_time_series(
 def get_logs(backtest_id: UUID, db: Session = Depends(get_db)) -> BacktestLogsOut:
     backtest_service.get_backtest(db, backtest_id)
     return BacktestLogsOut.model_validate(backtest_service.get_logs(backtest_id))
+
+
+@router.get("/{backtest_id}/tearsheet.html")
+def tearsheet_html(backtest_id: UUID, db: Session = Depends(get_db)) -> HTMLResponse:
+    from services.api.services.tearsheet_export import render_html
+
+    try:
+        return HTMLResponse(render_html(db, backtest_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.get("/{backtest_id}/tearsheet.pdf")
+def tearsheet_pdf(backtest_id: UUID, db: Session = Depends(get_db)) -> Response:
+    from services.api.services.tearsheet_export import render_pdf
+
+    try:
+        payload = render_pdf(db, backtest_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return Response(
+        content=payload,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="tearsheet-{backtest_id}.pdf"'},
+    )
 
 
 @router.get("/{backtest_id}/events")

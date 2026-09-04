@@ -24,7 +24,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Web (Next.js)                                              │
-│  Strategy Lab · Backtest Studio · Validation · Experiments   │
+│  Strategy Lab · Tearsheet · Validation · Research notes      │
 └───────────────────────────┬─────────────────────────────────┘
                             │  REST /api/v1  +  SSE
 ┌───────────────────────────▼─────────────────────────────────┐

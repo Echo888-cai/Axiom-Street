@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import structlog
 from celery import Celery
 from celery.signals import worker_ready
 
@@ -52,3 +55,16 @@ def _on_worker_ready(**_kwargs) -> None:
 
     publish_worker_health()
     reconcile_orphan_backtests(worker_restart=True)
+    try:
+        from quant.engine.pool import get_pool
+
+        cfg = get_settings()
+        get_pool(
+            image=cfg.lean_image,
+            size=cfg.lean_pool_size,
+            jobs_root=Path(cfg.jobs_root),
+            data_root=Path(cfg.data_root),
+            warm=cfg.lean_pool_warm,
+        ).ensure()
+    except Exception as exc:  # noqa: BLE001 - worker must still accept jobs if pool warm-up fails
+        structlog.get_logger("axiom.worker").warning("lean_pool_warmup_failed", error=str(exc))

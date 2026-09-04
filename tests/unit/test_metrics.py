@@ -11,6 +11,7 @@ from quant.metrics.performance import (
     monthly_returns_from_equity,
     parse_money,
     parse_pct,
+    summarize_exposure,
 )
 
 
@@ -207,3 +208,20 @@ def test_empty_equity_returns_zero_sharpe():
     metrics = compute_metrics_from_equity([])
     assert metrics["sharpe"] == 0.0
     assert metrics["final_equity"] is None or metrics["final_equity"] == 0.0
+
+
+def test_exposure_from_time_series():
+    metrics = compute_metrics_from_equity(
+        _daily_equity([100.0, 101.0, 102.0]),
+        time_series=[
+            {"name": "exposure_long", "value": 1.0},
+            {"name": "exposure_long", "value": 0.0},
+            {"name": "exposure_short", "value": 0.0},
+            {"name": "exposure_short", "value": 0.0},
+            {"name": "turnover", "value": 0.2},
+        ],
+    )
+    assert metrics["gross_exposure"] == pytest.approx(0.5)
+    assert metrics["net_exposure"] == pytest.approx(0.5)
+    assert metrics["turnover"] == pytest.approx(0.2)
+    assert summarize_exposure([])["turnover"] is None

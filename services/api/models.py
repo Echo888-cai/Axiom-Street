@@ -84,6 +84,7 @@ class Strategy(Base):
     )
 
     versions: Mapped[List[StrategyVersion]] = relationship(back_populates="strategy")
+    notes: Mapped[List["ResearchNote"]] = relationship(back_populates="strategy")
 
 
 class StrategyVersion(Base):
@@ -146,6 +147,7 @@ class Backtest(Base):
         Uuid, ForeignKey("universes.id", ondelete="SET NULL"), nullable=True, index=True
     )
     universe_snapshot: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    result_fingerprint: Mapped[Optional[str]] = mapped_column(String(64), index=True)
 
 
 class BacktestMetrics(Base):
@@ -471,3 +473,29 @@ class ValidationRun(Base):
     error: Mapped[Optional[dict]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class ResearchNote(Base):
+    __tablename__ = "research_notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    strategy_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("strategy_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    backtest_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("backtests.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    hypothesis: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    method: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    conclusion: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    failure_modes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    strategy: Mapped[Strategy] = relationship(back_populates="notes")

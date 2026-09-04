@@ -205,6 +205,54 @@ def _trade_stats(trades: Sequence[Mapping[str, Any]] | None) -> dict[str, Any]:
     return out
 
 
+def summarize_exposure(
+    time_series: Sequence[Mapping[str, Any]] | None,
+) -> dict[str, float | None]:
+    """Mean net/gross exposure and turnover from parsed LEAN charts.
+
+    Missing series stay ``None`` — never invent a quiet zero. Long without
+    short is treated as long-only (short = 0) because LEAN sometimes omits
+    the empty short series.
+    """
+    empty: dict[str, float | None] = {"turnover": None, "gross_exposure": None, "net_exposure": None}
+    if not time_series:
+        return empty
+    by_name: dict[str, list[float]] = {}
+    for row in time_series:
+        name = str(row.get("name") or "")
+        if not name:
+            continue
+        try:
+            value = float(row["value"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise MetricParseError(f"暴露序列无法解析: {row!r}") from exc
+        by_name.setdefault(name, []).append(value)
+
+    long_s = by_name.get("exposure_long") or []
+    short_s = by_name.get("exposure_short") or []
+    turn_s = by_name.get("turnover") or []
+    if long_s and short_s and len(long_s) != len(short_s):
+        raise MetricParseError(
+            f"long/short 暴露长度不一致: {len(long_s)} vs {len(short_s)}"
+        )
+    net: float | None = None
+    gross: float | None = None
+    if long_s and short_s:
+        nets = [lo - sh for lo, sh in zip(long_s, short_s)]
+        grosses = [lo + sh for lo, sh in zip(long_s, short_s)]
+        net = float(sum(nets) / len(nets))
+        gross = float(sum(grosses) / len(grosses))
+    elif long_s:
+        net = float(sum(long_s) / len(long_s))
+        gross = net
+    elif short_s:
+        mean_short = float(sum(short_s) / len(short_s))
+        net = -mean_short
+        gross = mean_short
+    turnover = float(sum(turn_s) / len(turn_s)) if turn_s else None
+    return {"turnover": turnover, "gross_exposure": gross, "net_exposure": net}
+
+
 def _ols_alpha_beta(y: np.ndarray, x: np.ndarray) -> tuple[float | None, float | None]:
     if len(y) < 3 or len(x) < 3:
         return None, None
@@ -222,6 +270,7 @@ def compute_metrics_from_equity(
     *,
     trade_count: int | None = None,
     trades: Sequence[Mapping[str, Any]] | None = None,
+    time_series: Sequence[Mapping[str, Any]] | None = None,
     lean_statistics: dict[str, Any] | None = None,
     runtime_statistics: dict[str, Any] | None = None,
     risk_free_rate: float = 0.0,
@@ -354,6 +403,7 @@ def compute_metrics_from_equity(
     commission = trade_stats["commission"]
     if commission is None:
         commission = _optional_money(lean_statistics, "Total Fees")
+    exposure = summarize_exposure(time_series)
 
     return {
         "total_return": total_return,
@@ -379,10 +429,10 @@ def compute_metrics_from_equity(
         "average_loss": trade_stats["average_loss"],
         "payoff_ratio": trade_stats["payoff_ratio"],
         "trade_count": resolved_trade_count,
-        "turnover": None,
+        "turnover": exposure["turnover"],
         "holding_period": trade_stats["holding_period"],
-        "gross_exposure": None,
-        "net_exposure": None,
+        "gross_exposure": exposure["gross_exposure"],
+        "net_exposure": exposure["net_exposure"],
         "leverage": None,
         "cash": None,
         "commission": commission,

@@ -38,8 +38,11 @@ export function BuilderPanel({
           onChange={(e) => onChange({ ...config, hypothesis: e.target.value })}
           rows={4}
           placeholder="用一句话写下这条策略为什么应该赚钱。"
-          className="w-full resize-none rounded-lg border border-as-border bg-as-bg px-3 py-2 text-sm leading-relaxed text-as-text outline-none placeholder:text-as-muted focus:border-as-primary/40 focus:ring-2 focus-visible:ring-as-primary/20"
+          className="w-full resize-none rounded-lg border border-as-border bg-as-bg px-3 py-2 text-sm leading-relaxed text-as-text outline-none placeholder:text-as-muted focus:border-as-primary/40 focus-visible:ring-2 focus-visible:ring-as-primary/20"
         />
+        <p className="mt-1.5 text-[10px] leading-relaxed text-as-muted">
+          保存版本后，研究笔记会带上这段假设。它不影响回测。
+        </p>
       </label>
       <Field label="标的">
         <Input

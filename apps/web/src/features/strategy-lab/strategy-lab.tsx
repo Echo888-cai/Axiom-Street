@@ -1,9 +1,10 @@
 "use client";
 
-import Editor from "@monaco-editor/react";
+import Editor, { type OnMount } from "@monaco-editor/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,12 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Tabs } from "@/components/ui/tabs";
 import { labelStatus } from "@/lib/labels";
 import { SPY_200DMA_TEMPLATE } from "@/lib/spy-200dma";
 import { EQUAL_WEIGHT_CONFIG, EQUAL_WEIGHT_TEMPLATE } from "@/lib/equal-weight";
 import { toast } from "@/components/ui/toast";
 import { BuilderPanel } from "./builder-panel";
 import { VersionHistory } from "./version-history";
+import { VersionDiff } from "./version-diff";
+import { RunDock } from "./run-dock";
+import { registerPythonLanguageFeatures, applyEngineError } from "./python-lsp";
 
 function friendlyError(message: string): string {
   if (message.includes("Docker is required") || message.includes("Docker")) {
@@ -59,6 +64,16 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
   const [name, setName] = useState("");
   const [confirmRestore, setConfirmRestore] = useState<"spy" | "equal" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [pane, setPane] = useState<"code" | "diff">("code");
+  const [runId, setRunId] = useState<string | null>(null);
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
+  const lspRef = useRef<{ dispose: () => void } | null>(null);
+
+  useEffect(() => {
+    return () => lspRef.current?.dispose();
+  }, []);
 
   useEffect(() => {
     if (strategy?.latest_version?.code) setCode(strategy.latest_version.code);
@@ -81,6 +96,40 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     window.addEventListener("beforeunload", onBefore);
     return () => window.removeEventListener("beforeunload", onBefore);
   }, [dirty]);
+
+  const comparePair = useMemo(() => {
+    if (compareIds.length !== 2) return null;
+    const left = (versions.data || []).find((v) => v.id === compareIds[0]);
+    const right = (versions.data || []).find((v) => v.id === compareIds[1]);
+    return left && right ? { left, right } : null;
+  }, [compareIds, versions.data]);
+
+  useEffect(() => {
+    if (compareIds.length === 2) setPane("diff");
+  }, [compareIds]);
+
+  function applyMarkers(result: { ok: boolean; message: string | null; line: number | null; column: number | null }) {
+    const editor = editorRef.current;
+    const monacoApi = monacoRef.current;
+    const model = editor?.getModel();
+    if (!editor || !monacoApi || !model) return;
+    monacoApi.editor.setModelMarkers(
+      model,
+      "axiom-syntax",
+      result.ok
+        ? []
+        : [
+            {
+              startLineNumber: result.line || 1,
+              startColumn: result.column || 1,
+              endLineNumber: result.line || 1,
+              endColumn: (result.column || 1) + 12,
+              message: result.message || "语法错误",
+              severity: monacoApi.MarkerSeverity.Error,
+            },
+          ],
+    );
+  }
 
   const save = useMutation({
     mutationFn: () =>
@@ -114,19 +163,13 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     onError: (err: Error) => toast(err.message, "err"),
   });
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        if (dirty) save.mutate();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [dirty, save]);
-
   const run = useMutation({
     mutationFn: async () => {
+      const lint = await api.checkSyntax(code);
+      applyMarkers(lint);
+      if (!lint.ok) {
+        throw new Error(`语法错误：第 ${lint.line} 行 ${lint.message || ""}`.trim());
+      }
       let versionId = strategy?.latest_version?.id;
       if (!versionId || dirty) {
         const version = await api.createVersion(strategyId, {
@@ -148,11 +191,32 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
       });
     },
     onSuccess: (bt) => {
-      toast("回测已提交", "ok");
-      router.push(`/backtests/${bt.id}`);
+      if (bt.cache_hit) {
+        toast("命中结果缓存，未重复计入试验台账", "ok");
+      } else {
+        toast("回测已提交，留在实验室继续改", "ok");
+      }
+      setRunId(bt.id);
+      qc.invalidateQueries({ queryKey: ["backtests"] });
+      qc.invalidateQueries({ queryKey: ["trial-stats", strategyId] });
     },
     onError: (err: Error) => toast(friendlyError(err.message), "err"),
   });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (dirty) save.mutate();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (!run.isPending) run.mutate();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dirty, save, run]);
 
   if (isLoading || !strategy) {
     return <Card className="h-[70vh] animate-pulse bg-as-secondary" />;
@@ -202,6 +266,11 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
             <Badge tone="neutral">{labelStatus(strategy.status)}</Badge>
             <Badge tone="blue">v{strategy.latest_version?.version ?? 1}</Badge>
             {dirty ? <Badge tone="amber">未保存</Badge> : null}
+            <Link href={`/reports?strategy_id=${strategyId}`}>
+              <Button variant="ghost" size="sm">
+                研究笔记
+              </Button>
+            </Link>
             <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>
               删除
             </Button>
@@ -269,6 +338,18 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         </div>
       </div>
 
+      {runId ? (
+        <RunDock
+          backtestId={runId}
+          onDismiss={() => setRunId(null)}
+          onFailure={(error) => {
+            const monacoApi = monacoRef.current;
+            const editor = editorRef.current;
+            if (monacoApi && editor) applyEngineError(monacoApi, editor, error);
+          }}
+        />
+      ) : null}
+
       {trialStats.data && trialStats.data.total_trials > 0 ? (
         <p className="text-xs text-as-muted">
           已在此策略族上试验 {trialStats.data.total_trials} 次
@@ -293,37 +374,73 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-6">
           <div className="flex items-center justify-between border-b border-as-border px-4 py-3">
-            <div className="text-sm font-medium">strategy.py</div>
-            <span className="text-[11px] text-as-muted">Python · Monaco · ⌘S 保存</span>
+            <div className="flex items-center gap-3">
+              <div className="text-sm font-medium">strategy.py</div>
+              {comparePair ? (
+                <Tabs
+                  value={pane}
+                  onChange={(id) => setPane(id as "code" | "diff")}
+                  items={[
+                    { id: "code", label: "编辑" },
+                    { id: "diff", label: "对比" },
+                  ]}
+                />
+              ) : null}
+            </div>
+            <span className="text-[11px] text-as-muted">
+              Python · Jedi 补全 · ⌘S 保存 · ⌘↵ 回测
+            </span>
           </div>
-          <div className="min-h-0 flex-1">
-            <Editor
-              height="100%"
-              defaultLanguage="python"
-              theme="vs"
-              value={code}
-              onChange={(v) => setCode(v || "")}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 13,
-                fontFamily: "SF Mono, Menlo, Monaco, Consolas, monospace",
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                padding: { top: 12 },
-              }}
-            />
-          </div>
+          {pane === "diff" && comparePair ? (
+            <VersionDiff left={comparePair.left} right={comparePair.right} />
+          ) : (
+            <div className="min-h-0 flex-1">
+              <Editor
+                height="100%"
+                defaultLanguage="python"
+                theme="vs"
+                value={code}
+                onMount={(editor, monacoApi) => {
+                  editorRef.current = editor;
+                  monacoRef.current = monacoApi;
+                  lspRef.current?.dispose();
+                  lspRef.current = registerPythonLanguageFeatures(monacoApi);
+                }}
+                onChange={(v) => setCode(v || "")}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  fontFamily: "SF Mono, Menlo, Monaco, Consolas, monospace",
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  padding: { top: 12 },
+                }}
+              />
+            </div>
+          )}
         </Card>
 
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
-          <div className="border-b border-as-border px-4 py-3 text-sm font-medium">版本历史</div>
+          <div className="border-b border-as-border px-4 py-3">
+            <div className="text-sm font-medium">版本历史</div>
+            <p className="mt-0.5 text-[11px] text-as-muted">勾选两个版本对比；点击载入到编辑器</p>
+          </div>
           <VersionHistory
             versions={versions.data || []}
             currentId={strategy.latest_version?.id}
+            compareIds={compareIds}
+            onToggleCompare={(id) =>
+              setCompareIds((ids) => {
+                if (ids.includes(id)) return ids.filter((x) => x !== id);
+                if (ids.length >= 2) return [ids[1], id];
+                return [...ids, id];
+              })
+            }
             onSelect={(v) => {
               setCode(v.code);
               setConfig(v.config || {});
               setMessage(`恢复 v${v.version}`);
+              setPane("code");
               toast(`已载入 v${v.version}`, "info");
             }}
           />

@@ -297,6 +297,7 @@ def parse_lean_result(
         equity,
         trade_count=len(trades),
         trades=trades,
+        time_series=time_series,
         lean_statistics=statistics,
         runtime_statistics=runtime,
         risk_free_rate=risk_free_rate,

@@ -48,6 +48,9 @@ services:
       STREET_INGEST_RPS: "2"
       STREET_INGEST_CONCURRENCY: "4"
       STREET_MAX_INFLIGHT_BACKTESTS: "2"
+      STREET_LEAN_POOL_SIZE: "2"
+      STREET_LEAN_POOL_WARM: "false"
+      STREET_SCAN_PARALLELISM: "2"
     ports:
       - "8000:8000"
     volumes:
@@ -78,6 +81,9 @@ services:
       STREET_JOBS_ROOT: "${PWD}/jobs"
       STREET_LEAN_IMAGE: quantconnect/lean:16355
       STREET_WORKER_CONCURRENCY: "2"
+      STREET_LEAN_POOL_SIZE: "2"
+      STREET_LEAN_POOL_WARM: "false"
+      STREET_SCAN_PARALLELISM: "2"
       STREET_LEAN_TIMEOUT_SECONDS: "1800"
       STREET_SYNC_INGESTS: "false"
       STREET_MARKET_RECONCILE_ENABLED: "true"

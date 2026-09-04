@@ -310,7 +310,7 @@ threading.Thread(target=execute_backtest, args=(bt_id,), daemon=True, ...).start
 
 **目标：让系统能主动告诉用户"你这个策略大概率是过拟合的"。**
 **预估：5–6 周。这是本路线图中技术含量最高、最难被复制的部分，也是"顶级"二字的真正来源。**
-**当前进度（Phase 3 闸门已齐）**：DSR、Walk-forward、PBO、参数敏感性、成本敏感性、stationary bootstrap Sharpe 区间、制度稳定性与 Hansen SPA_c 均已接入并挡住 `VALIDATED`。5.4 端到端验收：故意过拟合的 lookback 搜索必须给出 PBO > 0.5 且 DSR 低于未校正 PSR；SPY 200DMA golden 基线仍是 CAGR ~1.3% / Sharpe ~0.14——弱 edge，不是过拟合产物。下一阶段是 Phase 4 研究工作台，需显式开工。
+**当前进度（Phase 4 研究工作台）**：Phase 3 闸门仍挡住 `VALIDATED`。工作台已补专业 tearsheet（诚实指标条、分布/QQ、滚动夏普 / β / 波动率 / 相关、暴露序列、PDF/HTML 导出）、实验室版本 diff、提交前语法校验、Jedi 补全/悬停、以及 `/reports` 研究笔记。6.1 结果缓存与 LEAN worker 池 / 扫描并行已落地。
 
 ### 5.1 为什么这是护城河
 
@@ -406,6 +406,8 @@ White's Reality Check 与 Hansen's SPA test，用于回答"在我筛过的这一
 - 结果缓存：`(strategy_code_hash, data_snapshot_id, date_range, params)` 命中则直接返回历史结果（这也顺便防止重复试验污染试验台账）；
 - 参数扫描并行化（Celery group / chord）。
 
+**已做。** 结果缓存按 `(strategy_code_hash, data_snapshot_id, engine_version, date_range, params)` 命中则直接返回已有回测，**不写第二行试验台账**。`force=true` 才重跑。常驻 LEAN slot 池：预拉镜像、有界并发；`STREET_LEAN_POOL_WARM=true` 时才起 sleep 容器做 `docker exec`（默认关，以免改 golden 的 `docker run` 路径）。参数扫描在 worker 内按 `STREET_SCAN_PARALLELISM` 并行（不用 chord：父任务等子任务会在 concurrency=2 时死锁）。
+
 ### 6.2 完整 Tearsheet
 
 现有 12 个指标 tile + 3 张图（净值、回撤、月度表格）。补齐专业分析需要的：
@@ -419,13 +421,19 @@ White's Reality Check 与 Hansen's SPA test，用于回答"在我筛过的这一
 - **多回测对比**：叠加两条以上净值曲线（当前完全无法对比）
 - **导出**：PDF / HTML tearsheet（`/reports` 页面从占位升级）
 
+**已做（部分）**：诚实指标条（DSR / PSR / PBO / 试验次数排在原始夏普前）；VaR/CVaR/尾部比/偏度/峰度；日收益直方图 + 正态 QQ；63 日滚动夏普 / 波动率 / β / 相关由权益与基准序列计算（不用 LEAN 窗顶替）；LEAN Exposure / Turnover 序列上图；净值对数坐标、归一到 100、成交标记、同策略第二条回测叠加；PDF / HTML tearsheet 导出。成交表如实显示空的出场价/盈亏。未做：round-trip 配对。
+
 ### 6.3 研究笔记
 
 `/reports` 页面实现可版本化的研究文档：假设 → 检验 → 结论 → 失效模式记录。这是 `builder-panel.tsx` 里"假设"字段应有的归宿（当前它只是个不影响任何逻辑的元数据框）。
 
+**已做**：`research_notes` 表 + CRUD。新建笔记预填构建器假设；不代填结论。可从 tearsheet 带入 `backtest_id`。
+
 ### 6.4 策略编辑器升级
 
 Monaco 已接入但功能最小。补：Python LSP（补全/悬停/诊断）、提交前语法校验、回测失败的错误行内定位、**版本 diff 视图**（`version-history.tsx` 目前只能点击加载，无法对比）。
+
+**已做（部分）**：提交前回测走 `ast.parse`，错误写进 Monaco marker；版本历史勾选两个版本打开 DiffEditor。运行回测后留在实验室，底部 Run dock 看进度。Jedi 补全 / 悬停（LEAN 桩在 `quant/lsp_stubs`）；回测失败若 traceback 指向 `strategy.py` 则标到该行。未做：完整 pyright language server。
 
 ### 6.5 前端工程债
 
@@ -433,6 +441,8 @@ Monaco 已接入但功能最小。补：Python LSP（补全/悬停/诊断）、�
 - 前端测试当前为 **0** → 补 Vitest 单测 + Playwright 关键路径 E2E；
 - 已安装未使用的依赖（`@tanstack/react-table`、`date-fns`）→ 用于新交易表或移除；
 - 中文文案硬编码 → 若有国际化打算，此时抽 i18n 成本最低。
+
+**部分**：Vitest 覆盖标签、列表 unwrap、tearsheet 收益/滚动夏普/QQ、版本 diff。OpenAPI 生成与 Playwright 未做。
 
 ---
 

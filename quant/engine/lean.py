@@ -13,6 +13,7 @@ from quant.data.manifest import load_manifest
 from quant.data.universe import write_lean_map_files
 from quant.engine.base import BacktestEngineResult, BacktestRequest, ProgressCallback, QuantEngine
 from quant.engine.errors import BacktestCancelled, EngineTimeout
+from quant.engine.pool import build_lean_view, get_pool
 from quant.engine.result_parser import find_result_json, parse_lean_result
 
 LEAN_CONFIG_TEMPLATE = {
@@ -101,6 +102,9 @@ class LeanQuantEngine(QuantEngine):
         )
         self.risk_free_rate = float(os.getenv("STREET_RISK_FREE_RATE") or 0.0)
         self._containers: dict[str, str] = {}
+        self._pool_size = max(1, int(os.getenv("STREET_LEAN_POOL_SIZE") or "2"))
+        self._pool_warm = os.getenv("STREET_LEAN_POOL_WARM", "").lower() in {"1", "true", "yes"}
+        self._host_data_root = Path(os.getenv("STREET_DATA_ROOT") or str(self.data_root))
 
     def _docker_env(self) -> dict[str, str]:
         env = os.environ.copy()
@@ -126,15 +130,39 @@ class LeanQuantEngine(QuantEngine):
             available = result.returncode == 0
         except FileNotFoundError:
             available = False
+        pool_health: dict[str, Any] = {}
+        try:
+            pool_health = get_pool(
+                image=self.lean_image,
+                size=self._pool_size,
+                jobs_root=self.jobs_root,
+                data_root=self._host_data_root,
+                docker_env=self._docker_env(),
+                warm=self._pool_warm,
+            ).health()
+        except Exception as exc:  # noqa: BLE001 - health must never raise
+            pool_health = {"error": str(exc)}
         return {
             "engine": "lean",
             "image": self.lean_image,
             "docker_available": available,
+            "pool": pool_health,
         }
 
     def cancel_backtest(self, backtest_id: str) -> None:
         name = self._containers.get(backtest_id) or f"axiom-lean-{backtest_id[:8]}"
         subprocess.run(["docker", "rm", "-f", name], capture_output=True, check=False)
+        try:
+            get_pool(
+                image=self.lean_image,
+                size=self._pool_size,
+                jobs_root=self.jobs_root,
+                data_root=self._host_data_root,
+                docker_env=self._docker_env(),
+                warm=self._pool_warm,
+            ).cancel(backtest_id)
+        except Exception:  # noqa: BLE001 - cancel must still kill the named container above
+            return
 
     def run_backtest(
         self,
@@ -172,70 +200,107 @@ class LeanQuantEngine(QuantEngine):
         config["algorithm-type-name"] = request.strategy_class_name
         config["parameters"] = lean_runtime_parameters(request)
         config_path = job_dir / "config.json"
-        config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
-
-        container_name = f"axiom-lean-{request.backtest_id[:8]}"
-        self._containers[request.backtest_id] = container_name
 
         progress("Running algorithm")
         timeout = request.timeout_seconds
-        cmd = [
-            "docker",
-            "run",
-            "--rm",
-            "--name",
-            container_name,
-            "--network",
-            "none",
-            "--memory",
-            "2g",
-            "--cpus",
-            "2",
-            "--pids-limit",
-            "256",
-            *docker_volume_args(
-                config_path=config_path,
-                algo_dir=algo_dir,
-                lean_data=lean_data,
-                results_dir=results_dir,
-                map_overlay=map_overlay,
-            ),
-            self.lean_image,
-            "--data-folder",
-            "/Data",
-            "--results-destination-folder",
-            "/Results",
-            "--config",
-            "/Lean/Launcher/config.json",
-        ]
-
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=self._docker_env(),
+        pool = get_pool(
+            image=self.lean_image,
+            size=self._pool_size,
+            jobs_root=self.jobs_root,
+            data_root=self._host_data_root,
+            docker_env=self._docker_env(),
+            warm=self._pool_warm,
         )
-        deadline = time.monotonic() + timeout
-        try:
-            while proc.poll() is None:
-                if request.cancel_check and request.cancel_check():
-                    self.cancel_backtest(request.backtest_id)
-                    raise BacktestCancelled(request.backtest_id)
-                if time.monotonic() > deadline:
-                    self.cancel_backtest(request.backtest_id)
-                    raise EngineTimeout(f"LEAN exceeded {timeout}s")
-                time.sleep(2)
-            stdout, stderr = proc.communicate()
-        except (BacktestCancelled, EngineTimeout):
-            if proc.poll() is None:
-                proc.kill()
-            raise
+        stdout = ""
+        stderr = ""
+        returncode = 1
+        with pool.lease(request.backtest_id) as slot:
+            launcher = pool.launcher() if slot else None
+            use_warm = bool(slot and launcher)
+            if use_warm:
+                assert slot is not None and launcher is not None
+                view = build_lean_view(job_dir, lean_data, map_overlay)
+                config["algorithm-location"] = str(strategy_path.resolve())
+                config["data-folder"] = str(view.resolve())
+                config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+                self._containers[request.backtest_id] = slot
+                cmd = [
+                    "docker",
+                    "exec",
+                    "-w",
+                    str(launcher["workdir"]),
+                    slot,
+                    *list(launcher["entrypoint"]),
+                    "--data-folder",
+                    str(view.resolve()),
+                    "--results-destination-folder",
+                    str(results_dir.resolve()),
+                    "--config",
+                    str(config_path.resolve()),
+                ]
+            else:
+                config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+                container_name = f"axiom-lean-{request.backtest_id[:8]}"
+                self._containers[request.backtest_id] = container_name
+                cmd = [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    container_name,
+                    "--network",
+                    "none",
+                    "--memory",
+                    "2g",
+                    "--cpus",
+                    "2",
+                    "--pids-limit",
+                    "256",
+                    *docker_volume_args(
+                        config_path=config_path,
+                        algo_dir=algo_dir,
+                        lean_data=lean_data,
+                        results_dir=results_dir,
+                        map_overlay=map_overlay,
+                    ),
+                    self.lean_image,
+                    "--data-folder",
+                    "/Data",
+                    "--results-destination-folder",
+                    "/Results",
+                    "--config",
+                    "/Lean/Launcher/config.json",
+                ]
+
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=self._docker_env(),
+            )
+            deadline = time.monotonic() + timeout
+            try:
+                while proc.poll() is None:
+                    if request.cancel_check and request.cancel_check():
+                        self.cancel_backtest(request.backtest_id)
+                        raise BacktestCancelled(request.backtest_id)
+                    if time.monotonic() > deadline:
+                        self.cancel_backtest(request.backtest_id)
+                        raise EngineTimeout(f"LEAN exceeded {timeout}s")
+                    time.sleep(2)
+                stdout, stderr = proc.communicate()
+                returncode = proc.returncode or 0
+            except (BacktestCancelled, EngineTimeout):
+                if proc.poll() is None:
+                    proc.kill()
+                raise
+
         (job_dir / "docker_stdout.log").write_text(stdout or "", encoding="utf-8")
         (job_dir / "docker_stderr.log").write_text(stderr or "", encoding="utf-8")
-        if proc.returncode != 0:
+        if returncode != 0:
             raise RuntimeError(
-                f"LEAN docker exited with {proc.returncode}: {(stderr or stdout)[-2000:]}"
+                f"LEAN docker exited with {returncode}: {(stderr or stdout)[-2000:]}"
             )
 
         progress("Calculating metrics")

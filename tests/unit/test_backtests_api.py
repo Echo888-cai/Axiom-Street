@@ -191,14 +191,47 @@ def test_duplicate_parameter_hash(client, monkeypatch):
         "parameters": {"lookback": 200},
     }
     assert client.post("/api/v1/backtests", json=body).status_code == 201
-    # bump inflight limit so the duplicate submission is accepted
+    # bump inflight limit so the forced duplicate is accepted
     from services.api.settings import get_settings
 
     get_settings.cache_clear()
     monkeypatch.setenv("STREET_MAX_INFLIGHT_BACKTESTS", "10")
     get_settings.cache_clear()
-    assert client.post("/api/v1/backtests", json=body).status_code == 201
+    assert client.post("/api/v1/backtests", json={**body, "force": True}).status_code == 201
     stats = client.get(f"/api/v1/strategies/{strategy['id']}/trial-stats").json()
     assert stats["total_trials"] == 2
     assert stats["by_snapshot"][0]["duplicate_parameter_hashes"] >= 1
+    get_settings.cache_clear()
+
+
+def test_identical_backtest_hits_cache_without_new_trial(client, monkeypatch):
+    _ready(monkeypatch)
+    from services.api.settings import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("STREET_MAX_INFLIGHT_BACKTESTS", "10")
+    get_settings.cache_clear()
+    strategy = _strategy(client)
+    body = {
+        "strategy_version_id": strategy["latest_version"]["id"],
+        "start_date": "2018-01-01",
+        "end_date": "2018-06-01",
+    }
+    first = client.post("/api/v1/backtests", json=body)
+    assert first.status_code == 201, first.text
+    assert first.json()["cache_hit"] is False
+    second = client.post("/api/v1/backtests", json=body)
+    assert second.status_code == 201, second.text
+    assert second.json()["cache_hit"] is True
+    assert second.json()["id"] == first.json()["id"]
+    stats = client.get(f"/api/v1/strategies/{strategy['id']}/trial-stats").json()
+    assert stats["total_trials"] == 1
+    listed = client.get("/api/v1/backtests").json()
+    assert listed["total"] == 1
+    forced = client.post("/api/v1/backtests", json={**body, "force": True})
+    assert forced.status_code == 201
+    assert forced.json()["cache_hit"] is False
+    assert forced.json()["id"] != first.json()["id"]
+    stats = client.get(f"/api/v1/strategies/{strategy['id']}/trial-stats").json()
+    assert stats["total_trials"] == 2
     get_settings.cache_clear()

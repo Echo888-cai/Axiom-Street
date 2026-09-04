@@ -67,7 +67,7 @@ export type Backtest = {
   data_version: string | null;
   parameters: Record<string, unknown>;
   progress_step: string | null;
-  error: { message?: string } | null;
+  error: { message?: string; line?: number; code?: string } | null;
   started_at: string | null;
   finished_at: string | null;
   created_at: string;
@@ -86,6 +86,8 @@ export type Backtest = {
     effective_from: string;
     effective_to: string | null;
   }> | null;
+  result_fingerprint?: string | null;
+  cache_hit?: boolean;
 };
 
 export type BacktestMetrics = {
@@ -111,6 +113,15 @@ export type BacktestMetrics = {
   probabilistic_sharpe: number | null;
   dsr_n_trials: number | null;
   dsr_sr_star: number | null;
+  tail_ratio?: number | null;
+  skewness?: number | null;
+  kurtosis?: number | null;
+  var_95?: number | null;
+  cvar_95?: number | null;
+  omega_ratio?: number | null;
+  turnover?: number | null;
+  gross_exposure?: number | null;
+  net_exposure?: number | null;
   extras?: Record<string, unknown>;
   [key: string]: unknown;
 };
@@ -138,10 +149,37 @@ export type Trade = {
   signal: string | null;
 };
 
+export type TimeSeriesPoint = {
+  name: string;
+  ts: string;
+  value: number;
+};
+
+export type LspCompletion = {
+  label: string;
+  insert: string;
+  kind: string;
+  detail: string | null;
+};
+
 export type MonthlyReturn = {
   year: number;
   month: number;
   return_pct: number;
+};
+
+export type ResearchNote = {
+  id: string;
+  strategy_id: string;
+  strategy_version_id: string | null;
+  backtest_id: string | null;
+  title: string;
+  hypothesis: string;
+  method: string;
+  conclusion: string;
+  failure_modes: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Page<T> = {
@@ -314,6 +352,7 @@ export const api = {
     data_snapshot_id?: string;
     universe?: string[];
     universe_id?: string;
+    force?: boolean;
   }) =>
     request<Backtest>("/api/v1/backtests", {
       method: "POST",
@@ -326,6 +365,66 @@ export const api = {
     request<Page<Trade> | Trade[]>(`/api/v1/backtests/${id}/trades`).then(unwrapList),
   getMonthlyReturns: (id: string) =>
     request<MonthlyReturn[]>(`/api/v1/backtests/${id}/monthly-returns`),
+  getTimeSeries: (id: string, name?: string) => {
+    const q = name ? `?name=${encodeURIComponent(name)}` : "";
+    return request<TimeSeriesPoint[]>(`/api/v1/backtests/${id}/time-series${q}`);
+  },
+  tearsheetPdfUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/tearsheet.pdf`,
+  tearsheetHtmlUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/tearsheet.html`,
+  checkSyntax: (code: string) =>
+    request<{ ok: boolean; message: string | null; line: number | null; column: number | null }>(
+      "/api/v1/code/syntax",
+      { method: "POST", body: JSON.stringify({ code }) },
+    ),
+  completePython: (code: string, line: number, column: number) =>
+    request<{ items: LspCompletion[]; syntax: { ok: boolean }; error?: string | null }>(
+      "/api/v1/code/complete",
+      { method: "POST", body: JSON.stringify({ code, line, column }) },
+    ),
+  hoverPython: (code: string, line: number, column: number) =>
+    request<{ contents: string | null; error?: string | null }>("/api/v1/code/hover", {
+      method: "POST",
+      body: JSON.stringify({ code, line, column }),
+    }),
+  listResearchNotes: (params?: { strategy_id?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.strategy_id) search.set("strategy_id", params.strategy_id);
+    const q = search.toString();
+    return request<Page<ResearchNote>>(`/api/v1/research-notes${q ? `?${q}` : ""}`);
+  },
+  getResearchNote: (id: string) => request<ResearchNote>(`/api/v1/research-notes/${id}`),
+  createResearchNote: (body: {
+    strategy_id: string;
+    strategy_version_id?: string;
+    backtest_id?: string;
+    title?: string;
+    hypothesis?: string;
+    method?: string;
+    conclusion?: string;
+    failure_modes?: string;
+  }) =>
+    request<ResearchNote>("/api/v1/research-notes", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateResearchNote: (
+    id: string,
+    body: {
+      title?: string;
+      hypothesis?: string;
+      method?: string;
+      conclusion?: string;
+      failure_modes?: string;
+      strategy_version_id?: string | null;
+      backtest_id?: string | null;
+    },
+  ) =>
+    request<ResearchNote>(`/api/v1/research-notes/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteResearchNote: (id: string) =>
+    request<void>(`/api/v1/research-notes/${id}`, { method: "DELETE" }),
   eventsUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/events`,
   dataStatus: () => request<DataStatus>("/api/v1/data/status"),
   reconcileMarket: (force = false) =>

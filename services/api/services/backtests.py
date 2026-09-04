@@ -30,6 +30,7 @@ from services.api.models import (
 from services.api.schemas import BacktestCreate, BacktestOut
 from services.api.services import snapshots as snapshot_service
 from services.api.services import universes as universe_service
+from services.api.services.backtest_cache import find_cached_backtest, result_fingerprint
 from services.api.services.strategies import get_version
 from services.api.settings import get_settings
 
@@ -96,6 +97,8 @@ def to_out(db: Session, backtest: Backtest) -> BacktestOut:
             "data_snapshot_id": backtest.data_snapshot_id,
             "universe_id": backtest.universe_id,
             "universe_snapshot": backtest.universe_snapshot,
+            "result_fingerprint": backtest.result_fingerprint,
+            "cache_hit": bool(getattr(backtest, "cache_hit", False)),
         }
     )
 
@@ -244,14 +247,33 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
 
     from services.api.services.validation import count_inflight_engine_jobs
 
+    if snapshot is None:
+        snapshot = snapshot_service.ensure_snapshot_row(db, data_root)
+
+    fingerprint = result_fingerprint(
+        code=version.code,
+        data_snapshot_id=snapshot.id if snapshot else None,
+        engine_version=settings.lean_image,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        benchmark=payload.benchmark,
+        initial_capital=payload.initial_capital,
+        universe=universe,
+        universe_id=payload.universe_id,
+        parameters=payload.parameters or {},
+    )
+    if not payload.force:
+        cached = find_cached_backtest(db, fingerprint)
+        if cached is not None:
+            cached.cache_hit = True  # type: ignore[attr-defined]
+            return cached
+
     if count_inflight_engine_jobs(db) >= settings.max_inflight_backtests:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="并发回测已达上限，请等待正在运行的任务完成后再提交。",
         )
 
-    if snapshot is None:
-        snapshot = snapshot_service.ensure_snapshot_row(db, data_root)
     strategy = db.get(Strategy, version.strategy_id)
     params = payload.parameters or {}
     backtest = Backtest(
@@ -268,6 +290,7 @@ def create_backtest(db: Session, payload: BacktestCreate) -> Backtest:
         or (market.get("manifest") or {}).get("sha256"),
         universe_id=payload.universe_id,
         universe_snapshot=universe_snapshot,
+        result_fingerprint=fingerprint,
     )
     db.add(backtest)
     db.flush()

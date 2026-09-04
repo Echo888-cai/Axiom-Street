@@ -44,3 +44,12 @@ def test_alembic_baseline_creates_tables():
     )
     assert "progress_step" in text7
     assert 'sa.Column("status"' in text7
+    text8 = Path("services/api/alembic/versions/0008_research_notes.py").read_text(encoding="utf-8")
+    assert "research_notes" in text8
+    assert "failure_modes" in text8
+    assert 'down_revision: Union[str, None] = "0007"' in text8
+    text9 = Path("services/api/alembic/versions/0009_backtest_result_fingerprint.py").read_text(
+        encoding="utf-8"
+    )
+    assert "result_fingerprint" in text9
+    assert 'down_revision: Union[str, None] = "0008"' in text9
