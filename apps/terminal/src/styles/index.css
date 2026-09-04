@@ -1,0 +1,230 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* ------------------------------------------------------------------ */
+/* Axiom Street — Terminal Design Tokens                               */
+/* Linear restraint × OpenBB workspace × Bloomberg density             */
+/* ------------------------------------------------------------------ */
+
+@theme {
+  /* Surfaces — near-black, never pure #000 */
+  --color-bg: #0a0a0b;
+  --color-sunken: #0d0e10;
+  --color-panel: #101214;
+  --color-raised: #16181c;
+  --color-overlay: #1c1f24;
+
+  /* Hairlines — whisper-quiet, structural only */
+  --color-edge: rgba(255, 255, 255, 0.065);
+  --color-edge-strong: rgba(255, 255, 255, 0.13);
+
+  /* Text — soft white, never glaring */
+  --color-text: #e8e9eb;
+  --color-text-2: #9ba1a8;
+  --color-text-3: #5f656d;
+  --color-text-4: #3f444b;
+
+  /* Brand accent — terminal amber, usage budget < 5% */
+  --color-accent: #e3b341;
+  --color-accent-hi: #efc45e;
+  --color-accent-dim: rgba(227, 179, 65, 0.13);
+
+  /* Market semantics — desaturated, anti-casino */
+  --color-pos: #3fa97c;
+  --color-pos-dim: rgba(63, 169, 124, 0.13);
+  --color-neg: #d9635e;
+  --color-neg-dim: rgba(217, 99, 94, 0.12);
+  --color-info: #7fa6e8;
+
+  /* Typography */
+  --font-sans: "Inter Variable", -apple-system, "SF Pro Text", ui-sans-serif,
+    system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo,
+    monospace;
+
+  /* Radii — restrained */
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+
+  /* Motion */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01";
+  overflow: hidden;
+}
+
+::selection {
+  background: rgba(227, 179, 65, 0.24);
+  color: #f5f6f7;
+}
+
+/* Financial figures */
+.tnum,
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.01em;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.015em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Scrollbars — thin, quiet                                            */
+/* ------------------------------------------------------------------ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/* Micro-interaction primitives                                        */
+/* ------------------------------------------------------------------ */
+
+.interactive {
+  transition:
+    background-color 160ms var(--ease-out-quart),
+    color 160ms var(--ease-out-quart),
+    border-color 160ms var(--ease-out-quart),
+    opacity 160ms var(--ease-out-quart);
+}
+
+.pressable:active {
+  transform: scale(0.985);
+  transition-duration: 60ms;
+}
+
+/* Keyboard focus */
+:focus-visible {
+  outline: 1.5px solid rgba(227, 179, 65, 0.55);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.035) 25%,
+    rgba(255, 255, 255, 0.07) 37%,
+    rgba(255, 255, 255, 0.035) 63%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+  border-radius: 4px;
+}
+
+/* Blinking live dot */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.live-dot {
+  animation: pulse-dot 2.2s var(--ease-out-quart) infinite;
+}
+
+/* Parameter sliders — terminal-grade range input */
+.axiom-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  cursor: pointer;
+}
+
+.axiom-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e3b341;
+  border: 2.5px solid #0a0a0b;
+  box-shadow: 0 0 0 1px rgba(227, 179, 65, 0.4);
+  transition: transform 150ms var(--ease-out-quart);
+}
+
+.axiom-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.axiom-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e3b341;
+  border: 2.5px solid #0a0a0b;
+  box-shadow: 0 0 0 1px rgba(227, 179, 65, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
