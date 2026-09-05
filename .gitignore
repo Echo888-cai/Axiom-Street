@@ -33,8 +33,10 @@ apps/web/out/
 data/cache/
 data/lean/
 data/market/**/*.parquet
+data/corporate_actions/**/*.parquet
 data/snapshots/
 !data/market/.gitkeep
+!data/corporate_actions/.gitkeep
 jobs/
 *.log
 *.db
