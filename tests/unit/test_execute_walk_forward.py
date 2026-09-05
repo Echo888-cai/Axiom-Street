@@ -402,9 +402,7 @@ def test_failed_walk_forward_demotes_validated(monkeypatch):
     monkeypatch.setattr("services.worker.tasks.LeanQuantEngine", lambda **_k: fake)
     from services.worker.tasks import execute_walk_forward
 
-    run_id, strategy_id = _seed(
-        Session, dsr_passed=True, strategy_status=StrategyStatus.VALIDATED
-    )
+    run_id, strategy_id = _seed(Session, dsr_passed=True, strategy_status=StrategyStatus.VALIDATED)
     execute_walk_forward(run_id)
     db = Session()
     strategy = db.get(Strategy, strategy_id)

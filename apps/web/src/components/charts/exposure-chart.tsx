@@ -1,4 +1,5 @@
 "use client";
+import { chartColors } from "@/lib/chart-tokens";
 
 import { useEffect, useRef } from "react";
 import {
@@ -36,31 +37,31 @@ export function ExposureChart({
     const chart = createChart(ref.current, {
       height,
       layout: {
-        background: { type: ColorType.Solid, color: "#ffffff" },
-        textColor: "#667085",
+        background: { type: ColorType.Solid, color: chartColors.background },
+        textColor: chartColors.muted,
         fontFamily: "Inter, system-ui, sans-serif",
       },
       grid: {
-        vertLines: { color: "rgba(15,23,42,0.04)" },
-        horzLines: { color: "rgba(15,23,42,0.04)" },
+        vertLines: { color: chartColors.grid },
+        horzLines: { color: chartColors.grid },
       },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
     });
     longRef.current = chart.addSeries(LineSeries, {
-      color: "#1677FF",
+      color: chartColors.primary,
       lineWidth: 2,
       priceLineVisible: false,
       title: "多头",
     });
     shortRef.current = chart.addSeries(LineSeries, {
-      color: "#F04438",
+      color: chartColors.negative,
       lineWidth: 2,
       priceLineVisible: false,
       title: "空头",
     });
     netRef.current = chart.addSeries(LineSeries, {
-      color: "#667085",
+      color: chartColors.muted,
       lineWidth: 1,
       lineStyle: 2,
       priceLineVisible: false,
@@ -81,7 +82,10 @@ export function ExposureChart({
     const toLine = (key: "long" | "short" | "net"): LineData[] =>
       data
         .filter((d) => d[key] != null)
-        .map((d) => ({ time: d.time.slice(0, 10) as LineData["time"], value: d[key] as number }));
+        .map((d) => ({
+          time: d.time.slice(0, 10) as LineData["time"],
+          value: d[key] as number,
+        }));
     longRef.current?.setData(toLine("long"));
     shortRef.current?.setData(toLine("short"));
     netRef.current?.setData(toLine("net"));
@@ -93,13 +97,13 @@ export function ExposureChart({
       <div ref={ref} className="w-full" />
       <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-as-muted">
         <span className="inline-flex items-center gap-1">
-          <span className="h-0.5 w-3 bg-[#1677FF]" /> 多头
+          <span className="h-0.5 w-3 bg-as-primary" /> 多头
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="h-0.5 w-3 bg-[#F04438]" /> 空头
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-0.5 w-3 bg-[#667085]" /> 净暴露
+          <span className="h-0.5 w-3 bg-as-muted" /> 净暴露
         </span>
       </div>
     </div>

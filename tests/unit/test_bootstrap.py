@@ -79,9 +79,7 @@ def test_zero_mean_sharpe_ci_covers_zero():
     rng = np.random.default_rng(7)
     half = rng.normal(0.0, 0.01, size=MIN_OBS)
     rets = np.concatenate([half, -half])  # mean exactly 0
-    result = bootstrap_metrics(
-        rets, years=2.0, n_boot=400, seed=7, mean_block_length=1.0
-    )
+    result = bootstrap_metrics(rets, years=2.0, n_boot=400, seed=7, mean_block_length=1.0)
     assert result.sharpe.observed == pytest.approx(0.0, abs=1e-12)
     assert result.sharpe.crosses_zero
     assert result.passed is False

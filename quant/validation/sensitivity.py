@@ -209,7 +209,6 @@ def assert_navs_differ(finals: Sequence[float | None]) -> None:
         )
 
 
-
 def _fmt(value: float) -> str:
     if float(value).is_integer():
         return str(int(value))

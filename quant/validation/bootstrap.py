@@ -117,9 +117,7 @@ def returns_from_equity(
     elif 20.0 <= median <= 45.0:
         ppy = 12.0
     else:
-        raise BootstrapError(
-            f"净值采样不是日/周/月频（中位间隔 {median:.2f} 天），拒绝 Bootstrap"
-        )
+        raise BootstrapError(f"净值采样不是日/周/月频（中位间隔 {median:.2f} 天），拒绝 Bootstrap")
     return rets, years, ppy
 
 
@@ -221,9 +219,7 @@ def resample_indices(
     return _resample_indices(t, mean_block, rng, method=method)
 
 
-def _percentile_interval(
-    observed: float, draws: np.ndarray, confidence_level: float
-) -> Interval:
+def _percentile_interval(observed: float, draws: np.ndarray, confidence_level: float) -> Interval:
     if not np.all(np.isfinite(draws)):
         raise BootstrapError("Bootstrap 分布存在非有限值，拒绝报区间")
     alpha = (1.0 - confidence_level) / 2.0

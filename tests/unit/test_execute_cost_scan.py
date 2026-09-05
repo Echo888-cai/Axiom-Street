@@ -180,7 +180,9 @@ def _seed(Session, *, costs: list[float] | None = None):
         ValidationKind.REGIME,
         ValidationKind.SPA,
     ):
-        _add_gate(db, strategy_id=strategy.id, version_id=version.id, backtest_id=backtest.id, kind=kind)
+        _add_gate(
+            db, strategy_id=strategy.id, version_id=version.id, backtest_id=backtest.id, kind=kind
+        )
     db.commit()
     ids = (str(run.id), strategy.id)
     db.close()

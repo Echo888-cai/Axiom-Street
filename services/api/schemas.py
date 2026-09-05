@@ -388,6 +388,15 @@ class WalkForwardCreate(BaseModel):
     embargo_days: int = Field(default=1, ge=1, le=30)
 
 
+class ValidationCreate(BaseModel):
+    """Unified validation creation — params validated against spec registry."""
+
+    kind: str
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+    params: Dict[str, Any] = Field(default_factory=dict)
+
+
 class ValidationRunOut(ORMModel):
     id: UUID
     strategy_id: Optional[UUID] = None
@@ -402,6 +411,14 @@ class ValidationRunOut(ORMModel):
     error: Dict[str, Any] | None = None
     created_at: datetime
     finished_at: Optional[datetime] = None
+
+
+class ValidationSpecOut(BaseModel):
+    kind: str
+    display_name: str
+    description: str
+    auto_on_backtest: bool
+    params_schema: Dict[str, Any]
 
 
 class ValidationPage(BaseModel):

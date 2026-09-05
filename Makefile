@@ -1,3 +1,5 @@
+PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+
 .PHONY: up down api web lint typecheck test test-all ingest golden migrate prune-snapshots
 
 up:
@@ -7,33 +9,35 @@ down:
 	docker compose down
 
 api:
-	uvicorn services.api.main:app --reload --port 8000
+	$(PYTHON) -m uvicorn services.api.main:app --reload --port 8000
 
 web:
 	npm --prefix apps/web run dev
 
 lint:
-	ruff check quant services tests
-	ruff format --check quant services tests
+	$(PYTHON) -m ruff check quant services tests
+	$(PYTHON) -m ruff format --check quant services tests
 
 typecheck:
-	mypy quant services
-	npm --prefix apps/web exec tsc --noEmit
+	$(PYTHON) -m mypy quant services
+	npm --prefix apps/web run typecheck
 
 test:
-	pytest tests/unit -q
+	$(PYTHON) -m pytest tests/unit -q
 
 test-all: lint typecheck test
+	npm --prefix apps/web run test
+	npm --prefix apps/web run lint
 	npm --prefix apps/web run build
 
 ingest:
-	python -m quant.data.ingest_spy
+	$(PYTHON) -m quant.data.ingest.cli
 
 golden:
-	pytest -m golden -q
+	$(PYTHON) -m pytest -m golden -q
 
 migrate:
-	alembic upgrade head
+	$(PYTHON) -m alembic upgrade head
 
 prune-snapshots:
-	python -m services.api.prune_snapshots
+	$(PYTHON) -m services.api.prune_snapshots

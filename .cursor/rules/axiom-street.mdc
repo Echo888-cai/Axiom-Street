@@ -5,17 +5,19 @@ alwaysApply: true
 
 # Axiom Street Rules
 
-Product vision: `docs/VISION.md` · Roadmap: `docs/ROADMAP.md` · Architecture: `docs/architecture.md`
+Product vision: `docs/VISION.md` · Plan: `docs/PLAN.md` · Architecture: `docs/architecture.md` · Gates: `docs/validation-gates.md`
 
-When a rule below conflicts with a feature request, the rule wins. When the vision conflicts with the roadmap, the vision wins.
+When a rule below conflicts with a feature request, the rule wins. When the vision conflicts with the plan, the vision wins.
 
 ## Current scope
 
-- **Active phase: Phase 4 — Research workbench.** Tearsheet depth, version diff, research notes, and lab interaction. Do not start Phase 5 (AI Copilot). Validation gates from Phase 3 remain in front of `VALIDATED`. See `docs/ROADMAP.md`.
+- **Active phase: Phase 4 — Research workbench closeout.** Tearsheet depth, multi-backtest compare, MAE/MFE, UI v2, frontend tests. Do not start Phase 5 (AI Copilot). Validation gates from Phase 3 remain in front of `VALIDATED`. See `docs/PLAN.md`.
 - Do not start Phase 5 (AI Copilot) until Phase 4 workbench quality is in place. One phase at a time.
 - Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
 - **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.
-- Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.
+- **Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.**
+- **No module that synthesizes backtest data may exist in this repository.** (Synthetic price series, metrics, trades, heatmaps — all prohibited. This rule is `grep`-checkable; the previous "purpose-based" rule was not.)
+- **Single source of truth for phase/status.** "当前阶段" 与 "已交付能力" 在整个仓库只允许声明一处（`docs/PLAN.md` 第 2 章与第 7 章）。其余文档一律指向此处，不得自行复述。
 
 ## Fail loud, never degrade silently
 
@@ -63,11 +65,12 @@ This is the highest-priority correctness rule. A wrong number is worse than no n
 
 ## UI
 
-- Follow Axiom design tokens (white, `#1677FF`, restrained green/red). See `design-system/axiom-street/MASTER.md`.
-- No purple gradients, neon, glassmorphism, robot icons, or oversized chart walls.
-- Financial figures use `tabular-nums`. Empty states use honest copy and never fake portfolio P&L.
-- Split components; no 3000-line pages.
-- Deflated Sharpe and overfitting probability rank visually above raw Sharpe once Phase 3 lands.
+- Follow Axiom design tokens v2 (dual theme, 5-level surfaces, hairline borders, density, mono figures). See `design-system/axiom-street/MASTER.md`.
+- Dark theme allowed (near-black from `#0a0a0b`, pure `#000` forbidden). No purple gradients, neon, glassmorphism, robot icons, oversized chart walls.
+- Financial figures use `tabular-nums` **and** `--font-mono`. Empty states use honest copy and never fake portfolio P&L.
+- Split components; no 400-line pages.
+- Emphasis color budget < 5% page area.
+- Deflated Sharpe and overfitting probability rank visually above raw Sharpe.
 
 ## Every PR
 

@@ -3,412 +3,25 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck } from "lucide-react";
-import { api, type ValidationRun } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { EquityCurve } from "@/components/charts/equity-curve";
 import { formatPct } from "@/lib/utils";
-import { FoldSharpeBars } from "@/features/validation/fold-sharpe-bars";
 import { WalkForwardForm } from "@/features/validation/walk-forward-form";
 import { SensitivityForm } from "@/features/validation/sensitivity-form";
 import { CostScanForm } from "@/features/validation/cost-form";
 import { BootstrapForm } from "@/features/validation/bootstrap-form";
 import { RegimeForm } from "@/features/validation/regime-form";
 import { SpaForm } from "@/features/validation/spa-form";
-import { CostAlphaBars, RegimeSharpeBars, SharpeSurfaceBars, SpaTStatBars } from "@/features/validation/surface-bars";
-
-function isInflight(row: ValidationRun): boolean {
-  return row.status === "QUEUED" || row.status === "RUNNING";
-}
-
-function conclusion(row: ValidationRun) {
-  if (row.status === "QUEUED" || row.status === "RUNNING") {
-    return { tone: "blue" as const, label: row.progress_step || row.status };
-  }
-  if (row.error) return { tone: "red" as const, label: "失败" };
-  if (row.kind === "DSR") {
-    return row.passed
-      ? { tone: "green" as const, label: "通过 95%" }
-      : { tone: "amber" as const, label: "未过线" };
-  }
-  if (row.kind === "PBO") {
-    return row.passed
-      ? { tone: "green" as const, label: "PBO ≤ 0.5" }
-      : { tone: "amber" as const, label: "PBO > 0.5" };
-  }
-  if (row.kind === "SENSITIVITY") {
-    return row.passed
-      ? { tone: "green" as const, label: "高原" }
-      : { tone: "amber" as const, label: "孤峰" };
-  }
-  if (row.kind === "COST") {
-    return row.passed
-      ? { tone: "green" as const, label: "成本可承受" }
-      : { tone: "amber" as const, label: "临界成本过低" };
-  }
-  if (row.kind === "BOOTSTRAP") {
-    return row.passed
-      ? { tone: "green" as const, label: "Sharpe CI > 0" }
-      : { tone: "amber" as const, label: "区间跨零" };
-  }
-  if (row.kind === "REGIME") {
-    if (row.passed && row.result.single_regime === true) {
-      return { tone: "amber" as const, label: "edge 集中" };
-    }
-    return row.passed
-      ? { tone: "green" as const, label: "跨制度稳健" }
-      : { tone: "amber" as const, label: "单一制度" };
-  }
-  if (row.kind === "SPA") {
-    return row.passed
-      ? { tone: "green" as const, label: "SPA_c 拒绝无 edge" }
-      : { tone: "amber" as const, label: "不能声称有 edge" };
-  }
-  return row.passed
-    ? { tone: "green" as const, label: "通过" }
-    : { tone: "amber" as const, label: "未通过" };
-}
-
-function asFolds(result: Record<string, unknown>): Array<Record<string, unknown>> {
-  return Array.isArray(result.folds) ? (result.folds as Array<Record<string, unknown>>) : [];
-}
-
-function asEquity(result: Record<string, unknown>): Array<{ time: string; strategy: number }> {
-  const raw = Array.isArray(result.oos_equity) ? result.oos_equity : [];
-  return raw
-    .map((point) => {
-      const row = point as { ts?: string; strategy_value?: number };
-      if (!row.ts || typeof row.strategy_value !== "number") return null;
-      return { time: String(row.ts).slice(0, 10), strategy: row.strategy_value };
-    })
-    .filter((point): point is { time: string; strategy: number } => point != null);
-}
-
-function WalkForwardReport({ run }: { run: ValidationRun }) {
-  const folds = asFolds(run.result);
-  const equity = asEquity(run.result);
-  const combined =
-    typeof run.result.combined_oos_sharpe === "number" ? run.result.combined_oos_sharpe : null;
-  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
-  return (
-    <Card>
-      <CardHeader
-        title="最近一次 Walk-forward"
-        hint={
-          <p className="text-xs text-as-muted">
-            {run.params.mode === "anchored" ? "锚定" : "滚动"} · 训练{" "}
-            {String(run.params.train_years ?? "—")} 年 / 测试 {String(run.params.test_years ?? "—")} 年
-          </p>
-        }
-      />
-      {reason ? <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p> : null}
-      {combined != null ? (
-        <p className="mb-4 text-xs text-as-muted">
-          拼接样本外 Sharpe{" "}
-          <span className="tabular-nums text-as-text">{combined.toFixed(2)}</span>
-          {run.result.overfit_collapse === true ? " · 判定为过拟合塌缩" : ""}
-        </p>
-      ) : null}
-      {folds.length ? <FoldSharpeBars folds={folds} /> : null}
-      {equity.length ? (
-        <div className="mt-6">
-          <h4 className="mb-2 text-xs font-medium text-as-muted">拼接样本外净值</h4>
-          <EquityCurve data={equity} height={220} />
-        </div>
-      ) : null}
-    </Card>
-  );
-}
-
-function asPoints(result: Record<string, unknown>): Array<Record<string, unknown>> {
-  return Array.isArray(result.points) ? (result.points as Array<Record<string, unknown>>) : [];
-}
-
-function SensitivityReport({ run }: { run: ValidationRun }) {
-  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
-  const shape = typeof run.result.shape === "string" ? run.result.shape : null;
-  const peakSharpe =
-    typeof run.result.peak_sharpe === "number" ? run.result.peak_sharpe : null;
-  const width = typeof run.result.plateau_width === "number" ? run.result.plateau_width : null;
-  const points = asPoints(run.result);
-  return (
-    <Card>
-      <CardHeader
-        title="最近一次参数敏感性"
-        hint={
-          <p className="text-xs text-as-muted">
-            最优点周围 Sharpe 是否形成高原。孤峰是过拟合特征，不能进入 VALIDATED。
-          </p>
-        }
-      />
-      {reason ? <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p> : null}
-      <p className="mb-4 text-xs text-as-muted">
-        {shape === "plateau" ? "高原" : shape === "knife_edge" ? "孤峰" : "形态未记录"}
-        {peakSharpe != null ? ` · 峰值 Sharpe ${peakSharpe.toFixed(2)}` : ""}
-        {width != null ? ` · 带宽 ${width} 点` : ""}
-      </p>
-      {points.length ? (
-        <SharpeSurfaceBars
-          points={points.map((row) => ({
-            value: typeof row.value === "number" ? row.value : undefined,
-            sharpe: typeof row.sharpe === "number" ? row.sharpe : null,
-            backtest_id: typeof row.backtest_id === "string" ? row.backtest_id : null,
-            on_plateau: row.on_plateau === true,
-            is_peak: row.is_peak === true,
-          }))}
-        />
-      ) : null}
-    </Card>
-  );
-}
-
-function asInterval(raw: unknown): { observed: number; low: number; high: number } | null {
-  if (!raw || typeof raw !== "object") return null;
-  const row = raw as { observed?: unknown; low?: unknown; high?: unknown };
-  if (
-    typeof row.observed !== "number" ||
-    typeof row.low !== "number" ||
-    typeof row.high !== "number"
-  ) {
-    return null;
-  }
-  return { observed: row.observed, low: row.low, high: row.high };
-}
-
-function IntervalRow({
-  label,
-  interval,
-  format,
-}: {
-  label: string;
-  interval: { observed: number; low: number; high: number };
-  format: (n: number) => string;
-}) {
-  const span = interval.high - interval.low;
-  const absBound = Math.max(Math.abs(interval.low), Math.abs(interval.high), Math.abs(interval.observed), 1e-9);
-  const left = ((interval.low + absBound) / (2 * absBound)) * 100;
-  const width = Math.max(4, (span / (2 * absBound)) * 100);
-  const obsLeft = ((interval.observed + absBound) / (2 * absBound)) * 100;
-  const crosses = interval.low <= 0 && interval.high >= 0;
-  return (
-    <div className="grid gap-2 sm:grid-cols-[6.5rem_1fr_9rem] sm:items-center">
-      <div className="text-[11px] text-as-muted">{label}</div>
-      <div className="relative h-2 rounded-full bg-as-secondary">
-        <div
-          className={`absolute top-0 h-2 rounded-full ${crosses ? "bg-as-negative/70" : "bg-as-primary"}`}
-          style={{ left: `${left}%`, width: `${width}%` }}
-        />
-        <div
-          className="absolute top-[-2px] h-3 w-0.5 bg-as-text"
-          style={{ left: `${obsLeft}%` }}
-          title={`观测 ${format(interval.observed)}`}
-        />
-      </div>
-      <div className="tabular-nums text-[11px] text-as-muted">
-        {format(interval.observed)} [{format(interval.low)}, {format(interval.high)}]
-      </div>
-    </div>
-  );
-}
-
-function BootstrapReport({ run }: { run: ValidationRun }) {
-  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
-  const sharpe = asInterval(run.result.sharpe);
-  const cagr = asInterval(run.result.cagr);
-  const maxDd = asInterval(run.result.max_drawdown);
-  const nBoot = typeof run.result.n_boot === "number" ? run.result.n_boot : null;
-  const meanBlock =
-    typeof run.result.mean_block_length === "number" ? run.result.mean_block_length : null;
-  const level =
-    typeof run.result.confidence_level === "number" ? run.result.confidence_level : 0.95;
-  return (
-    <Card>
-      <CardHeader
-        title="最近一次 Bootstrap"
-        hint={
-          <p className="text-xs text-as-muted">
-            Stationary bootstrap {level * 100}% 分位区间。Sharpe 下界 ≤ 0 不能进入 VALIDATED。
-            {nBoot != null ? ` · ${nBoot} 次重抽样` : ""}
-            {meanBlock != null ? ` · 平均块长 ${meanBlock.toFixed(1)}` : ""}
-          </p>
-        }
-      />
-      {reason ? <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p> : null}
-      <div className="space-y-3">
-        {sharpe ? (
-          <IntervalRow label="Sharpe" interval={sharpe} format={(n) => n.toFixed(2)} />
-        ) : null}
-        {cagr ? (
-          <IntervalRow label="CAGR" interval={cagr} format={(n) => formatPct(n)} />
-        ) : null}
-        {maxDd ? (
-          <IntervalRow label="MaxDD" interval={maxDd} format={(n) => formatPct(n)} />
-        ) : null}
-      </div>
-    </Card>
-  );
-}
-
-function asSlices(result: Record<string, unknown>): Array<Record<string, unknown>> {
-  return Array.isArray(result.slices) ? (result.slices as Array<Record<string, unknown>>) : [];
-}
-
-function RegimeReport({ run }: { run: ValidationRun }) {
-  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
-  const concentrated =
-    typeof run.result.concentrated_in === "string" ? run.result.concentrated_in : null;
-  const slices = asSlices(run.result);
-  return (
-    <Card>
-      <CardHeader
-        title="最近一次制度稳定性"
-        hint={
-          <p className="text-xs text-as-muted">
-            按基准牛/熊、实现波动、FOMC 利率周期与指定压力窗口切片。互补制度 Sharpe 为负不能进入 VALIDATED。
-          </p>
-        }
-      />
-      {reason ? <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p> : null}
-      {run.result.single_regime === true ? (
-        <p className="mb-4 text-xs text-as-muted">
-          edge 集中在 {concentrated || "单一制度"}，互补制度未塌缩，已标注。
-        </p>
-      ) : null}
-      {slices.length ? (
-        <RegimeSharpeBars
-          slices={slices.map((row) => ({
-            key: typeof row.key === "string" ? row.key : "unknown",
-            axis: typeof row.axis === "string" ? row.axis : "",
-            label: typeof row.label === "string" ? row.label : String(row.key ?? ""),
-            n_obs: typeof row.n_obs === "number" ? row.n_obs : 0,
-            sharpe: typeof row.sharpe === "number" ? row.sharpe : null,
-            win_rate: typeof row.win_rate === "number" ? row.win_rate : null,
-            covered: row.covered === true,
-          }))}
-        />
-      ) : null}
-    </Card>
-  );
-}
-
-function asModels(result: Record<string, unknown>): Array<Record<string, unknown>> {
-  return Array.isArray(result.models) ? (result.models as Array<Record<string, unknown>>) : [];
-}
-
-function SpaReport({ run }: { run: ValidationRun }) {
-  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
-  const pRc = typeof run.result.p_reality_check === "number" ? run.result.p_reality_check : null;
-  const pLower = typeof run.result.p_spa_lower === "number" ? run.result.p_spa_lower : null;
-  const pConsistent =
-    typeof run.result.p_spa_consistent === "number" ? run.result.p_spa_consistent : null;
-  const pUpper = typeof run.result.p_spa_upper === "number" ? run.result.p_spa_upper : null;
-  const nModels = typeof run.result.n_models === "number" ? run.result.n_models : null;
-  const nObs = typeof run.result.n_obs === "number" ? run.result.n_obs : null;
-  const statistic = typeof run.result.statistic === "number" ? run.result.statistic : null;
-  const models = asModels(run.result);
-  return (
-    <Card>
-      <CardHeader
-        title="最近一次 Reality Check"
-        hint={
-          <p className="text-xs text-as-muted">
-            White RC 是未学生化的最大均值；Hansen SPA_c 是闸门。p ≥ α 表示不能声称最好的试验优于现金。
-          </p>
-        }
-      />
-      {reason ? <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p> : null}
-      <p className="mb-4 text-xs text-as-muted">
-        {nModels != null ? `${nModels} 条试验` : "试验数未记录"}
-        {nObs != null ? ` · ${nObs} 个共同交易日` : ""}
-        {statistic != null ? ` · T ${statistic.toFixed(2)}` : ""}
-      </p>
-      <dl className="mb-4 grid gap-3 text-xs text-as-muted sm:grid-cols-4">
-        <div>
-          <dt>White RC</dt>
-          <dd className="mt-1 tabular-nums text-as-text">
-            {pRc == null ? "—" : `p ${pRc.toFixed(3)}`}
-          </dd>
-        </div>
-        <div>
-          <dt>SPA_l</dt>
-          <dd className="mt-1 tabular-nums text-as-text">
-            {pLower == null ? "—" : `p ${pLower.toFixed(3)}`}
-          </dd>
-        </div>
-        <div>
-          <dt>SPA_c</dt>
-          <dd className="mt-1 tabular-nums text-as-text">
-            {pConsistent == null ? "—" : `p ${pConsistent.toFixed(3)}`}
-          </dd>
-        </div>
-        <div>
-          <dt>SPA_u</dt>
-          <dd className="mt-1 tabular-nums text-as-text">
-            {pUpper == null ? "—" : `p ${pUpper.toFixed(3)}`}
-          </dd>
-        </div>
-      </dl>
-      {models.length ? (
-        <SpaTStatBars
-          models={models.map((row) => ({
-            backtest_id: typeof row.backtest_id === "string" ? row.backtest_id : null,
-            t_stat: typeof row.t_stat === "number" ? row.t_stat : null,
-            mean: typeof row.mean === "number" ? row.mean : null,
-            is_best: row.is_best === true,
-          }))}
-        />
-      ) : null}
-    </Card>
-  );
-}
-
-function CostReport({ run }: { run: ValidationRun }) {
-  const conclusionText =
-    typeof run.result.conclusion === "string" ? run.result.conclusion : null;
-  const reason = typeof run.result.reason === "string" ? run.result.reason : null;
-  const breakeven =
-    typeof run.result.breakeven_bps === "number" ? run.result.breakeven_bps : null;
-  const realistic =
-    typeof run.result.realistic_one_way_bps === "number"
-      ? run.result.realistic_one_way_bps
-      : null;
-  const points = asPoints(run.result);
-  return (
-    <Card>
-      <CardHeader
-        title="最近一次成本敏感性"
-        hint={
-          <p className="text-xs text-as-muted">
-            alpha_capm 归零的单边成本。不高于真实成本则策略判死。
-          </p>
-        }
-      />
-      {conclusionText ? (
-        <p className="mb-2 text-sm leading-relaxed text-as-text">{conclusionText}</p>
-      ) : null}
-      {reason ? <p className="mb-4 text-xs leading-relaxed text-as-muted">{reason}</p> : null}
-      <p className="mb-4 text-xs text-as-muted">
-        临界{" "}
-        <span className="tabular-nums text-as-text">
-          {breakeven == null ? "> 网格上限" : `${breakeven.toFixed(2)} bps`}
-        </span>
-        {realistic != null ? ` · 真实 ${realistic} bps` : ""}
-      </p>
-      {points.length ? (
-        <CostAlphaBars
-          points={points.map((row) => ({
-            cost_bps: typeof row.cost_bps === "number" ? row.cost_bps : undefined,
-            alpha_capm: typeof row.alpha_capm === "number" ? row.alpha_capm : null,
-            backtest_id: typeof row.backtest_id === "string" ? row.backtest_id : null,
-          }))}
-          realisticBps={realistic}
-        />
-      ) : null}
-    </Card>
-  );
-}
+import { isInflight, conclusion } from "./validation-status";
+import { WalkForwardReport } from "./reports/walk-forward-report";
+import { SensitivityReport } from "./reports/sensitivity-report";
+import { asInterval, BootstrapReport } from "./reports/bootstrap-report";
+import { RegimeReport } from "./reports/regime-report";
+import { SpaReport } from "./reports/spa-report";
+import { CostReport } from "./reports/cost-report";
 
 export function ValidationDesk() {
   const { data, isLoading, error } = useQuery({
@@ -432,26 +45,57 @@ export function ValidationDesk() {
   return (
     <div className="space-y-6 as-enter">
       <PageHeader
-        title="验证"
-        description="统计验证是进入 VALIDATED 的唯一路径。客户端不能把策略标成已验证。"
+        title="稳健性验证"
+        description="一个漂亮的结果，还需要经得住样本外、成本与市场变化的检验。"
       />
 
       <Card>
-        <p className="text-sm text-as-text">{gates?.note || "正在读取验证闸门…"}</p>
+        <p className="text-sm text-as-text">
+          {gates?.note ||
+            (error ? "连接研究服务后查看验证要求。" : "正在读取验证闸门…")}
+        </p>
         <dl className="mt-4 grid gap-3 text-xs text-as-muted sm:grid-cols-3">
           <div>
             <dt className="text-[11px] uppercase tracking-wide">已实现</dt>
-            <dd className="mt-1 text-as-text">{(gates?.available || ["DSR", "WALK_FORWARD", "PBO", "SENSITIVITY", "COST", "BOOTSTRAP", "REGIME", "SPA"]).join(" · ")}</dd>
+            <dd className="mt-1 text-as-text">
+              {(
+                gates?.available || [
+                  "DSR",
+                  "WALK_FORWARD",
+                  "PBO",
+                  "SENSITIVITY",
+                  "COST",
+                  "BOOTSTRAP",
+                  "REGIME",
+                  "SPA",
+                ]
+              ).join(" · ")}
+            </dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-wide">VALIDATED 需要</dt>
+            <dt className="text-[11px] uppercase tracking-wide">
+              VALIDATED 需要
+            </dt>
             <dd className="mt-1 text-as-text">
-              {(gates?.validated_requires || ["WALK_FORWARD", "DSR", "PBO", "SENSITIVITY", "COST", "BOOTSTRAP", "REGIME", "SPA"]).join(" · ")}
+              {(
+                gates?.validated_requires || [
+                  "WALK_FORWARD",
+                  "DSR",
+                  "PBO",
+                  "SENSITIVITY",
+                  "COST",
+                  "BOOTSTRAP",
+                  "REGIME",
+                  "SPA",
+                ]
+              ).join(" · ")}
             </dd>
           </div>
           <div>
             <dt className="text-[11px] uppercase tracking-wide">尚未接入</dt>
-            <dd className="mt-1">{(gates?.missing || []).join(" · ") || "—"}</dd>
+            <dd className="mt-1">
+              {(gates?.missing || []).join(" · ") || "—"}
+            </dd>
           </div>
         </dl>
       </Card>
@@ -459,7 +103,19 @@ export function ValidationDesk() {
       <Card>
         <CardHeader
           title="Walk-forward"
-          hint={<p className="text-xs text-as-muted">每折一次完整 LEAN 运行，样本外拼接后评分。过拟合塌缩不能进入 VALIDATED。参数扫描在 <Link href="/experiments" className="text-as-primary hover:underline">实验</Link>。</p>}
+          hint={
+            <p className="text-xs text-as-muted">
+              每折一次完整 LEAN 运行，样本外拼接后评分。过拟合塌缩不能进入
+              VALIDATED。参数扫描在{" "}
+              <Link
+                href="/experiments"
+                className="text-as-primary hover:underline"
+              >
+                实验
+              </Link>
+              。
+            </p>
+          }
         />
         <WalkForwardForm />
       </Card>
@@ -474,7 +130,10 @@ export function ValidationDesk() {
           hint={
             <p className="text-xs text-as-muted">
               扰动 lookback，判断 Sharpe 响应是高原还是孤峰。PBO 参数扫描仍在{" "}
-              <Link href="/experiments" className="text-as-primary hover:underline">
+              <Link
+                href="/experiments"
+                className="text-as-primary hover:underline"
+              >
                 实验
               </Link>
               。
@@ -509,7 +168,8 @@ export function ValidationDesk() {
           title="Bootstrap 置信区间"
           hint={
             <p className="text-xs text-as-muted">
-              对已完成回测的日收益做 stationary bootstrap。区间跨零则无统计显著性。
+              对已完成回测的日收益做 stationary
+              bootstrap。区间跨零则无统计显著性。
             </p>
           }
         />
@@ -525,14 +185,17 @@ export function ValidationDesk() {
           title="制度稳定性"
           hint={
             <p className="text-xs text-as-muted">
-              按市场状态分段看 Sharpe 与胜率。只在单一制度有效的策略会被标注；互补制度为负则不能进入 VALIDATED。
+              按市场状态分段看 Sharpe
+              与胜率。只在单一制度有效的策略会被标注；互补制度为负则不能进入
+              VALIDATED。
             </p>
           }
         />
         <RegimeForm />
       </Card>
 
-      {latestRegime && (latestRegime.status === "COMPLETED" || latestRegime.error) ? (
+      {latestRegime &&
+      (latestRegime.status === "COMPLETED" || latestRegime.error) ? (
         <RegimeReport run={latestRegime} />
       ) : null}
 
@@ -541,7 +204,8 @@ export function ValidationDesk() {
           title="Reality Check / SPA"
           hint={
             <p className="text-xs text-as-muted">
-              对同一家族试验台账做 White Reality Check 与 Hansen SPA。闸门是 SPA_c，不是最好那条试验的原始 Sharpe。
+              对同一家族试验台账做 White Reality Check 与 Hansen SPA。闸门是
+              SPA_c，不是最好那条试验的原始 Sharpe。
             </p>
           }
         />
@@ -556,7 +220,10 @@ export function ValidationDesk() {
         <Card className="h-40 animate-pulse bg-as-secondary" />
       ) : error ? (
         <Card>
-          <EmptyState title="API 未连接" description="请先启动 FastAPI 服务（端口 8000）。" />
+          <EmptyState
+            title="API 未连接"
+            description="请先启动 FastAPI 服务（端口 8000）。"
+          />
         </Card>
       ) : !items.length ? (
         <Card className="min-h-[240px]">
@@ -568,7 +235,9 @@ export function ValidationDesk() {
         </Card>
       ) : (
         <Card className="p-0">
-          <div className="border-b border-as-border px-5 py-3 text-sm font-medium">验证运行</div>
+          <div className="border-b border-as-border px-5 py-3 text-sm font-medium">
+            验证运行
+          </div>
           <table className="w-full text-sm">
             <thead className="text-left text-[11px] uppercase tracking-wide text-as-muted">
               <tr className="border-b border-as-border">
@@ -582,16 +251,26 @@ export function ValidationDesk() {
             <tbody>
               {items.map((row) => {
                 const badge = conclusion(row);
-                const pbo = typeof row.result.pbo === "number" ? row.result.pbo : null;
-                const dsr = typeof row.result.dsr === "number" ? row.result.dsr : null;
-                const n = typeof row.result.n_trials === "number" ? row.result.n_trials : null;
+                const pbo =
+                  typeof row.result.pbo === "number" ? row.result.pbo : null;
+                const dsr =
+                  typeof row.result.dsr === "number" ? row.result.dsr : null;
+                const n =
+                  typeof row.result.n_trials === "number"
+                    ? row.result.n_trials
+                    : null;
                 const oos =
                   typeof row.result.combined_oos_sharpe === "number"
                     ? row.result.combined_oos_sharpe
                     : null;
-                const shape = typeof row.result.shape === "string" ? row.result.shape : null;
+                const shape =
+                  typeof row.result.shape === "string"
+                    ? row.result.shape
+                    : null;
                 const breakeven =
-                  typeof row.result.breakeven_bps === "number" ? row.result.breakeven_bps : null;
+                  typeof row.result.breakeven_bps === "number"
+                    ? row.result.breakeven_bps
+                    : null;
                 const sharpeCi = asInterval(row.result.sharpe);
                 const concentrated =
                   typeof row.result.concentrated_in === "string"
@@ -626,24 +305,34 @@ export function ValidationDesk() {
                                 : row.passed
                                   ? "跨制度"
                                   : "未通过"
-                            : row.kind === "SPA"
-                              ? typeof row.result.p_spa_consistent === "number"
-                                ? `SPA_c ${row.result.p_spa_consistent.toFixed(3)}`
-                                : "—"
-                            : oos == null
-                              ? "—"
-                              : `OOS Sharpe ${oos.toFixed(2)}`;
+                              : row.kind === "SPA"
+                                ? typeof row.result.p_spa_consistent ===
+                                  "number"
+                                  ? `SPA_c ${row.result.p_spa_consistent.toFixed(3)}`
+                                  : "—"
+                                : oos == null
+                                  ? "—"
+                                  : `OOS Sharpe ${oos.toFixed(2)}`;
                 return (
-                  <tr key={row.id} className="border-b border-as-border last:border-0">
+                  <tr
+                    key={row.id}
+                    className="border-b border-as-border last:border-0"
+                  >
                     <td className="px-5 py-3 font-medium">{row.kind}</td>
-                    <td className="px-5 py-3 text-xs text-as-muted">{row.status}</td>
+                    <td className="px-5 py-3 text-xs text-as-muted">
+                      {row.status}
+                    </td>
                     <td className="px-5 py-3">
                       <Badge tone={badge.tone}>{badge.label}</Badge>
                       {row.error?.message ? (
-                        <p className="mt-1 text-xs text-as-muted">{row.error.message}</p>
+                        <p className="mt-1 text-xs text-as-muted">
+                          {row.error.message}
+                        </p>
                       ) : null}
                     </td>
-                    <td className="px-5 py-3 tabular-nums text-as-muted">{summary}</td>
+                    <td className="px-5 py-3 tabular-nums text-as-muted">
+                      {summary}
+                    </td>
                     <td className="px-5 py-3">
                       {row.backtest_id ? (
                         <Link

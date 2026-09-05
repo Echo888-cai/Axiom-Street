@@ -176,10 +176,7 @@ def classify_cost_curve(
         )
     return CostSensitivityResult(
         passed=True,
-        reason=(
-            f"临界成本 {breakeven:.2f} bps 高于真实单边成本 "
-            f"{realistic_one_way_bps:g} bps。"
-        ),
+        reason=(f"临界成本 {breakeven:.2f} bps 高于真实单边成本 {realistic_one_way_bps:g} bps。"),
         breakeven_bps=float(breakeven),
         breakeven_kind=kind,
         realistic_one_way_bps=float(realistic_one_way_bps),

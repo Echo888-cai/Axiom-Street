@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
-from quant.data.ingest_spy import data_status
+from quant.data.ingest import data_status
 from quant.data.symbols import normalize_symbols
 from services.api.db import SessionLocal, get_db
 from services.api.health import docker_status

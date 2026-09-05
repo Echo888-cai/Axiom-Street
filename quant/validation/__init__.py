@@ -113,4 +113,3 @@ __all__ = [
     "spa_test",
     "stitch_oos_equity",
 ]
-

@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from quant.data.ingest_spy import data_status, ingest
+from quant.data.ingest import data_status, ingest
 from quant.data.rate_limit import (
     TokenBucket,
     ensure_ingest_symbol_count,
@@ -95,7 +95,7 @@ def test_load_symbols_file_empty_fails(tmp_path: Path):
 def test_ingest_rejects_over_max_symbols(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("STREET_INGEST_MAX_SYMBOLS", "2")
     monkeypatch.setattr(
-        "quant.data.ingest_spy.fetch_daily",
+        "quant.data.ingest.fetch_daily",
         lambda symbol, **_k: FetchResult(_bars(symbol), "yfinance", YFINANCE_CAPABILITIES),
     )
     with pytest.raises(ValueError, match="at most 2 symbols"):
@@ -107,7 +107,7 @@ def test_concurrent_ingest_writes_every_symbol(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("STREET_INGEST_RPS", "0")
     tickers = [f"A{i:03d}" for i in range(12)]
     monkeypatch.setattr(
-        "quant.data.ingest_spy.fetch_daily",
+        "quant.data.ingest.fetch_daily",
         lambda symbol, **_k: FetchResult(_bars(symbol), "yfinance", YFINANCE_CAPABILITIES),
     )
     result = ingest(symbols=tickers, data_root=tmp_path, convert_lean=False)
@@ -122,7 +122,7 @@ def test_ingest_500_symbols_writes_lean(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("STREET_INGEST_MAX_SYMBOLS", "500")
     tickers = [f"A{i:03d}" for i in range(500)]
     monkeypatch.setattr(
-        "quant.data.ingest_spy.fetch_daily",
+        "quant.data.ingest.fetch_daily",
         lambda symbol, **_k: FetchResult(_bars(symbol), "yfinance", YFINANCE_CAPABILITIES),
     )
     result = ingest(symbols=tickers, data_root=tmp_path, convert_lean=True)

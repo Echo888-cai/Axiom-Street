@@ -1,35 +1,44 @@
-# Axiom Street Design System
+# Axiom Street · White Studio
 
-## Product
+2026-09-05。当前产品采用单一浅色主题，依据项目所有者明确提出的白色、轻盈、克制、玻璃质感方向。旧版双主题、禁止玻璃和小圆角规则已被替代，历史内容保存在 `archive/v2.md`。
 
-AI-native quant research workbench. Visual goal: Apple restraint + Linear efficiency + buy-side terminal credibility.
+## 视觉原则
 
-## Tokens
+白色内容面板承载数据；冷调浅灰构成画布；半透明玻璃用于侧栏、顶栏、模态框。层次来自留白、发丝边框、柔和阴影与精确对齐。避免大面积强调色、彩色卡片、发光效果或凭空填充的收益数据。
 
-| Token | Value |
-|-------|-------|
-| Background | `#FFFFFF` |
-| Secondary | `#F7F8FA` |
-| Border | `rgba(15, 23, 42, 0.08)` |
-| Text | `#111827` |
-| Muted text | `#667085` |
-| Primary | `#1677FF` |
-| Positive | `#12B76A` |
-| Negative | `#F04438` |
-| Radius | `12px` |
-| Motion | `150–250ms` |
+## 令牌
 
-## Typography
+实现基线：`apps/web/src/app/globals.css`。Canvas 图表通过 `lib/chart-tokens.ts` 读取解析后的 CSS 令牌，不能把 `var(...)` 字符串直接传给图表引擎。
 
-`-apple-system, SF Pro, Inter, system-ui`. Financial figures use `tabular-nums`.
+| 角色 | 值 |
+|---|---|
+| 面板 | `#ffffff` |
+| 画布 | `#f5f6f8` / `#f7f8fa` |
+| 主文字 | `#22252b` |
+| 次文字 | `#737984` |
+| 强调色 | `#4167ac` |
+| 正向 / 负向 | `#34806a` / `#bb5b62` |
+| 边框 | `rgba(34,45,61,.085)` |
+| 玻璃表面 | 74% 白，24px 模糊 |
+| 控件圆角 | 12px |
+| 面板 / 模态圆角 | 20px / 24px |
 
-## Components
+字体优先系统字体，macOS 使用系统西文字体与苹方。构建无需从 Google Fonts 下载字体。标题 28–32px，正文 13–14px，辅助信息 10–12px；财务数字使用 tabular-nums。主按钮为石墨色渐变，次按钮为银白材质。
 
-- Cards: subtle border, weak shadow, 20–24px padding
-- Sidebar: icon + label, active = soft blue fill
-- Charts: Lightweight Charts with TradingView attribution retained
-- Empty states: honest copy, never fake portfolio P&L
+## 组件边界
 
-## Anti-patterns
+- `components/brand/axiom-mark.tsx`：原创矢量 A 标记，上升街道的切面。favicon 使用 `public/axiom-mark.svg`。
+- `components/layout/`：响应式外壳、导航、搜索入口与通知。
+- `components/ui/`：Button、Card、Input、Tabs、Badge、EmptyState、Modal 等通用原语。
+- `features/`：业务视图；由各自的查询和交互驱动，不能伪造研究结果。
+- 模态框使用原生 dialog 顶层渲染，防止被玻璃面板的 stacking context 限制，并提供焦点约束、Escape 与焦点归还。
 
-Purple tech gradients, neon, heavy glassmorphism, cyberpunk black, full-screen candles, robot icons, exaggerated glow, oversized corner radius, colorful card spam.
+## 页面与适配
+
+桌面侧栏 232–248px，可收至 76px。768px 以下使用移动导航。手机首页的装饰图形隐藏，让内容保持完整。长数据表在自身容器内横向滚动。策略编辑器保持至少 420px 高度。
+
+点击、悬停、焦点、禁用、加载、错误、空数据必须有明确反馈。玻璃表面下的主要操作目标至少 40–44px；密集辅助操作保持键盘可达。支持减少动画与减少透明度偏好。没有后端时保留工作台，并显示可重试的连接提示。
+
+## 产品真实性
+
+累计收益、夏普、回撤只读取完成的真实回测。不存在数据时展示破折号；不添加示例收益或伪装实时行情。模拟交易、实盘、硬风控继续标注规划中。当前界面以中文为主，现有 locales 留作渐进国际化，不宣称全文已国际化。

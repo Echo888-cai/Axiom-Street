@@ -116,7 +116,7 @@ services:
       context: .
       dockerfile: infra/docker/Dockerfile.web
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      API_BASE_URL: http://api:8000
     ports:
       - "3000:3000"
     depends_on:

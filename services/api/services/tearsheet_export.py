@@ -34,7 +34,9 @@ def _pdf_latin1(text: str) -> str:
     return text.encode("latin-1", "replace").decode("latin-1")
 
 
-def _load(db: Session, backtest_id: UUID) -> tuple[Backtest, BacktestMetrics, list[BacktestEquity], str]:
+def _load(
+    db: Session, backtest_id: UUID
+) -> tuple[Backtest, BacktestMetrics, list[BacktestEquity], str]:
     backtest = backtest_service.get_backtest(db, backtest_id)
     if backtest.status.value != "COMPLETED":
         raise ValueError("回测尚未完成，无法导出 tearsheet")

@@ -214,7 +214,11 @@ def summarize_exposure(
     short is treated as long-only (short = 0) because LEAN sometimes omits
     the empty short series.
     """
-    empty: dict[str, float | None] = {"turnover": None, "gross_exposure": None, "net_exposure": None}
+    empty: dict[str, float | None] = {
+        "turnover": None,
+        "gross_exposure": None,
+        "net_exposure": None,
+    }
     if not time_series:
         return empty
     by_name: dict[str, list[float]] = {}
@@ -232,9 +236,7 @@ def summarize_exposure(
     short_s = by_name.get("exposure_short") or []
     turn_s = by_name.get("turnover") or []
     if long_s and short_s and len(long_s) != len(short_s):
-        raise MetricParseError(
-            f"long/short 暴露长度不一致: {len(long_s)} vs {len(short_s)}"
-        )
+        raise MetricParseError(f"long/short 暴露长度不一致: {len(long_s)} vs {len(short_s)}")
     net: float | None = None
     gross: float | None = None
     if long_s and short_s:

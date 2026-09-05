@@ -27,9 +27,7 @@ def test_k_one_fails_loud():
 
 
 def test_short_panel_fails_loud():
-    panel = np.column_stack(
-        [_zero_mean(100, 0.01, 1), _zero_mean(100, 0.01, 2)]
-    )
+    panel = np.column_stack([_zero_mean(100, 0.01, 1), _zero_mean(100, 0.01, 2)])
     with pytest.raises(SpaError, match="少于"):
         spa_test(panel, n_boot=200, seed=1)
 
@@ -42,19 +40,17 @@ def test_identical_columns_fail_loud():
 
 def test_iid_method_is_not_an_option():
     # spa_test has no method=iid; resampling goes through stationary indices only.
-    panel = np.column_stack(
-        [_zero_mean(MIN_OBS, 0.01, 4), _zero_mean(MIN_OBS, 0.01, 5)]
-    )
+    panel = np.column_stack([_zero_mean(MIN_OBS, 0.01, 4), _zero_mean(MIN_OBS, 0.01, 5)])
     result = spa_test(panel, n_boot=200, seed=4, mean_block_length=1.0)
     assert result.n_models == MIN_MODELS
 
 
 def test_zero_mean_panel_does_not_reject():
-    panel = np.column_stack(
-        [_zero_mean(MIN_OBS * 2, 0.01, 6), _zero_mean(MIN_OBS * 2, 0.01, 7)]
-    )
+    panel = np.column_stack([_zero_mean(MIN_OBS * 2, 0.01, 6), _zero_mean(MIN_OBS * 2, 0.01, 7)])
     result = spa_test(panel, n_boot=400, seed=6, mean_block_length=1.0)
-    assert result.statistic == pytest.approx(0.0, abs=1e-8) or result.p_spa_consistent >= DEFAULT_ALPHA
+    assert (
+        result.statistic == pytest.approx(0.0, abs=1e-8) or result.p_spa_consistent >= DEFAULT_ALPHA
+    )
     assert result.passed is False
 
 
@@ -92,9 +88,7 @@ def test_hansen_p_value_ordering():
 
 def test_same_seed_reproducible():
     n = MIN_OBS
-    panel = np.column_stack(
-        [0.0008 + _zero_mean(n, 0.01, 11) * 0.5, _zero_mean(n, 0.01, 12)]
-    )
+    panel = np.column_stack([0.0008 + _zero_mean(n, 0.01, 11) * 0.5, _zero_mean(n, 0.01, 12)])
     a = spa_test(panel, n_boot=200, seed=99, mean_block_length=5.0)
     b = spa_test(panel, n_boot=200, seed=99, mean_block_length=5.0)
     assert a.p_spa_consistent == b.p_spa_consistent

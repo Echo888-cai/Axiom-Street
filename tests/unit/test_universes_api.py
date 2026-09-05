@@ -265,7 +265,7 @@ def test_ingest_delisted_symbol_records_effective_to(client, monkeypatch, tmp_pa
             )
         return FetchResult(pd.DataFrame(rows), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
     universe = client.post(
         "/api/v1/universes",
         json={
@@ -334,7 +334,7 @@ def test_rule_universe_builds_from_snapshot(client, monkeypatch, tmp_path):
             )
         return FetchResult(pd.DataFrame(rows), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
     ingest = client.post(
         "/api/v1/data/ingest",
         json={"symbols": ["SPY", "QQQ"], "provider": "yfinance", "convert_lean": False},
@@ -387,7 +387,7 @@ def test_rule_universe_market_cap_fails_without_fundamentals(client, monkeypatch
         ]
         return FetchResult(pd.DataFrame(rows), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
     ingest = client.post(
         "/api/v1/data/ingest",
         json={"symbols": ["SPY"], "provider": "yfinance", "convert_lean": False},
@@ -448,8 +448,8 @@ def test_rule_universe_builds_from_market_cap(client, monkeypatch, tmp_path):
             classified_as_of=date(2020, 1, 2),
         )
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_fundamentals", fake_fundamentals)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_fundamentals", fake_fundamentals)
     ingest = client.post(
         "/api/v1/data/ingest",
         json={"symbols": ["SPY", "XOM"], "provider": "yfinance", "convert_lean": False},

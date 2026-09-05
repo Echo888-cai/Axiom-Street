@@ -12,7 +12,10 @@ const selectClass =
 
 function readsLookback(code: string | undefined): boolean {
   if (!code) return false;
-  return code.includes('GetParameter("lookback")') || code.includes("GetParameter('lookback')");
+  return (
+    code.includes('GetParameter("lookback")') ||
+    code.includes("GetParameter('lookback')")
+  );
 }
 
 function parseValues(raw: string): number[] {
@@ -33,7 +36,10 @@ function parseValues(raw: string): number[] {
 
 export function PboScanForm() {
   const qc = useQueryClient();
-  const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.listStrategies });
+  const strategies = useQuery({
+    queryKey: ["strategies"],
+    queryFn: api.listStrategies,
+  });
   const [strategyId, setStrategyId] = useState("");
   const [start, setStart] = useState("2018-01-01");
   const [end, setEnd] = useState("2020-12-31");
@@ -47,20 +53,17 @@ export function PboScanForm() {
 
   const backtests = useQuery({
     queryKey: ["backtests", selected?.id, "COMPLETED"],
-    queryFn: () => api.listBacktests({ strategy_id: selected?.id, status: "COMPLETED" }),
+    queryFn: () =>
+      api.listBacktests({ strategy_id: selected?.id, status: "COMPLETED" }),
     enabled: Boolean(selected?.id),
   });
   const latest = backtests.data?.[0];
 
   useEffect(() => {
-    if (!selected && items[0]) setStrategyId(items[0].id);
-  }, [items, selected]);
-
-  useEffect(() => {
     if (!latest) return;
     setStart(latest.start_date.slice(0, 10));
     setEnd(latest.end_date.slice(0, 10));
-  }, [latest?.id]);
+  }, [latest]);
 
   const hint = useMemo(() => {
     if (!items.length) return "先建一条策略。";
@@ -131,15 +134,26 @@ export function PboScanForm() {
         </label>
         <label className="space-y-1 text-[11px] text-as-muted">
           开始
-          <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+          <Input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          />
         </label>
         <label className="space-y-1 text-[11px] text-as-muted">
           结束
-          <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <Input
+            type="date"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          />
         </label>
       </div>
       <p className="text-[11px] leading-relaxed text-as-muted">{hint}</p>
-      <Button type="submit" disabled={!versionId || !latest || !hasLookback || create.isPending}>
+      <Button
+        type="submit"
+        disabled={!versionId || !latest || !hasLookback || create.isPending}
+      >
         {create.isPending ? "提交中…" : "运行 lookback 扫描"}
       </Button>
     </form>

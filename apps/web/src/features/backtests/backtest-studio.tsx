@@ -1,17 +1,18 @@
 "use client";
+import { useBacktestAnalysis, peerLabel } from "./use-backtest-analysis";
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, Download, LineChart, NotebookPen } from "lucide-react";
-import { api, type Backtest } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EquityCurve, type EquityMarker, type EquitySeries } from "@/components/charts/equity-curve";
+import { EquityCurve } from "@/components/charts/equity-curve";
 import { DrawdownChart } from "@/components/charts/drawdown-chart";
 import { MonthlyHeatmap } from "@/components/charts/monthly-heatmap";
-import { formatNumber, formatPct, formatUsd, filterEquityByPeriod, cn } from "@/lib/utils";
+import { formatNumber, formatPct, formatUsd, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs } from "@/components/ui/tabs";
@@ -23,16 +24,6 @@ import { TruthStrip } from "@/features/tearsheet/truth-strip";
 import { DistributionPanel } from "@/features/tearsheet/distribution-panel";
 import { RollingPanel } from "@/features/tearsheet/rolling-panel";
 import { ExposurePanel } from "@/features/tearsheet/exposure-panel";
-import type { ExposurePoint } from "@/components/charts/exposure-chart";
-import {
-  dailyReturnsFromEquity,
-  histogram,
-  normalizeSeries,
-  pairedDailyReturns,
-  qqNormal,
-  rollingBeta,
-  rollingSharpe,
-} from "@/lib/tearsheet";
 
 const RUN_STEPS = ["排队中", "准备环境", "加载数据", "运行策略", "计算指标"];
 
@@ -56,7 +47,9 @@ function Toggle({
       className={cn(
         "h-8 rounded-lg px-2.5 text-[11px] font-medium outline-none transition-colors duration-as",
         "focus-visible:ring-2 focus-visible:ring-as-primary/30",
-        pressed ? "bg-as-bg text-as-text shadow-sm" : "text-as-muted hover:text-as-text",
+        pressed
+          ? "bg-as-bg text-as-text shadow-sm"
+          : "text-as-muted hover:text-as-text",
         disabled && "cursor-not-allowed opacity-40",
       )}
     >
@@ -69,7 +62,9 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
   const qc = useQueryClient();
   const [liveStep, setLiveStep] = useState<string | null>(null);
   const [tab, setTab] = useState("curve");
-  const [period, setPeriod] = useState<"1M" | "3M" | "YTD" | "1Y" | "ALL">("ALL");
+  const [period, setPeriod] = useState<"1M" | "3M" | "YTD" | "1Y" | "ALL">(
+    "ALL",
+  );
   const [logScale, setLogScale] = useState(false);
   const [normalized, setNormalized] = useState(false);
   const [showTrades, setShowTrades] = useState(false);
@@ -79,7 +74,8 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
     queryKey: ["backtest", backtestId],
     queryFn: () => api.getBacktest(backtestId),
     refetchInterval: (q) =>
-      q.state.data && ["QUEUED", "STARTING", "RUNNING"].includes(q.state.data.status)
+      q.state.data &&
+      ["QUEUED", "STARTING", "RUNNING"].includes(q.state.data.status)
         ? 1500
         : false,
   });
@@ -95,7 +91,8 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
 
   useEffect(() => {
     if (!backtest.data) return;
-    if (!["QUEUED", "STARTING", "RUNNING"].includes(backtest.data.status)) return;
+    if (!["QUEUED", "STARTING", "RUNNING"].includes(backtest.data.status))
+      return;
     const es = new EventSource(api.eventsUrl(backtestId));
     es.addEventListener("progress", (ev) => {
       try {
@@ -112,202 +109,47 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
     return () => es.close();
   }, [backtest.data?.status, backtestId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const ready = backtest.data?.status === "COMPLETED";
-  const metrics = useQuery({
-    queryKey: ["metrics", backtestId],
-    queryFn: () => api.getMetrics(backtestId),
-    enabled: ready,
-  });
-  const equity = useQuery({
-    queryKey: ["equity", backtestId],
-    queryFn: () => api.getEquity(backtestId),
-    enabled: ready,
-  });
-  const trades = useQuery({
-    queryKey: ["trades", backtestId],
-    queryFn: () => api.getTrades(backtestId),
-    enabled: ready,
-  });
-  const monthly = useQuery({
-    queryKey: ["monthly", backtestId],
-    queryFn: () => api.getMonthlyReturns(backtestId),
-    enabled: ready,
-  });
-  const timeSeries = useQuery({
-    queryKey: ["time-series", backtestId],
-    queryFn: () => api.getTimeSeries(backtestId),
-    enabled: ready,
-  });
-  const pboQuery = useQuery({
-    queryKey: ["validation", backtest.data?.strategy_id, "PBO"],
-    queryFn: () => api.listValidation({ strategy_id: backtest.data?.strategy_id || "", kind: "PBO" }),
-    enabled: ready && Boolean(backtest.data?.strategy_id),
-  });
-  const peers = useQuery({
-    queryKey: ["backtests", backtest.data?.strategy_id, "COMPLETED"],
-    queryFn: () =>
-      api.listBacktests({ strategy_id: backtest.data?.strategy_id || "", status: "COMPLETED" }),
-    enabled: Boolean(backtest.data?.strategy_id),
-  });
-  const compareEquity = useQuery({
-    queryKey: ["equity", compareId],
-    queryFn: () => api.getEquity(compareId),
-    enabled: Boolean(compareId),
+  const {
+    metrics,
+    trades,
+    monthly,
+    peers,
+    pbo,
+    distribution,
+    exposure,
+    canLog,
+    series,
+    markers,
+    drawdownPoints,
+  } = useBacktestAnalysis({
+    backtest: backtest.data,
+    backtestId,
+    compareId,
+    period,
+    normalized,
+    showTrades,
   });
 
-  const pbo = useMemo(() => {
-    const items = pboQuery.data?.items || [];
-    const latest = items.find((row) => row.status === "COMPLETED" && !row.error);
-    const value = latest?.result?.pbo;
-    return typeof value === "number" ? value : null;
-  }, [pboQuery.data]);
-
-  const filteredEquity = useMemo(() => {
-    const raw = (equity.data || []).map((p) => ({
-      time: p.ts,
-      strategy: p.strategy_value,
-      benchmark: p.benchmark_value,
-      drawdown: p.drawdown,
-    }));
-    return filterEquityByPeriod(raw, period);
-  }, [equity.data, period]);
-
-  const distribution = useMemo(() => {
-    const values = (equity.data || []).map((p) => p.strategy_value);
-    const benches = (equity.data || []).map((p) => p.benchmark_value);
-    const times = (equity.data || []).slice(1).map((p) => p.ts);
-    const daily = dailyReturnsFromEquity(values);
-    if (daily.error) {
-      return {
-        error: daily.error,
-        bins: [],
-        qq: [],
-        rolling: { points: [], error: daily.error },
-        beta: { points: [], error: daily.error },
-      };
-    }
-    const hist = histogram(daily.returns);
-    const qq = qqNormal(daily.returns);
-    const rolling = rollingSharpe(daily.returns, times);
-    const paired = pairedDailyReturns(values, benches, times);
-    const beta = paired.error
-      ? { points: [], error: paired.error }
-      : rollingBeta(paired.strategy, paired.benchmark, paired.times);
-    return {
-      error: hist.error || qq.error,
-      bins: hist.bins,
-      qq: qq.points,
-      rolling,
-      beta,
-    };
-  }, [equity.data]);
-
-  const exposure = useMemo(() => {
-    const rows = timeSeries.data || [];
-    const byTime = new Map<string, ExposurePoint>();
-    const turnover: { time: string; value: number }[] = [];
-    for (const row of rows) {
-      const time = row.ts;
-      if (row.name === "turnover") {
-        turnover.push({ time, value: row.value });
-        continue;
-      }
-      const current = byTime.get(time) || { time };
-      if (row.name === "exposure_long") current.long = row.value;
-      if (row.name === "exposure_short") current.short = row.value;
-      byTime.set(time, current);
-    }
-    const points = [...byTime.values()]
-      .map((p) => ({
-        ...p,
-        net: p.long != null || p.short != null ? (p.long || 0) - (p.short || 0) : undefined,
-      }))
-      .sort((a, b) => a.time.localeCompare(b.time));
-    return { points, turnover };
-  }, [timeSeries.data]);
-
-  const canLog = filteredEquity.every((p) => p.strategy > 0);
-  const series: EquitySeries[] = useMemo(() => {
-    const strategyValues = filteredEquity.map((p) => p.strategy);
-    const benchValues = filteredEquity.map((p) => p.benchmark);
-    const strategyNorm = normalized ? normalizeSeries(strategyValues) : { values: strategyValues };
-    const out: EquitySeries[] = [
-      {
-        id: "strategy",
-        label: normalized ? "本回测（=100）" : "本回测",
-        color: "#1677FF",
-        data: filteredEquity.map((p, i) => ({
-          time: p.time,
-          value: strategyNorm.values[i] ?? p.strategy,
-        })),
-      },
-    ];
-    if (!normalized) {
-      const benchPoints = filteredEquity
-        .map((p) => (p.benchmark != null ? { time: p.time, value: p.benchmark } : null))
-        .filter((p): p is { time: string; value: number } => p != null);
-      if (benchPoints.length) {
-        out.push({ id: "benchmark", label: "基准", color: "#98A2B3", dashed: true, data: benchPoints });
-      }
-    } else {
-      const aligned = benchValues
-        .map((v, i) => (v != null && v > 0 ? { time: filteredEquity[i].time, value: v } : null))
-        .filter((p): p is { time: string; value: number } => p != null);
-      if (aligned.length) {
-        const norm = normalizeSeries(aligned.map((p) => p.value));
-        if (!norm.error) {
-          out.push({
-            id: "benchmark",
-            label: "基准（=100）",
-            color: "#98A2B3",
-            dashed: true,
-            data: aligned.map((p, i) => ({ time: p.time, value: norm.values[i] })),
-          });
-        }
-      }
-    }
-    if (compareId && compareEquity.data?.length) {
-      const compareRaw = filterEquityByPeriod(
-        compareEquity.data.map((p) => ({ time: p.ts, strategy: p.strategy_value })),
-        period,
-      );
-      const source = compareRaw.map((p) => p.strategy);
-      const scaled = normalized ? normalizeSeries(source) : { values: source };
-      if (!scaled.error) {
-        const peer = (peers.data || []).find((row) => row.id === compareId);
-        out.push({
-          id: "compare",
-          label: peerLabel(peer, normalized),
-          color: "#12B76A",
-          dashed: true,
-          data: compareRaw.map((p, i) => ({ time: p.time, value: scaled.values[i] })),
-        });
-      }
-    }
-    return out;
-  }, [compareEquity.data, compareId, filteredEquity, normalized, peers.data, period]);
-
-  const markers: EquityMarker[] = useMemo(() => {
-    if (!showTrades) return [];
-    return (trades.data || []).map((t) => {
-      const buy = labelDirection(t.direction, t.quantity) !== "卖出";
-      return {
-        time: t.trade_date,
-        label: t.ticker,
-        buy,
-      };
-    });
-  }, [showTrades, trades.data]);
-
-  const drawdownPoints = useMemo(
-    () => (equity.data || []).map((p) => ({ time: p.ts, value: p.drawdown ?? 0 })),
-    [equity.data],
-  );
+  if (backtest.isError)
+    return (
+      <Card>
+        <EmptyState
+          title="无法读取这次回测"
+          description={backtest.error.message}
+          action={
+            <Button variant="secondary" onClick={() => backtest.refetch()}>
+              重新读取
+            </Button>
+          }
+        />
+      </Card>
+    );
 
   if (backtest.isLoading || !backtest.data) {
     return <Card className="h-80 animate-pulse bg-as-secondary" />;
   }
 
+  const ready = backtest.data?.status === "COMPLETED";
   const bt = backtest.data;
   const m = metrics.data;
   const running = ["QUEUED", "STARTING", "RUNNING"].includes(bt.status);
@@ -315,7 +157,17 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
 
   function exportTrades() {
     const rows = trades.data || [];
-    const header = ["日期", "标的", "方向", "数量", "入场价", "出场价", "盈亏", "持有期", "佣金"];
+    const header = [
+      "日期",
+      "标的",
+      "方向",
+      "数量",
+      "入场价",
+      "出场价",
+      "盈亏",
+      "持有期",
+      "佣金",
+    ];
     const csv = [
       header.join(","),
       ...rows.map((t) =>
@@ -362,7 +214,11 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
           <div className="flex items-center gap-2">
             <Badge
               tone={
-                bt.status === "COMPLETED" ? "green" : bt.status === "FAILED" ? "red" : "blue"
+                bt.status === "COMPLETED"
+                  ? "green"
+                  : bt.status === "FAILED"
+                    ? "red"
+                    : "blue"
               }
             >
               {labelStatus(bt.status)}
@@ -398,8 +254,13 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
         <Card className="min-h-[320px]">
           {running ? (
             <div className="flex min-h-[280px] flex-col items-center justify-center gap-6 px-6">
-              <ProgressSteps steps={RUN_STEPS} current={currentStep || "排队中"} />
-              <p className="text-sm text-as-muted">{currentStep || "正在准备 LEAN 环境"}</p>
+              <ProgressSteps
+                steps={RUN_STEPS}
+                current={currentStep || "排队中"}
+              />
+              <p className="text-sm text-as-muted">
+                {currentStep || "正在准备 LEAN 环境"}
+              </p>
             </div>
           ) : (
             <EmptyState
@@ -425,17 +286,43 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
           <TruthStrip metrics={m} pbo={pbo} strategyId={bt.strategy_id} />
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6 as-stagger">
-            <MetricTile label="总收益" value={formatPct(m?.total_return)} tone={metricTone(m?.total_return)} />
-            <MetricTile label="年化 CAGR" value={formatPct(m?.cagr)} tone={metricTone(m?.cagr)} />
-            <MetricTile label="最大回撤" value={formatPct(m?.max_drawdown)} tone="neg" />
+            <MetricTile
+              label="总收益"
+              value={formatPct(m?.total_return)}
+              tone={metricTone(m?.total_return)}
+            />
+            <MetricTile
+              label="年化 CAGR"
+              value={formatPct(m?.cagr)}
+              tone={metricTone(m?.cagr)}
+            />
+            <MetricTile
+              label="最大回撤"
+              value={formatPct(m?.max_drawdown)}
+              tone="neg"
+            />
             <MetricTile label="波动率" value={formatPct(m?.volatility)} />
-            <MetricTile label="超额收益" value={formatPct(m?.excess_return)} tone={metricTone(m?.excess_return)} />
-            <MetricTile label="CAPM α" value={formatPct(m?.alpha_capm)} tone={metricTone(m?.alpha_capm)} />
+            <MetricTile
+              label="超额收益"
+              value={formatPct(m?.excess_return)}
+              tone={metricTone(m?.excess_return)}
+            />
+            <MetricTile
+              label="CAPM α"
+              value={formatPct(m?.alpha_capm)}
+              tone={metricTone(m?.alpha_capm)}
+            />
             <MetricTile label="β" value={formatNumber(m?.beta)} />
-            <MetricTile label="信息比率" value={formatNumber(m?.information_ratio)} />
+            <MetricTile
+              label="信息比率"
+              value={formatNumber(m?.information_ratio)}
+            />
             <MetricTile label="索提诺" value={formatNumber(m?.sortino)} />
             <MetricTile label="卡尔玛" value={formatNumber(m?.calmar)} />
-            <MetricTile label="成交笔数" value={formatNumber(m?.trade_count, 0)} />
+            <MetricTile
+              label="成交笔数"
+              value={formatNumber(m?.trade_count, 0)}
+            />
             <MetricTile label="期末权益" value={formatUsd(m?.final_equity)} />
           </div>
 
@@ -462,20 +349,29 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                 }}
               >
                 <Copy className="h-3 w-3" />
-                数据 {bt.data_version ? `${bt.data_version.slice(0, 12)}…` : "—"}
+                数据{" "}
+                {bt.data_version ? `${bt.data_version.slice(0, 12)}…` : "—"}
               </button>
               <span>引擎 {bt.engine_version || "—"}</span>
               <Button variant="secondary" size="sm" onClick={exportTrades}>
                 <Download className="h-3.5 w-3.5" />
                 导出 CSV
               </Button>
-              <a href={api.tearsheetPdfUrl(backtestId)} target="_blank" rel="noreferrer">
+              <a
+                href={api.tearsheetPdfUrl(backtestId)}
+                target="_blank"
+                rel="noreferrer"
+              >
                 <Button variant="secondary" size="sm">
                   <Download className="h-3.5 w-3.5" />
                   PDF
                 </Button>
               </a>
-              <a href={api.tearsheetHtmlUrl(backtestId)} target="_blank" rel="noreferrer">
+              <a
+                href={api.tearsheetHtmlUrl(backtestId)}
+                target="_blank"
+                rel="noreferrer"
+              >
                 <Button variant="ghost" size="sm">
                   HTML
                 </Button>
@@ -490,19 +386,31 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                   title="权益曲线"
                   hint={
                     <span className="text-[11px] text-as-muted">
-                      {normalized ? "各序列独立归一到 100，才能叠在一起看" : "绝对净值"}
+                      {normalized
+                        ? "各序列独立归一到 100，才能叠在一起看"
+                        : "绝对净值"}
                     </span>
                   }
                   action={
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <div className="inline-flex rounded-xl bg-as-secondary p-1">
-                        <Toggle pressed={logScale} disabled={!canLog} onPressed={() => setLogScale((v) => !v)}>
+                        <Toggle
+                          pressed={logScale}
+                          disabled={!canLog}
+                          onPressed={() => setLogScale((v) => !v)}
+                        >
                           对数
                         </Toggle>
-                        <Toggle pressed={normalized} onPressed={() => setNormalized((v) => !v)}>
+                        <Toggle
+                          pressed={normalized}
+                          onPressed={() => setNormalized((v) => !v)}
+                        >
                           归一到 100
                         </Toggle>
-                        <Toggle pressed={showTrades} onPressed={() => setShowTrades((v) => !v)}>
+                        <Toggle
+                          pressed={showTrades}
+                          onPressed={() => setShowTrades((v) => !v)}
+                        >
                           成交标记
                         </Toggle>
                       </div>
@@ -538,7 +446,9 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                   }
                 />
                 {!canLog && logScale ? (
-                  <p className="mb-3 text-xs text-as-negative">权益含非正值，对数坐标不可用。</p>
+                  <p className="mb-3 text-xs text-as-negative">
+                    权益含非正值，对数坐标不可用。
+                  </p>
                 ) : null}
                 <EquityCurve
                   series={series}
@@ -593,14 +503,25 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
               <div className="border-b border-as-border px-5 py-4">
                 <div className="text-sm font-medium">成交明细</div>
                 <p className="mt-1 text-[11px] text-as-muted">
-                  出场价、盈亏、持有期目前为空——引擎还没有 round-trip 配对，这里不填假数。
+                  出场价、盈亏、持有期目前为空——引擎还没有 round-trip
+                  配对，这里不填假数。
                 </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px] text-left text-xs">
                   <thead className="sticky top-0 bg-as-secondary/90 text-as-muted backdrop-blur-sm">
                     <tr>
-                      {["日期", "标的", "方向", "数量", "入场价", "出场价", "盈亏", "持有期", "佣金"].map((h) => (
+                      {[
+                        "日期",
+                        "标的",
+                        "方向",
+                        "数量",
+                        "入场价",
+                        "出场价",
+                        "盈亏",
+                        "持有期",
+                        "佣金",
+                      ].map((h) => (
                         <th key={h} className="px-4 py-3 font-medium">
                           {h}
                         </th>
@@ -612,24 +533,46 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                       const dir = labelDirection(t.direction, t.quantity);
                       const sell = dir === "卖出";
                       return (
-                        <tr key={t.id} className="border-t border-as-border/70 hover:bg-as-secondary/50">
-                          <td className="px-4 py-2.5 tabular">{t.trade_date.slice(0, 10)}</td>
+                        <tr
+                          key={t.id}
+                          className="border-t border-as-border/70 hover:bg-as-secondary/50"
+                        >
+                          <td className="px-4 py-2.5 tabular">
+                            {t.trade_date.slice(0, 10)}
+                          </td>
                           <td className="px-4 py-2.5">{t.ticker}</td>
-                          <td className={`px-4 py-2.5 ${sell ? "text-as-negative" : "text-as-positive"}`}>
+                          <td
+                            className={`px-4 py-2.5 ${sell ? "text-as-negative" : "text-as-positive"}`}
+                          >
                             {dir}
                           </td>
-                          <td className="px-4 py-2.5 tabular">{formatNumber(t.quantity, 0)}</td>
-                          <td className="px-4 py-2.5 tabular">{formatNumber(t.entry_price)}</td>
-                          <td className="px-4 py-2.5 tabular">{formatNumber(t.exit_price)}</td>
-                          <td className="px-4 py-2.5 tabular">{formatNumber(t.pnl)}</td>
-                          <td className="px-4 py-2.5 tabular">{formatNumber(t.holding_period, 0)}</td>
-                          <td className="px-4 py-2.5 tabular">{formatNumber(t.commission)}</td>
+                          <td className="px-4 py-2.5 tabular">
+                            {formatNumber(t.quantity, 0)}
+                          </td>
+                          <td className="px-4 py-2.5 tabular">
+                            {formatNumber(t.entry_price)}
+                          </td>
+                          <td className="px-4 py-2.5 tabular">
+                            {formatNumber(t.exit_price)}
+                          </td>
+                          <td className="px-4 py-2.5 tabular">
+                            {formatNumber(t.pnl)}
+                          </td>
+                          <td className="px-4 py-2.5 tabular">
+                            {formatNumber(t.holding_period, 0)}
+                          </td>
+                          <td className="px-4 py-2.5 tabular">
+                            {formatNumber(t.commission)}
+                          </td>
                         </tr>
                       );
                     })}
                     {!trades.data?.length ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-8 text-center text-as-muted">
+                        <td
+                          colSpan={9}
+                          className="px-4 py-8 text-center text-as-muted"
+                        >
                           暂无成交记录。
                         </td>
                       </tr>
@@ -643,11 +586,4 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
       )}
     </div>
   );
-}
-
-function peerLabel(row: Backtest | undefined, normalized: boolean): string {
-  if (!row) return normalized ? "对比（=100）" : "对比";
-  const range = `${row.start_date.slice(0, 10)} → ${row.end_date.slice(0, 10)}`;
-  const version = row.version_number ? `v${row.version_number}` : row.id.slice(0, 8);
-  return normalized ? `${version} ${range}（=100）` : `${version} ${range}`;
 }

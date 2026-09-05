@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api, type Backtest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ProgressSteps } from "@/components/ui/progress-steps";
@@ -19,6 +19,10 @@ export function RunDock({
   onDismiss: () => void;
   onFailure?: (error: { message?: string; line?: number }) => void;
 }) {
+  const failureRef = useRef(onFailure);
+  useEffect(() => {
+    failureRef.current = onFailure;
+  }, [onFailure]);
   const [bt, setBt] = useState<Backtest | null>(null);
 
   useEffect(() => {
@@ -26,19 +30,27 @@ export function RunDock({
     async function pull() {
       const row = await api.getBacktest(backtestId);
       if (!cancelled) setBt(row);
-      if (row.status === "FAILED" && row.error) onFailure?.(row.error);
+      if (row.status === "FAILED" && row.error) failureRef.current?.(row.error);
     }
-    pull();
+    pull().catch(() => {
+      /* Event stream reconnect will retry. */
+    });
     const es = new EventSource(api.eventsUrl(backtestId));
     es.addEventListener("progress", (ev) => {
       try {
-        const payload = JSON.parse((ev as MessageEvent).data) as Partial<Backtest> & {
+        const payload = JSON.parse(
+          (ev as MessageEvent).data,
+        ) as Partial<Backtest> & {
           progress_step?: string;
           status?: string;
         };
         setBt((prev) =>
           prev
-            ? { ...prev, status: payload.status || prev.status, progress_step: payload.progress_step || prev.progress_step }
+            ? {
+                ...prev,
+                status: payload.status || prev.status,
+                progress_step: payload.progress_step || prev.progress_step,
+              }
             : prev,
         );
       } catch {
@@ -47,7 +59,9 @@ export function RunDock({
     });
     es.addEventListener("done", () => {
       es.close();
-      pull();
+      pull().catch(() => {
+        /* Keep the last known state. */
+      });
     });
     return () => {
       cancelled = true;
@@ -85,14 +99,21 @@ export function RunDock({
               <ProgressSteps steps={RUN_STEPS} current={step || "排队中"} />
             </div>
           ) : bt.status === "FAILED" ? (
-            <p className="mt-1 text-xs text-as-negative">{bt.error?.message || "回测失败"}</p>
+            <p className="mt-1 text-xs text-as-negative">
+              {bt.error?.message || "回测失败"}
+            </p>
           ) : (
-            <p className="mt-1 text-xs text-as-muted">留在实验室继续改，或打开 tearsheet。</p>
+            <p className="mt-1 text-xs text-as-muted">
+              留在实验室继续改，或打开 tearsheet。
+            </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           <Link href={`/backtests/${backtestId}`}>
-            <Button size="sm" variant={bt.status === "COMPLETED" ? "primary" : "secondary"}>
+            <Button
+              size="sm"
+              variant={bt.status === "COMPLETED" ? "primary" : "secondary"}
+            >
               打开 tearsheet
             </Button>
           </Link>

@@ -13,12 +13,12 @@ import {
 } from "lucide-react";
 
 export const NAV_ITEMS = [
-  { href: "/", label: "首页", icon: Home },
+  { href: "/", label: "研究概览", icon: Home },
   { href: "/strategies", label: "策略实验室", icon: FlaskConical },
-  { href: "/backtests", label: "回测", icon: LineChart },
-  { href: "/validation", label: "验证", icon: BadgeCheck },
+  { href: "/backtests", label: "回测工作室", icon: LineChart },
+  { href: "/validation", label: "稳健性验证", icon: BadgeCheck },
   { href: "/universes", label: "标的池", icon: Layers },
-  { href: "/experiments", label: "实验", icon: Beaker },
+  { href: "/experiments", label: "实验记录", icon: Beaker },
   { href: "/paper", label: "模拟交易", icon: Newspaper },
   { href: "/live", label: "实盘", icon: Workflow },
   { href: "/risk", label: "风控", icon: Shield },

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException
 
-from quant.data.ingest_spy import prune_unreferenced_snapshots
+from quant.data.ingest import prune_unreferenced_snapshots
 from services.api.hashing import canonical_hash
 from services.api.models import StrategyStatus
 from services.api.status_machine import assert_client_status_transition

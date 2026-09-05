@@ -8,17 +8,13 @@ from sqlalchemy.orm import Session
 from services.api.db import get_db
 from services.api.models import ValidationKind
 from services.api.schemas import (
-    BootstrapCreate,
-    CostScanCreate,
-    PBOScanCreate,
-    RegimeCreate,
-    SensitivityCreate,
-    SpaCreate,
+    ValidationCreate,
     ValidationPage,
     ValidationRunOut,
-    WalkForwardCreate,
+    ValidationSpecOut,
 )
 from services.api.services import validation as validation_service
+from services.api.services.validation_spec import all_specs, params_schema_for
 
 router = APIRouter(prefix="/validation", tags=["validation"])
 
@@ -52,45 +48,91 @@ def list_validation_runs(
     )
 
 
+@router.post("", response_model=ValidationRunOut, status_code=201)
+def create_validation_run(
+    payload: ValidationCreate, db: Session = Depends(get_db)
+) -> ValidationRunOut:
+    return validation_service.to_out(validation_service.create_validation_run(db, payload))
+
+
+# Legacy endpoints for backward compatibility — delegate to unified endpoint
+def _legacy_payload(kind: str, payload: dict) -> ValidationCreate:
+    known_keys = {"strategy_version_id", "backtest_id"}
+    params = {k: v for k, v in payload.items() if k not in known_keys}
+    return ValidationCreate(
+        kind=kind,
+        strategy_version_id=payload["strategy_version_id"],
+        backtest_id=payload.get("backtest_id"),
+        params=params,
+    )
+
+
 @router.post("/pbo", response_model=ValidationRunOut, status_code=201)
-def create_pbo_scan(payload: PBOScanCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
-    return validation_service.to_out(validation_service.create_pbo_scan(db, payload))
+def create_pbo_scan(payload: dict, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(
+        validation_service.create_validation_run(db, _legacy_payload("pbo", payload))
+    )
 
 
 @router.post("/sensitivity", response_model=ValidationRunOut, status_code=201)
-def create_sensitivity_scan(
-    payload: SensitivityCreate, db: Session = Depends(get_db)
-) -> ValidationRunOut:
-    return validation_service.to_out(validation_service.create_sensitivity_scan(db, payload))
+def create_sensitivity_scan(payload: dict, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(
+        validation_service.create_validation_run(db, _legacy_payload("sensitivity", payload))
+    )
 
 
 @router.post("/cost", response_model=ValidationRunOut, status_code=201)
-def create_cost_scan(payload: CostScanCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
-    return validation_service.to_out(validation_service.create_cost_scan(db, payload))
+def create_cost_scan(payload: dict, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(
+        validation_service.create_validation_run(db, _legacy_payload("cost", payload))
+    )
 
 
 @router.post("/bootstrap", response_model=ValidationRunOut, status_code=201)
-def create_bootstrap(payload: BootstrapCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
-    return validation_service.to_out(validation_service.create_bootstrap_run(db, payload))
+def create_bootstrap(payload: dict, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(
+        validation_service.create_validation_run(db, _legacy_payload("bootstrap", payload))
+    )
 
 
 @router.post("/regime", response_model=ValidationRunOut, status_code=201)
-def create_regime(payload: RegimeCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
-    return validation_service.to_out(validation_service.create_regime_run(db, payload))
+def create_regime(payload: dict, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(
+        validation_service.create_validation_run(db, _legacy_payload("regime", payload))
+    )
 
 
 @router.post("/spa", response_model=ValidationRunOut, status_code=201)
-def create_spa(payload: SpaCreate, db: Session = Depends(get_db)) -> ValidationRunOut:
-    return validation_service.to_out(validation_service.create_spa_run(db, payload))
+def create_spa(payload: dict, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(
+        validation_service.create_validation_run(db, _legacy_payload("spa", payload))
+    )
 
 
 @router.post("/walk-forward", response_model=ValidationRunOut, status_code=201)
-def create_walk_forward(
-    payload: WalkForwardCreate, db: Session = Depends(get_db)
-) -> ValidationRunOut:
-    return validation_service.to_out(validation_service.create_walk_forward_run(db, payload))
+def create_walk_forward(payload: dict, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(
+        validation_service.create_validation_run(db, _legacy_payload("walk_forward", payload))
+    )
 
 
 @router.get("/{run_id}", response_model=ValidationRunOut)
 def get_validation_run(run_id: UUID, db: Session = Depends(get_db)) -> ValidationRunOut:
     return validation_service.to_out(validation_service.get_validation_run(db, run_id))
+
+
+@router.get("/specs", response_model=list[ValidationSpecOut])
+def get_validation_specs() -> list[ValidationSpecOut]:
+    specs = []
+    for spec in all_specs():
+        schema = params_schema_for(spec.kind)
+        specs.append(
+            ValidationSpecOut(
+                kind=spec.kind,
+                display_name=spec.display_name,
+                description=spec.description,
+                auto_on_backtest=spec.auto_on_backtest,
+                params_schema=schema.model_json_schema(),
+            )
+        )
+    return specs
