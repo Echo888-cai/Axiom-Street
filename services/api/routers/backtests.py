@@ -20,6 +20,7 @@ from services.api.schemas import (
     BacktestPage,
     EquityPage,
     EquityPoint,
+    MaeMfePoint,
     MonthlyReturnOut,
     RollingWindowOut,
     TimeSeriesPointOut,
@@ -216,3 +217,41 @@ async def backtest_events(backtest_id: UUID) -> EventSourceResponse:
             await asyncio.sleep(1.0)
 
     return EventSourceResponse(event_generator())
+
+
+@router.get("/compare/equity")
+def compare_equity(
+    ids: list[UUID] = Query(..., min_length=2, max_length=6),
+    normalized: bool = Query(False),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Multi-backtest equity comparison across strategies."""
+    series: list[dict] = []
+    for bid in ids:
+        bt = backtest_service.get_backtest(db, bid)
+        rows, _ = backtest_service.get_equity(db, bid, limit=50_000, offset=0)
+        if not rows:
+            continue
+        if normalized:
+            vals = [p.strategy_value for p in rows]
+            first = vals[0] if vals else 1
+            points = [
+                {"time": p.ts, "value": (p.strategy_value / first) * 100 if first else 0}
+                for p in rows
+            ]
+        else:
+            points = [{"time": p.ts, "value": p.strategy_value} for p in rows]
+        series.append(
+            {
+                "id": str(bid),
+                "label": f"{bt.strategy_name or 'Strategy'} v{bt.version_number or '?'}",
+                "data": points,
+            }
+        )
+    return {"series": series}
+
+
+@router.get("/{backtest_id}/mae-mfe", response_model=list[MaeMfePoint])
+def get_mae_mfe(backtest_id: UUID, db: Session = Depends(get_db)) -> list[MaeMfePoint]:
+    """MAE/MFE per trade with holding period distribution."""
+    return backtest_service.get_mae_mfe(db, backtest_id)

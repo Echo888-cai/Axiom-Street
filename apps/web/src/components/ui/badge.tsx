@@ -15,7 +15,7 @@ export function Badge({
         tone === "blue" && "bg-as-primary/10 text-as-primary",
         tone === "green" && "bg-as-positive/10 text-as-positive",
         tone === "red" && "bg-as-negative/10 text-as-negative",
-        tone === "amber" && "bg-[rgba(247,144,9,0.12)] text-[#b54708]",
+        tone === "amber" && "bg-[var(--as-warning)/10] text-[var(--as-warning)]",
       )}
     >
       {children}

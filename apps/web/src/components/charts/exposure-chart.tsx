@@ -100,7 +100,7 @@ export function ExposureChart({
           <span className="h-0.5 w-3 bg-as-primary" /> 多头
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-0.5 w-3 bg-[#F04438]" /> 空头
+          <span className="h-0.5 w-3 bg-as-negative" /> 空头
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="h-0.5 w-3 bg-as-muted" /> 净暴露

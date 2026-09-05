@@ -3,6 +3,7 @@
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RollingChart } from "@/components/charts/rolling-chart";
+import { chartColors } from "@/lib/chart-tokens";
 import type { RollingPoint } from "@/lib/tearsheet";
 
 export function RollingPanel({
@@ -42,7 +43,7 @@ export function RollingPanel({
         ) : (
           <RollingChart
             data={sharpe.map((p) => ({ time: p.time, value: p.volatility }))}
-            color="#667085"
+            color={chartColors.muted}
             caption="与滚动夏普同一窗口"
           />
         )}
@@ -59,7 +60,7 @@ export function RollingPanel({
             data={beta
               .filter((p) => p.beta != null)
               .map((p) => ({ time: p.time, value: p.beta as number }))}
-            color="#12B76A"
+            color={chartColors.positive}
             caption="Cov(r, r_b) / Var(r_b) · 63 日"
           />
         )}
@@ -76,7 +77,7 @@ export function RollingPanel({
             data={beta
               .filter((p) => p.correlation != null)
               .map((p) => ({ time: p.time, value: p.correlation as number }))}
-            color="#F04438"
+            color={chartColors.negative}
             caption="同一 63 日窗口"
           />
         )}

@@ -24,6 +24,8 @@ import { TruthStrip } from "@/features/tearsheet/truth-strip";
 import { DistributionPanel } from "@/features/tearsheet/distribution-panel";
 import { RollingPanel } from "@/features/tearsheet/rolling-panel";
 import { ExposurePanel } from "@/features/tearsheet/exposure-panel";
+import { ComparePanel } from "./compare-panel";
+import { MaeMfePanel } from "./mae-mfe-panel";
 
 const RUN_STEPS = ["排队中", "准备环境", "加载数据", "运行策略", "计算指标"];
 
@@ -335,6 +337,8 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                 { id: "distribution", label: "分布" },
                 { id: "rolling", label: "滚动" },
                 { id: "exposure", label: "暴露" },
+                { id: "compare", label: "比较" },
+                { id: "mae-mfe", label: "MAE/MFE" },
                 { id: "trades", label: "成交" },
                 { id: "monthly", label: "月度" },
               ]}
@@ -489,6 +493,14 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
               gross={m?.gross_exposure}
               net={m?.net_exposure}
             />
+          ) : null}
+
+          {tab === "compare" ? (
+            <ComparePanel currentBacktestId={backtestId} />
+          ) : null}
+
+          {tab === "mae-mfe" ? (
+            <MaeMfePanel backtestId={backtestId} />
           ) : null}
 
           {tab === "monthly" ? (

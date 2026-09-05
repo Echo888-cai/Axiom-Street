@@ -61,7 +61,7 @@ function NavigationContent({
           collapsed && "justify-center px-3",
         )}
       >
-        <AxiomMark className="h-9 w-9 shrink-0 text-[#303b4c]" />
+        <AxiomMark className="h-9 w-9 shrink-0 text-as-text" />
         {!collapsed && (
           <div>
             <div className="text-[16px] font-semibold tracking-[-.04em]">
@@ -266,7 +266,7 @@ export function MobileNavigation({
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      className="fixed inset-0 m-0 h-dvh max-h-none w-[290px] max-w-[85vw] border-0 bg-[#f6f7f9] p-0 shadow-as-lg backdrop:bg-slate-900/15 backdrop:backdrop-blur-sm"
+      className="fixed inset-0 m-0 h-dvh max-h-none w-[290px] max-w-[85vw] border-0 bg-as-bg p-0 shadow-as-lg backdrop:bg-slate-900/15 backdrop:backdrop-blur-sm"
     >
       <div className="flex h-full flex-col">
         <button

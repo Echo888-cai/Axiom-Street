@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ExposureChart, type ExposurePoint } from "@/components/charts/exposure-chart";
 import { RollingChart } from "@/components/charts/rolling-chart";
 import { formatNumber } from "@/lib/utils";
+import { chartColors } from "@/lib/chart-tokens";
 
 export function ExposurePanel({
   points,
@@ -43,7 +44,7 @@ export function ExposurePanel({
       <Card>
         <CardHeader title="换手" hint={<span className="text-[11px] text-as-muted">Portfolio Turnover 图</span>} />
         {turnover.length ? (
-          <RollingChart data={turnover} color="#667085" caption="LEAN Portfolio Turnover 序列" />
+          <RollingChart data={turnover} color={chartColors.muted} caption="LEAN Portfolio Turnover 序列" />
         ) : (
           <EmptyState title="没有换手序列" description="LEAN 没有写出 Portfolio Turnover 图。" />
         )}

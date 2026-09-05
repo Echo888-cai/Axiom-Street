@@ -176,6 +176,21 @@ class TradeOut(ORMModel):
     signal: Optional[str]
 
 
+class MaeMfePoint(BaseModel):
+    trade_id: int
+    trade_date: datetime
+    ticker: str
+    direction: str
+    entry_price: Optional[float]
+    exit_price: Optional[float]
+    pnl: Optional[float]
+    mae: Optional[float]
+    mfe: Optional[float]
+    holding_period: Optional[float]
+    entry_drawdown: Optional[float]
+    exit_drawdown: Optional[float]
+
+
 class MonthlyReturnOut(BaseModel):
     year: int
     month: int

@@ -222,7 +222,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
           <label className="flex h-9 items-center gap-2 text-xs text-as-muted">
             <input
               type="checkbox"
-              className="accent-[#1677FF]"
+              className="accent-[var(--as-primary)]"
               checked={infer}
               onChange={(e) => setInfer(e.target.checked)}
             />
