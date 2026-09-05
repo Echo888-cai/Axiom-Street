@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from quant.data.ingest_spy import ingest
+from quant.data.ingest import ingest
 from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
 
 
@@ -46,7 +46,7 @@ def test_incremental_fetches_only_after_last_bar(monkeypatch, tmp_path: Path):
             return FetchResult(_bars(symbol, [2, 3, 6, 7]), "yfinance", YFINANCE_CAPABILITIES)
         return FetchResult(_bars(symbol, [8, 9, 10]), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
 
     first = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False, mode="full")
     prior_key = first["snapshot_key"]
@@ -77,7 +77,7 @@ def test_incremental_restatement_warns_and_writes_new_snapshot(monkeypatch, tmp_
             _bars(symbol, [2, 3, 6, 7], close_base=100.0), "yfinance", YFINANCE_CAPABILITIES
         )
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", full_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", full_fetch)
     first = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False, mode="full")
     prior_path = (
         tmp_path / "snapshots" / first["snapshot_key"] / "market/equities/US/daily/SPY.parquet"
@@ -95,7 +95,7 @@ def test_incremental_restatement_warns_and_writes_new_snapshot(monkeypatch, tmp_
         frame.loc[mask, "low"] = 99.0
         return FetchResult(frame, "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", revised_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", revised_fetch)
     second = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False, mode="incremental")
 
     assert second["snapshot_key"] != first["snapshot_key"]

@@ -5,12 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPct(value: number | null | undefined, digits = 2): string {
+export function formatPct(
+  value: number | null | undefined,
+  digits = 2,
+): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(digits)}%`;
 }
 
-export function formatNumber(value: number | null | undefined, digits = 2): string {
+export function formatNumber(
+  value: number | null | undefined,
+  digits = 2,
+): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return value.toLocaleString(undefined, {
     minimumFractionDigits: digits,
@@ -18,7 +24,10 @@ export function formatNumber(value: number | null | undefined, digits = 2): stri
   });
 }
 
-export function formatUsd(value: number | null | undefined, digits = 0): string {
+export function formatUsd(
+  value: number | null | undefined,
+  digits = 0,
+): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return value.toLocaleString(undefined, {
     style: "currency",
@@ -35,7 +44,13 @@ export function formatDate(value: string | null | undefined): string {
 
 export function formatRelative(value: string | null | undefined): string {
   if (!value) return "—";
-  const then = new Date(value).getTime();
+  // The database emits naive UTC; do not interpret it in the browser timezone.
+  const timestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(
+    value,
+  )
+    ? `${value}Z`
+    : value;
+  const then = new Date(timestamp).getTime();
   if (Number.isNaN(then)) return "—";
   const delta = Date.now() - then;
   const minutes = Math.floor(delta / 60000);

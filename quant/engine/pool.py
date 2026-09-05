@@ -115,13 +115,23 @@ class LeanSlotPool:
             self._pull_image()
             try:
                 self._launcher = inspect_launcher(self.image, self._env)
-            except (RuntimeError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+            except (
+                RuntimeError,
+                FileNotFoundError,
+                subprocess.TimeoutExpired,
+                json.JSONDecodeError,
+            ):
                 self._launcher = None
             if self._want_warm:
                 try:
                     self._start_warm()
                     self._warm = True
-                except (RuntimeError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+                except (
+                    RuntimeError,
+                    FileNotFoundError,
+                    subprocess.TimeoutExpired,
+                    json.JSONDecodeError,
+                ):
                     self._warm = False
             self._ensured = True
 
@@ -153,7 +163,9 @@ class LeanSlotPool:
         started: list[str] = []
         for index in range(self.size):
             name = f"axiom-lean-slot-{index}"
-            subprocess.run(["docker", "rm", "-f", name], capture_output=True, check=False, env=self._env)
+            subprocess.run(
+                ["docker", "rm", "-f", name], capture_output=True, check=False, env=self._env
+            )
             cmd = [
                 "docker",
                 "run",
@@ -177,7 +189,9 @@ class LeanSlotPool:
                 self.image,
                 "86400",
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False, env=self._env, timeout=60)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, check=False, env=self._env, timeout=60
+            )
             if result.returncode != 0:
                 for created in started:
                     subprocess.run(

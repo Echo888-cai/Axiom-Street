@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from quant.data.ingest_spy import ingest
+from quant.data.ingest import ingest
 from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
 
 
@@ -37,7 +37,7 @@ def test_ingest_on_progress_reports_each_symbol(monkeypatch, tmp_path: Path):
     def fake_fetch(symbol: str, **_k):
         return FetchResult(_frame(symbol), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
     ingest(
         symbols=["SPY", "QQQ"],
         data_root=tmp_path,
@@ -57,7 +57,7 @@ def test_create_ingest_job_sync_completes(client, monkeypatch, tmp_path: Path):
     def fake_fetch(symbol: str, **_k):
         return FetchResult(_frame(symbol), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
 
     res = client.post(
         "/api/v1/data/ingest",

@@ -152,14 +152,9 @@ def spa_test(
     if n_models < MIN_MODELS:
         raise SpaError(f"跨策略 Reality Check 至少需要 {MIN_MODELS} 条试验，当前 {n_models}")
     if n_models > MAX_MODELS:
-        raise SpaError(
-            f"试验台账有 {n_models} 条，超过 {MAX_MODELS}。"
-            "拒绝截断后再做多重检验。"
-        )
+        raise SpaError(f"试验台账有 {n_models} 条，超过 {MAX_MODELS}。拒绝截断后再做多重检验。")
     if n_obs < MIN_OBS:
-        raise SpaError(
-            f"共同交易日只有 {n_obs} 根，少于 {MIN_OBS}，拒绝把 SPA 算成通过。"
-        )
+        raise SpaError(f"共同交易日只有 {n_obs} 根，少于 {MIN_OBS}，拒绝把 SPA 算成通过。")
     if n_boot < MIN_BOOT or n_boot > MAX_BOOT:
         raise SpaError(f"n_boot 必须在 {MIN_BOOT}–{MAX_BOOT} 之间")
     if not 0.01 <= alpha <= 0.2:
@@ -314,4 +309,3 @@ def panel_from_equity_paths(
     matrix = np.column_stack([[row[d] for d in ordered] for _ident, row in parsed])
     ids = [ident for ident, _row in parsed]
     return matrix, ids
-

@@ -11,12 +11,14 @@ export function KpiStrip({
   maxDrawdown,
   strategyCount,
   hasBacktest,
+  unavailable,
 }: {
   totalReturn: number | null;
   sharpe: number | null;
   maxDrawdown: number | null;
   strategyCount: number;
   hasBacktest: boolean;
+  unavailable?: boolean;
 }) {
   const items = [
     {
@@ -25,7 +27,11 @@ export function KpiStrip({
       icon: TrendingUp,
       value: hasBacktest ? formatPct(totalReturn) : "—",
       hint: hasBacktest ? "研究指标，非实盘组合" : "跑完第一次回测后显示",
-      tone: hasBacktest ? ((totalReturn ?? 0) >= 0 ? "text-as-positive" : "text-as-negative") : "text-as-text",
+      tone: hasBacktest
+        ? (totalReturn ?? 0) >= 0
+          ? "text-as-positive"
+          : "text-as-negative"
+        : "text-as-text",
     },
     {
       key: "sharpe",
@@ -47,25 +53,32 @@ export function KpiStrip({
       key: "strategies",
       label: "策略数量",
       icon: FlaskConical,
-      value: String(strategyCount),
+      value: unavailable ? "—" : String(strategyCount),
       hint: strategyCount ? "实验室中的策略" : "还没有策略",
       tone: "text-as-text",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 as-stagger">
+    <div className="grid grid-cols-2 gap-4 xl:grid-cols-4 as-stagger">
       {items.map((kpi) => {
         const Icon = kpi.icon;
         return (
-          <Card key={kpi.key} className="min-h-[108px]">
+          <Card key={kpi.key} className="min-h-[132px]">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-medium text-as-muted">{kpi.label}</span>
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-as-secondary text-as-muted">
+              <span className="text-xs font-medium text-as-muted">
+                {kpi.label}
+              </span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-as-secondary/70 text-as-muted">
                 <Icon className="h-3.5 w-3.5" />
               </span>
             </div>
-            <div className={cn("text-2xl font-semibold tabular tracking-tight", kpi.tone)}>
+            <div
+              className={cn(
+                "text-[28px] font-medium tabular tracking-tight",
+                kpi.tone,
+              )}
+            >
               {kpi.value}
             </div>
             <p className="mt-1.5 text-[11px] text-as-muted">{kpi.hint}</p>

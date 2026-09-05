@@ -7,7 +7,7 @@ from uuid import uuid4
 import pandas as pd
 import pytest
 
-from quant.data.ingest_spy import ingest
+from quant.data.ingest import ingest
 from quant.data.providers import fetch_daily
 from quant.data.symbols import as_symbol_list, normalize_symbols, snapshot_slug
 from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
@@ -65,7 +65,7 @@ def test_ingest_two_symbols_writes_both_parquets(monkeypatch, tmp_path: Path):
     def fake_fetch(symbol: str, **_k):
         return FetchResult(_frame(symbol), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
     result = ingest(symbols=["SPY", "QQQ"], data_root=tmp_path, convert_lean=False)
     assert result["symbols"] == ["SPY", "QQQ"]
     snap = tmp_path / "snapshots" / result["snapshot_key"]

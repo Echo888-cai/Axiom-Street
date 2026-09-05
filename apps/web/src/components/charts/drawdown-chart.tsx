@@ -1,4 +1,5 @@
 "use client";
+import { chartColors } from "@/lib/chart-tokens";
 
 import { useEffect, useRef } from "react";
 import {
@@ -26,20 +27,20 @@ export function DrawdownChart({
     const chart = createChart(ref.current, {
       height,
       layout: {
-        background: { type: ColorType.Solid, color: "#ffffff" },
-        textColor: "#667085",
+        background: { type: ColorType.Solid, color: chartColors.background },
+        textColor: chartColors.muted,
       },
       grid: {
-        vertLines: { color: "rgba(15,23,42,0.04)" },
-        horzLines: { color: "rgba(15,23,42,0.04)" },
+        vertLines: { color: chartColors.grid },
+        horzLines: { color: chartColors.grid },
       },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
     });
     const series = chart.addSeries(AreaSeries, {
-      lineColor: "#F04438",
-      topColor: "rgba(240,68,56,0.25)",
-      bottomColor: "rgba(240,68,56,0.02)",
+      lineColor: chartColors.negative,
+      topColor: chartColors.negativeArea,
+      bottomColor: chartColors.negativeFade,
       lineWidth: 2,
       priceLineVisible: false,
     });

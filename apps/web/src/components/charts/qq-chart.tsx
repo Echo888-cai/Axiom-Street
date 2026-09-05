@@ -33,7 +33,10 @@ export function QqChart({ points }: { points: QqPoint[] }) {
   }, [inner, points]);
 
   return (
-    <svg viewBox={`0 0 ${box} ${box}`} className="h-48 w-full max-w-[280px] text-as-muted">
+    <svg
+      viewBox={`0 0 ${box} ${box}`}
+      className="h-48 w-full max-w-[280px] text-as-muted"
+    >
       <line
         x1={geometry.ref.x1}
         y1={geometry.ref.y1}
@@ -44,7 +47,13 @@ export function QqChart({ points }: { points: QqPoint[] }) {
         strokeWidth="1"
       />
       {geometry.dots.map((d, i) => (
-        <circle key={`${d.x}-${d.y}-${i}`} cx={d.x} cy={d.y} r="2.2" fill="#1677FF" />
+        <circle
+          key={`${d.x}-${d.y}-${i}`}
+          cx={d.x}
+          cy={d.y}
+          r="2.2"
+          fill="var(--as-primary)"
+        />
       ))}
     </svg>
   );

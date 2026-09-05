@@ -4,8 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from quant.data.duckdb_query import connect_market
-from quant.data.ingest_spy import data_status, latest_snapshot_dir, load_spy_parquet
+from quant.data.ingest import data_status, latest_snapshot_dir, load_spy_parquet
 from quant.data.lean_converter import (
     bars_to_lean_daily_csv,
     build_factor_file,
@@ -124,22 +123,6 @@ def test_latest_snapshot_dir_empty(tmp_path: Path):
     assert latest_snapshot_dir(tmp_path) is None
     (tmp_path / "snapshots").mkdir()
     assert latest_snapshot_dir(tmp_path) is None
-
-
-def test_connect_market_without_parquet(tmp_path: Path):
-    con = connect_market(tmp_path)
-    assert con is not None
-    con.close()
-
-
-def test_connect_market_with_parquet(tmp_path: Path):
-    parquet = tmp_path / "market" / "equities" / "US" / "daily" / "SPY.parquet"
-    parquet.parent.mkdir(parents=True)
-    _spy_df().to_parquet(parquet, index=False)
-    con = connect_market(tmp_path)
-    n = con.execute("select count(*) from spy_daily").fetchone()[0]
-    assert n == 1
-    con.close()
 
 
 def test_convert_to_lean_writes_qqq_zip(tmp_path: Path):

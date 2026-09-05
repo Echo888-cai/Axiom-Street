@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Modal } from "./modal";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -28,8 +29,14 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
 
-  const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.listStrategies });
-  const backtests = useQuery({ queryKey: ["backtests"], queryFn: () => api.listBacktests() });
+  const strategies = useQuery({
+    queryKey: ["strategies"],
+    queryFn: api.listStrategies,
+  });
+  const backtests = useQuery({
+    queryKey: ["backtests"],
+    queryFn: () => api.listBacktests(),
+  });
   const notes = useQuery({
     queryKey: ["research-notes", "all"],
     queryFn: () => api.listResearchNotes(),
@@ -116,89 +123,109 @@ export function CommandPalette({
 
   if (!open) return null;
 
-  const groups = ["导航", "策略", "回测", "笔记"].filter((g) => hits.some((h) => h.group === g));
+  const groups = ["导航", "策略", "回测", "笔记"].filter((g) =>
+    hits.some((h) => h.group === g),
+  );
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-[14vh]">
-      <button
-        type="button"
-        className="absolute inset-0 bg-[rgba(15,23,42,0.28)] as-fade"
-        aria-label="关闭命令盘"
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="命令盘"
-        className="relative w-full max-w-[560px] overflow-hidden rounded-as border border-as-border bg-as-bg shadow-as-lg as-scale-in"
-      >
-        <div className="flex items-center gap-2 border-b border-as-border px-4">
-          <Search className="h-4 w-4 text-as-muted" />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索策略、回测、页面…"
-            className="h-12 w-full bg-transparent text-sm text-as-text outline-none placeholder:text-as-muted"
-            onKeyDown={(e) => {
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setActive((v) => Math.min(v + 1, Math.max(hits.length - 1, 0)));
-              }
-              if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setActive((v) => Math.max(v - 1, 0));
-              }
-              if (e.key === "Enter" && hits[active]) go(hits[active].href);
-              if (e.key === "Escape") onClose();
-            }}
-          />
-        </div>
-        <div className="max-h-[420px] overflow-auto py-2">
-          {!hits.length ? (
-            <p className="px-4 py-10 text-center text-sm text-as-muted">没有匹配结果</p>
-          ) : (
-            groups.map((group) => {
-              const items = hits.filter((h) => h.group === group);
-              return (
-                <div key={group} className="px-2 py-1">
-                  <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-as-muted">
-                    {group}
-                  </div>
-                  {items.map((hit) => {
-                    const index = hits.indexOf(hit);
-                    return (
-                      <button
-                        key={hit.href + hit.title}
-                        type="button"
-                        onMouseEnter={() => setActive(index)}
-                        onClick={() => go(hit.href)}
-                        className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${
-                          index === active ? "bg-as-secondary" : ""
-                        }`}
-                      >
-                        <span className="truncate text-as-text">{hit.title}</span>
-                        <span className="ml-3 shrink-0 text-[11px] text-as-muted">{hit.meta}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })
-          )}
-        </div>
-        <div className="flex items-center gap-3 border-t border-as-border bg-as-secondary/50 px-4 py-2 text-[11px] text-as-muted">
-          <span>
-            <kbd className="rounded border border-as-border bg-as-bg px-1">↑↓</kbd> 选择
-          </span>
-          <span>
-            <kbd className="rounded border border-as-border bg-as-bg px-1">↵</kbd> 打开
-          </span>
-          <span>
-            <kbd className="rounded border border-as-border bg-as-bg px-1">esc</kbd> 关闭
-          </span>
-        </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      label="搜索工作空间"
+      className="mt-[12vh] max-w-[560px]"
+    >
+      <div className="flex items-center gap-2 border-b border-as-border px-4">
+        <Search className="h-4 w-4 text-as-muted" />
+        <input
+          ref={inputRef}
+          aria-label="搜索策略、回测、页面"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls="command-results"
+          aria-activedescendant={
+            hits[active] ? `command-result-${active}` : undefined
+          }
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="搜索策略、回测、页面…"
+          className="h-12 w-full bg-transparent text-sm text-as-text outline-none placeholder:text-as-muted"
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActive((v) => Math.min(v + 1, Math.max(hits.length - 1, 0)));
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActive((v) => Math.max(v - 1, 0));
+            }
+            if (e.key === "Enter" && hits[active]) go(hits[active].href);
+            if (e.key === "Escape") onClose();
+          }}
+        />
       </div>
-    </div>
+      <div
+        id="command-results"
+        role="listbox"
+        aria-label="搜索结果"
+        className="max-h-[50dvh] overflow-auto py-2"
+      >
+        {!hits.length ? (
+          <p className="px-4 py-10 text-center text-sm text-as-muted">
+            没有匹配结果
+          </p>
+        ) : (
+          groups.map((group) => {
+            const items = hits.filter((h) => h.group === group);
+            return (
+              <div key={group} className="px-2 py-1">
+                <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-as-muted">
+                  {group}
+                </div>
+                {items.map((hit) => {
+                  const index = hits.indexOf(hit);
+                  return (
+                    <button
+                      key={hit.href + hit.title}
+                      id={`command-result-${index}`}
+                      role="option"
+                      aria-selected={index === active}
+                      type="button"
+                      onMouseEnter={() => setActive(index)}
+                      onClick={() => go(hit.href)}
+                      className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${
+                        index === active ? "bg-as-secondary" : ""
+                      }`}
+                    >
+                      <span className="truncate text-as-text">{hit.title}</span>
+                      <span className="ml-3 shrink-0 text-[11px] text-as-muted">
+                        {hit.meta}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })
+        )}
+      </div>
+      <div className="flex items-center gap-3 border-t border-as-border bg-as-secondary/50 px-4 py-2 text-[11px] text-as-muted">
+        <span>
+          <kbd className="rounded border border-as-border bg-as-bg px-1">
+            ↑↓
+          </kbd>{" "}
+          选择
+        </span>
+        <span>
+          <kbd className="rounded border border-as-border bg-as-bg px-1">↵</kbd>{" "}
+          打开
+        </span>
+        <span>
+          <kbd className="rounded border border-as-border bg-as-bg px-1">
+            esc
+          </kbd>{" "}
+          关闭
+        </span>
+      </div>
+    </Modal>
   );
 }

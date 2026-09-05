@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from quant.data.ingest_spy import ingest
+from quant.data.ingest import ingest
 from quant.data.providers import fetch_polygon, fetch_yfinance, polygon_configured
 from quant.data.reconcile import reconcile_frames
 

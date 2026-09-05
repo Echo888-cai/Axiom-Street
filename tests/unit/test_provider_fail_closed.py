@@ -41,7 +41,7 @@ def test_factor_file_requires_events_when_asked():
 
 
 def test_stooq_ingest_convert_raises(monkeypatch, tmp_path):
-    from quant.data import ingest_spy as ingest_mod
+    from quant.data.ingest import ingest_spy as ingest_func
     from quant.data.types import STOOQ_CAPABILITIES, FetchResult
 
     frame = pd.DataFrame(
@@ -69,12 +69,11 @@ def test_stooq_ingest_convert_raises(monkeypatch, tmp_path):
         ]
     )
     monkeypatch.setattr(
-        ingest_mod,
-        "fetch_daily",
+        "quant.data.ingest.fetch_daily",
         lambda *_a, **_k: FetchResult(frame, "stooq", STOOQ_CAPABILITIES),
     )
     with pytest.raises(ProviderCapabilityError, match="不提供分红"):
-        ingest_mod.ingest_spy(data_root=tmp_path, convert_lean=True)
+        ingest_func(data_root=tmp_path, convert_lean=True)
 
 
 def test_fetch_spy_daily_auto_falls_back_to_stooq_then_raises_on_adjusted(monkeypatch):

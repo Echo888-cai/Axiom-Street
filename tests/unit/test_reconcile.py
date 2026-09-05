@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import pytest
 
-from quant.data.ingest_spy import ingest
+from quant.data.ingest import ingest
 from quant.data.providers import (
     fetch_polygon,
     provider_status,
@@ -66,7 +66,7 @@ def test_close_within_threshold_is_clean():
 
 
 def test_ingest_records_close_mismatch_warning(monkeypatch, tmp_path):
-    from quant.data.ingest_spy import data_status
+    from quant.data.ingest import data_status
 
     primary = _frame({"2020-01-02": 100.0, "2020-01-03": 101.0})
     secondary = _frame({"2020-01-02": 100.20, "2020-01-03": 101.0})
@@ -78,7 +78,7 @@ def test_ingest_records_close_mismatch_warning(monkeypatch, tmp_path):
             return FetchResult(secondary.copy(), "yfinance", YFINANCE_CAPABILITIES)
         raise AssertionError(f"unexpected provider {provider}")
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
     result = ingest(
         symbols=["SPY"],
         data_root=tmp_path,
@@ -155,7 +155,7 @@ def test_ingest_reconcile_blocks_on_corp_action_mismatch(monkeypatch, tmp_path):
             return FetchResult(secondary.copy(), "yfinance", YFINANCE_CAPABILITIES)
         raise AssertionError(f"unexpected provider {provider}")
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
     with pytest.raises(DataQualityError) as exc:
         ingest(
             symbols=["SPY"],

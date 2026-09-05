@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from quant.data.fundamentals import load_fundamentals_map
-from quant.data.ingest_spy import load_symbol_parquet
+from quant.data.ingest import load_symbol_parquet
 from quant.data.symbols import list_market_symbols, normalize_symbols
 from quant.data.universe import (
     Membership,

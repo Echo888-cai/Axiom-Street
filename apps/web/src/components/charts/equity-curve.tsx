@@ -1,4 +1,5 @@
 "use client";
+import { chartColors } from "@/lib/chart-tokens";
 
 import { useEffect, useRef } from "react";
 import {
@@ -39,7 +40,7 @@ function fromLegacy(data: LegacyPoint[]): EquitySeries[] {
     {
       id: "strategy",
       label: "策略",
-      color: "#1677FF",
+      color: chartColors.primary,
       data: data.map((d) => ({ time: d.time, value: d.strategy })),
     },
   ];
@@ -48,7 +49,7 @@ function fromLegacy(data: LegacyPoint[]): EquitySeries[] {
     series.push({
       id: "benchmark",
       label: "基准",
-      color: "#98A2B3",
+      color: chartColors.benchmark,
       dashed: true,
       data: bench.map((d) => ({ time: d.time, value: d.benchmark as number })),
     });
@@ -74,19 +75,27 @@ export function EquityCurve({
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRefs = useRef<ISeriesApi<"Line">[]>([]);
 
+  const structure = JSON.stringify(
+    resolved.map(({ id, color, dashed }) => ({ id, color, dashed })),
+  );
+
   useEffect(() => {
+    const definitions = JSON.parse(structure) as Pick<
+      EquitySeries,
+      "id" | "color" | "dashed"
+    >[];
     if (!containerRef.current) return;
 
     const chart = createChart(containerRef.current, {
       height,
       layout: {
-        background: { type: ColorType.Solid, color: "#ffffff" },
-        textColor: "#667085",
+        background: { type: ColorType.Solid, color: chartColors.background },
+        textColor: chartColors.muted,
         fontFamily: "Inter, system-ui, sans-serif",
       },
       grid: {
-        vertLines: { color: "rgba(15,23,42,0.04)" },
-        horzLines: { color: "rgba(15,23,42,0.04)" },
+        vertLines: { color: chartColors.grid },
+        horzLines: { color: chartColors.grid },
       },
       rightPriceScale: {
         borderVisible: false,
@@ -94,18 +103,24 @@ export function EquityCurve({
       },
       timeScale: { borderVisible: false },
       crosshair: {
-        vertLine: { color: "rgba(22,119,255,0.25)", labelBackgroundColor: "#1677FF" },
-        horzLine: { color: "rgba(22,119,255,0.25)", labelBackgroundColor: "#1677FF" },
+        vertLine: {
+          color: chartColors.crosshair,
+          labelBackgroundColor: chartColors.primary,
+        },
+        horzLine: {
+          color: chartColors.crosshair,
+          labelBackgroundColor: chartColors.primary,
+        },
       },
     });
 
-    const created = resolved.map((item) =>
+    const created = definitions.map((item) =>
       chart.addSeries(LineSeries, {
         color: item.color,
         lineWidth: 2,
         lineStyle: item.dashed ? LineStyle.Dashed : LineStyle.Solid,
         priceLineVisible: false,
-          lastValueVisible: resolved.length > 1,
+        lastValueVisible: definitions.length > 1,
       }),
     );
 
@@ -125,7 +140,7 @@ export function EquityCurve({
       chartRef.current = null;
       seriesRefs.current = [];
     };
-  }, [height, logScale, resolved.map((s) => `${s.id}:${s.dashed ? "d" : "s"}:${s.color}`).join("|")]);
+  }, [height, logScale, structure]);
 
   useEffect(() => {
     const apis = seriesRefs.current;
@@ -145,7 +160,7 @@ export function EquityCurve({
           ? markers.map((m) => ({
               time: m.time.slice(0, 10) as Time,
               position: m.buy ? "belowBar" : "aboveBar",
-              color: m.buy ? "#12B76A" : "#F04438",
+              color: m.buy ? chartColors.positive : chartColors.negative,
               shape: m.buy ? "arrowUp" : "arrowDown",
               text: m.label,
             }))
@@ -153,7 +168,7 @@ export function EquityCurve({
       );
     }
     chartRef.current?.timeScale().fitContent();
-  }, [resolved, markers]);
+  }, [resolved, markers, height, logScale, structure]);
 
   return (
     <div>
@@ -170,7 +185,9 @@ export function EquityCurve({
                     : item.color,
                   color: item.color,
                   backgroundColor: item.dashed ? "transparent" : item.color,
-                  borderBottom: item.dashed ? `1.5px dashed ${item.color}` : undefined,
+                  borderBottom: item.dashed
+                    ? `1.5px dashed ${item.color}`
+                    : undefined,
                 }}
               />
               {item.label}

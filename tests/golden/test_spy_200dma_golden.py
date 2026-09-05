@@ -33,7 +33,7 @@ def test_spy_200dma_golden_backtest():
     jobs_root.mkdir(parents=True, exist_ok=True)
 
     if not (data_root / "market" / "equities" / "US" / "daily" / "SPY.parquet").exists():
-        pytest.skip("SPY parquet missing — run python -m quant.data.ingest_spy")
+        pytest.skip("SPY parquet missing — run python -m quant.data.ingest")
 
     engine = LeanQuantEngine(data_root=data_root, jobs_root=jobs_root)
     health = engine.health_check()

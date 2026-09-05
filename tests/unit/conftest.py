@@ -94,5 +94,5 @@ def _no_live_fundamentals(monkeypatch):
     def _blocked(symbol: str, **_k):
         raise FundamentalsFetchError(f"{symbol} fundamentals mocked offline")
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_fundamentals", _blocked)
+    monkeypatch.setattr("quant.data.ingest.fetch_fundamentals", _blocked)
     monkeypatch.setattr("quant.data.fundamentals.fetch_fundamentals", _blocked)

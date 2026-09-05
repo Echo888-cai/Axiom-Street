@@ -19,7 +19,10 @@ function spanYears(start: string, end: string): number {
 
 export function WalkForwardForm() {
   const qc = useQueryClient();
-  const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.listStrategies });
+  const strategies = useQuery({
+    queryKey: ["strategies"],
+    queryFn: api.listStrategies,
+  });
   const [strategyId, setStrategyId] = useState("");
   const [start, setStart] = useState("2018-01-01");
   const [end, setEnd] = useState("2020-12-31");
@@ -34,14 +37,11 @@ export function WalkForwardForm() {
 
   const backtests = useQuery({
     queryKey: ["backtests", selected?.id, "COMPLETED"],
-    queryFn: () => api.listBacktests({ strategy_id: selected?.id, status: "COMPLETED" }),
+    queryFn: () =>
+      api.listBacktests({ strategy_id: selected?.id, status: "COMPLETED" }),
     enabled: Boolean(selected?.id),
   });
   const latest = backtests.data?.[0];
-
-  useEffect(() => {
-    if (!selected && items[0]) setStrategyId(items[0].id);
-  }, [items, selected]);
 
   useEffect(() => {
     if (!latest) return;
@@ -50,11 +50,12 @@ export function WalkForwardForm() {
     const years = spanYears(latest.start_date, latest.end_date);
     setTrainYears(years >= 4 ? 3 : 1);
     setTestYears(1);
-  }, [latest?.id]);
+  }, [latest]);
 
   const hint = useMemo(() => {
     if (!items.length) return "先建一条策略。";
-    if (!latest) return "先对该版本跑完一次全样本回测。Walk-forward 借用那次回测的标的池与快照，不会猜测 SPY。";
+    if (!latest)
+      return "先对该版本跑完一次全样本回测。Walk-forward 借用那次回测的标的池与快照，不会猜测 SPY。";
     const years = spanYears(start, end);
     if (years < trainYears + testYears + 0.9) {
       return "当前区间切不出两折完整样本外。缩短训练年数，或把回测历史拉长。";
@@ -133,11 +134,19 @@ export function WalkForwardForm() {
         </label>
         <label className="space-y-1 text-[11px] text-as-muted">
           开始
-          <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+          <Input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          />
         </label>
         <label className="space-y-1 text-[11px] text-as-muted">
           结束
-          <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <Input
+            type="date"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="space-y-1 text-[11px] text-as-muted">
@@ -163,7 +172,10 @@ export function WalkForwardForm() {
         </div>
       </div>
       <p className="text-[11px] leading-relaxed text-as-muted">{hint}</p>
-      <Button type="submit" disabled={!versionId || !latest || create.isPending}>
+      <Button
+        type="submit"
+        disabled={!versionId || !latest || create.isPending}
+      >
         {create.isPending ? "提交中…" : "运行 Walk-forward"}
       </Button>
     </form>

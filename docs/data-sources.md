@@ -23,9 +23,9 @@ Stooq 不声明 `dividends`/`splits`。能力不足时摄取与 Adjusted 回测*
 
 ```bash
 # 有 POLYGON_API_KEY 时 auto = Polygon 主源 + yfinance 对账
-python -m quant.data.ingest_spy SPY
+python -m quant.data.ingest.cli SPY
 # 显式指定
-python -m quant.data.ingest_spy SPY --provider polygon --reconcile-with yfinance
+python -m quant.data.ingest.cli SPY --provider polygon --reconcile-with yfinance
 ```
 
 | 检查 | 阈值 | 严重度 |
@@ -62,7 +62,7 @@ Celery Beat 每天对当前已发布 universe 做一次 `mode=full` 再拉（任
 Polygon 每个标的约 3 次 HTTP（K 线 + 分红 + 拆分），实际标的吞吐约为 `RPS/3`。
 
 ```bash
-python -m quant.data.ingest_spy --symbols-file tickers.txt
+python -m quant.data.ingest.cli --symbols-file tickers.txt
 ```
 
 规则：
@@ -74,9 +74,9 @@ python -m quant.data.ingest_spy --symbols-file tickers.txt
 - 最后一根 K 线早于 14 个自然日 → 推断 `effective_to`，写入仍开放的标的池成分（不覆盖已有退出日）
 
 ```bash
-python -m quant.data.ingest_spy SPY
-python -m quant.data.ingest_spy SPY QQQ --mode incremental
-python -m quant.data.ingest_spy --symbols-file tickers.txt
+python -m quant.data.ingest.cli SPY
+python -m quant.data.ingest.cli SPY QQQ --mode incremental
+python -m quant.data.ingest.cli --symbols-file tickers.txt
 # POST /api/v1/data/ingest
 #   {"symbols": ["SPY"], "provider": "polygon", "reconcile_with": "yfinance"}
 # POST /api/v1/data/reconcile   # 对当前 universe 全量再拉（与 Beat 同一路径）

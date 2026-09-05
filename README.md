@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="brand/logo.png" alt="Axiom Street" width="160" />
+  <img src="apps/web/public/axiom-mark.svg" alt="Axiom Street" width="96" />
 </p>
 
 <h1 align="center">Axiom Street</h1>
@@ -15,6 +15,18 @@
 </p>
 
 ---
+
+## White Studio · 浅色研究工作室
+
+前端已整理为浅色设计系统与按业务划分的模块。启动、目录职责、同源 API 网关与已验证范围见 [前端接手文档](docs/frontend-handoff.md)，视觉规范见 [White Studio](design-system/axiom-street/MASTER.md)。
+
+```sh
+make up           # 完整 Docker 研究环境
+make web          # 本地 Next.js 前端
+make api          # 本地 FastAPI，优先使用 .venv
+```
+
+浏览器默认使用同源 `/api/backend`；Next.js 通过运行时 `API_BASE_URL` 连接后端。
 
 ## Why Axiom Street exists
 
@@ -86,15 +98,19 @@ Mature components over vanity engineering. We do not rewrite a backtester for sp
 
 | Phase | Status |
 |-------|--------|
-| 0–1 Foundation + SPY 200DMA path | Done |
-| 1.5 Trust hardening (fail-loud, Celery, trial ledger) | Done |
-| **2 Data platform** (PIT universes ✓, incremental ingest ✓, dual-source ✓, 500-name ingest ✓, 1/N 横截面 ✓, 退市 effective_to ✓, 价格/流动性规则池 ✓) | **In progress** |
-| 3 Validation engine | Done — DSR / WF / PBO / sensitivity / cost / bootstrap / regime / SPA_c gate `VALIDATED` |
-| 4–8 Research · AI · Paper · Live · Portfolio | Sequenced after validation |
+| **当前阶段：Phase 4 研究工作台收尾** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
 
-Do not treat backtest numbers as investment advice until Phase 2–3 close the remaining trust gaps.
+Do not treat backtest numbers as investment advice until Phase 4 closes.
 
-Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+### Deployment constraints (single-user, no auth)
+
+> **This product is single-user and not exposed to any network.**
+>
+> - API and Web bind **only `127.0.0.1`**, never `0.0.0.0`
+> - `POST /api/v1/data/ingest` is an unauthenticated network+disk DoS vector — **accepted risk** because it is unreachable from outside
+> - `users` table, `created_by="local"`, `audit_logs.actor="local"` are **known empty shells**, not pretend-auth
+
+If a second user ever appears, auth + `user_id` threading become P0 immediately.
 
 ---
 
@@ -123,9 +139,9 @@ uvicorn services.api.main:app --reload --port 8000
 ### Ingest market data
 
 ```bash
-python -m quant.data.ingest_spy SPY
-python -m quant.data.ingest_spy SPY QQQ --mode incremental
-python -m quant.data.ingest_spy --symbols-file tickers.txt
+python -m quant.data.ingest.cli SPY
+python -m quant.data.ingest.cli SPY QQQ --mode incremental
+python -m quant.data.ingest.cli --symbols-file tickers.txt
 ```
 
 Configuration uses the `STREET_` env prefix (see `.env.example`).
@@ -144,7 +160,8 @@ pytest -m golden        # requires Docker + pinned LEAN image
 | Document | Purpose |
 |----------|---------|
 | [`docs/VISION.md`](docs/VISION.md) | What we are — and what we refuse to become |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phased construction blueprint |
+| [`docs/PLAN.md`](docs/PLAN.md) | **Single execution plan** (replaces ROADMAP.md) |
+| [`docs/validation-gates.md`](docs/validation-gates.md) | 8 validation gate thresholds (only written record) |
 | [`docs/architecture.md`](docs/architecture.md) | Layers, boundaries, reproducibility contract |
 | [`docs/data-sources.md`](docs/data-sources.md) | Providers, capabilities, ingest layout |
 | [`design-system/axiom-street/MASTER.md`](design-system/axiom-street/MASTER.md) | Tokens and anti-patterns |

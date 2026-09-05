@@ -72,30 +72,22 @@ from services.api.schemas import (
     RegimeCreate,
     SensitivityCreate,
     SpaCreate,
+    ValidationCreate,
     ValidationRunOut,
     WalkForwardCreate,
 )
 from services.api.services.strategies import get_version
+from services.api.services.validation_spec import (
+    engine_kinds,
+    get_spec,
+    validated_kinds,
+)
 from services.api.settings import get_settings
 
 _BT_INFLIGHT = {BacktestStatus.QUEUED, BacktestStatus.STARTING, BacktestStatus.RUNNING}
 _WF_INFLIGHT = {ValidationRunStatus.QUEUED, ValidationRunStatus.RUNNING}
-_ENGINE_KINDS = (
-    ValidationKind.WALK_FORWARD,
-    ValidationKind.PBO,
-    ValidationKind.SENSITIVITY,
-    ValidationKind.COST,
-)
-_VALIDATED_KINDS = (
-    ValidationKind.WALK_FORWARD,
-    ValidationKind.DSR,
-    ValidationKind.PBO,
-    ValidationKind.SENSITIVITY,
-    ValidationKind.COST,
-    ValidationKind.BOOTSTRAP,
-    ValidationKind.REGIME,
-    ValidationKind.SPA,
-)
+_ENGINE_KINDS = engine_kinds()
+_VALIDATED_KINDS = validated_kinds()
 _LIVE_STATUSES = {
     StrategyStatus.PAPER,
     StrategyStatus.APPROVED,
@@ -225,7 +217,10 @@ def equity_payload(db: Session, backtest_id: UUID) -> list[dict[str, Any]]:
         .order_by(BacktestEquity.ts.asc())
         .all()
     )
-    return [{"ts": row.ts, "strategy_value": row.strategy_value, "benchmark_value": row.benchmark_value} for row in points]
+    return [
+        {"ts": row.ts, "strategy_value": row.strategy_value, "benchmark_value": row.benchmark_value}
+        for row in points
+    ]
 
 
 def record_bootstrap_for_backtest(
@@ -336,7 +331,9 @@ def record_regime_for_backtest(
 
 def count_inflight_engine_jobs(db: Session) -> int:
     backtests = int(
-        db.scalar(select(func.count()).select_from(Backtest).where(Backtest.status.in_(_BT_INFLIGHT)))
+        db.scalar(
+            select(func.count()).select_from(Backtest).where(Backtest.status.in_(_BT_INFLIGHT))
+        )
         or 0
     )
     walks = int(
@@ -405,8 +402,8 @@ def to_out(row: ValidationRun) -> ValidationRunOut:
 
 def validation_gates() -> dict[str, Any]:
     return {
-        "validated_requires": [kind.value for kind in _VALIDATED_KINDS],
-        "available": [kind.value for kind in _VALIDATED_KINDS],
+        "validated_requires": [kind.name for kind in _VALIDATED_KINDS],
+        "available": [kind.name for kind in _VALIDATED_KINDS],
         "missing": [],
         "note": (
             "VALIDATED 由系统持有：Walk-forward 通过、同版本 DSR 过 95% 线、"
@@ -501,9 +498,7 @@ def maybe_apply_validated(
         )
 
 
-def _template_backtest(
-    db: Session, version: StrategyVersion, backtest_id: UUID | None
-) -> Backtest:
+def _template_backtest(db: Session, version: StrategyVersion, backtest_id: UUID | None) -> Backtest:
     if backtest_id is not None:
         backtest = db.get(Backtest, backtest_id)
         if backtest is None:
@@ -550,6 +545,99 @@ def _enqueue_walk_forward(run_id: str, *, n_folds: int) -> None:
         time_limit=timeout,
         soft_time_limit=max(timeout - 60, 60),
     )
+
+
+def create_validation_run(db: Session, payload: ValidationCreate) -> ValidationRun:
+    """Generic validation creation — params validated against spec registry."""
+    try:
+        # Case-insensitive enum matching
+        kind_str = payload.kind.upper()
+        kind = ValidationKind[kind_str]
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"未知的验证类型：{payload.kind}",
+        ) from exc
+
+    spec = get_spec(kind)
+    schema = spec.params_schema()
+    # Validate params against schema
+    try:
+        validated_params = schema(**payload.params)
+    except Exception as exc:  # pydantic.ValidationError
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    version = get_version(db, payload.strategy_version_id)
+
+    # Pre-backtest strategy validation (e.g., parameter reading checks)
+    spec.validate_strategy(db, version, validated_params)
+
+    template = _template_backtest(db, version, payload.backtest_id)
+
+    # For engine kinds, check concurrency
+    if kind in _ENGINE_KINDS:
+        settings = get_settings()
+        if count_inflight_engine_jobs(db) >= settings.max_inflight_backtests:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="并发回测已达上限，请等待正在运行的任务完成后再提交验证。",
+            )
+
+    # Build params dict from validated model
+    try:
+        params_dict = spec.prepare_params(db, version, template, validated_params)
+    except WalkForwardError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    run = ValidationRun(
+        strategy_id=version.strategy_id,
+        strategy_version_id=version.id,
+        backtest_id=template.id,
+        kind=kind,
+        status=ValidationRunStatus.QUEUED,
+        progress_step="Queued",
+        params=params_dict,
+        result={},
+        passed=False,
+    )
+    db.add(run)
+    db.flush()
+    db.add(
+        AuditLog(
+            actor="local",
+            action=f"{spec.display_name} Started",
+            object_type="validation_run",
+            object_id=str(run.id),
+            after={
+                "strategy_version_id": str(version.id),
+                "kind": kind.value,
+                "params": params_dict,
+            },
+        )
+    )
+    db.commit()
+    db.refresh(run)
+
+    # Enqueue using spec's runner (sync or async based on settings)
+    settings = get_settings()
+    if settings.sync_backtests:
+        runner = spec.sync_runner()
+        runner(str(run.id))
+    else:
+        runner = spec.runner()
+        if hasattr(runner, "delay"):
+            runner.delay(str(run.id))
+        else:
+            runner(str(run.id))
+
+    db.refresh(run)
+    return run
 
 
 def create_walk_forward_run(db: Session, payload: WalkForwardCreate) -> ValidationRun:
@@ -652,7 +740,7 @@ def create_pbo_scan(db: Session, payload: PBOScanCreate) -> ValidationRun:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "该版本没有读取 LEAN 参数 lookback（GetParameter(\"lookback\")）。"
+                '该版本没有读取 LEAN 参数 lookback（GetParameter("lookback")）。'
                 "扫一个策略读不到的字段会得到相同净值，PBO 没有意义。请先提交新版本。"
             ),
         )
@@ -676,7 +764,9 @@ def create_pbo_scan(db: Session, payload: PBOScanCreate) -> ValidationRun:
     start = payload.start_date or template.start_date
     end = payload.end_date or template.end_date
     if end <= start:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="结束日期必须晚于开始日期")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="结束日期必须晚于开始日期"
+        )
 
     settings = get_settings()
     if count_inflight_engine_jobs(db) >= settings.max_inflight_backtests:
@@ -754,7 +844,7 @@ def create_sensitivity_scan(db: Session, payload: SensitivityCreate) -> Validati
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "该版本没有读取 LEAN 参数 lookback（GetParameter(\"lookback\")）。"
+                '该版本没有读取 LEAN 参数 lookback（GetParameter("lookback")）。'
                 "扰动一个策略读不到的字段会得到相同净值，敏感性没有意义。请先提交新版本。"
             ),
         )
@@ -773,7 +863,9 @@ def create_sensitivity_scan(db: Session, payload: SensitivityCreate) -> Validati
     start = payload.start_date or template.start_date
     end = payload.end_date or template.end_date
     if end <= start:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="结束日期必须晚于开始日期")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="结束日期必须晚于开始日期"
+        )
 
     settings = get_settings()
     if count_inflight_engine_jobs(db) >= settings.max_inflight_backtests:
@@ -846,7 +938,7 @@ def create_cost_scan(db: Session, payload: CostScanCreate) -> ValidationRun:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                f"该版本没有读取 LEAN 参数 {SLIPPAGE_PARAMETER}（GetParameter(\"{SLIPPAGE_PARAMETER}\")）。"
+                f'该版本没有读取 LEAN 参数 {SLIPPAGE_PARAMETER}（GetParameter("{SLIPPAGE_PARAMETER}")）。'
                 "成本扫描必须能改滑点，否则净值不变。请先提交新版本。"
             ),
         )
@@ -889,7 +981,9 @@ def create_cost_scan(db: Session, payload: CostScanCreate) -> ValidationRun:
     start = payload.start_date or template.start_date
     end = payload.end_date or template.end_date
     if end <= start:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="结束日期必须晚于开始日期")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="结束日期必须晚于开始日期"
+        )
 
     settings = get_settings()
     if count_inflight_engine_jobs(db) >= settings.max_inflight_backtests:
@@ -1158,4 +1252,3 @@ def create_spa_run(db: Session, payload: SpaCreate) -> ValidationRun:
     _enqueue_spa(str(run.id))
     db.refresh(run)
     return run
-

@@ -11,7 +11,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from quant.data.ingest_spy import data_status, ingest
+from quant.data.ingest import data_status, ingest
 from quant.data.rate_limit import ensure_ingest_symbol_count
 from quant.data.symbols import normalize_symbols
 from quant.data.types import DataQualityError, ProviderCapabilityError

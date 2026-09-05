@@ -92,7 +92,9 @@ def test_choose_n_slices_refuses_awkward_t():
 
 
 def test_strategy_reads_lookback():
-    assert strategy_reads_lookback('self.sma = self.SMA(self.spy.Symbol, int(self.GetParameter("lookback") or 200)')
+    assert strategy_reads_lookback(
+        'self.sma = self.SMA(self.spy.Symbol, int(self.GetParameter("lookback") or 200)'
+    )
     assert strategy_reads_lookback(DEFAULT_STRATEGY_CODE)
     assert not strategy_reads_lookback("self.sma = self.SMA(self.spy.Symbol, 200)")
 

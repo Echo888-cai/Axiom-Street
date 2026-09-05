@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,12 @@ function friendlyError(message: string): string {
 export function StrategyLab({ strategyId }: { strategyId: string }) {
   const router = useRouter();
   const qc = useQueryClient();
-  const { data: strategy, isLoading } = useQuery({
+  const {
+    data: strategy,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["strategy", strategyId],
     queryFn: () => api.getStrategy(strategyId),
   });
@@ -62,7 +68,9 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
   const [universeId, setUniverseId] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState("");
-  const [confirmRestore, setConfirmRestore] = useState<"spy" | "equal" | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState<"spy" | "equal" | null>(
+    null,
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [pane, setPane] = useState<"code" | "diff">("code");
@@ -77,14 +85,23 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
   useEffect(() => {
     if (strategy?.latest_version?.code) setCode(strategy.latest_version.code);
-    if (strategy?.latest_version?.config) setConfig(strategy.latest_version.config);
+    if (strategy?.latest_version?.config)
+      setConfig(strategy.latest_version.config);
     if (strategy?.name) setName(strategy.name);
-  }, [strategy?.latest_version?.id, strategy?.name]);
+  }, [
+    strategy?.latest_version?.id,
+    strategy?.latest_version?.code,
+    strategy?.latest_version?.config,
+    strategy?.name,
+  ]);
 
   const dirty = useMemo(() => {
     const latest = strategy?.latest_version;
     if (!latest) return Boolean(code);
-    return code !== latest.code || JSON.stringify(config) !== JSON.stringify(latest.config);
+    return (
+      code !== latest.code ||
+      JSON.stringify(config) !== JSON.stringify(latest.config)
+    );
   }, [code, config, strategy?.latest_version]);
 
   useEffect(() => {
@@ -108,7 +125,12 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     if (compareIds.length === 2) setPane("diff");
   }, [compareIds]);
 
-  function applyMarkers(result: { ok: boolean; message: string | null; line: number | null; column: number | null }) {
+  function applyMarkers(result: {
+    ok: boolean;
+    message: string | null;
+    line: number | null;
+    column: number | null;
+  }) {
     const editor = editorRef.current;
     const monacoApi = monacoRef.current;
     const model = editor?.getModel();
@@ -168,7 +190,9 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
       const lint = await api.checkSyntax(code);
       applyMarkers(lint);
       if (!lint.ok) {
-        throw new Error(`语法错误：第 ${lint.line} 行 ${lint.message || ""}`.trim());
+        throw new Error(
+          `语法错误：第 ${lint.line} 行 ${lint.message || ""}`.trim(),
+        );
       }
       let versionId = strategy?.latest_version?.id;
       if (!versionId || dirty) {
@@ -218,12 +242,27 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [dirty, save, run]);
 
+  if (error)
+    return (
+      <Card>
+        <EmptyState
+          title="无法读取这项研究"
+          description={error.message}
+          action={
+            <Button variant="secondary" onClick={() => refetch()}>
+              重新读取
+            </Button>
+          }
+        />
+      </Card>
+    );
+
   if (isLoading || !strategy) {
     return <Card className="h-[70vh] animate-pulse bg-as-secondary" />;
   }
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-4 as-enter">
+    <div className="flex min-h-[calc(100vh-12rem)] flex-col gap-4 as-enter">
       <PageHeader
         crumbs={[
           { href: "/", label: "首页" },
@@ -260,7 +299,9 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
             </button>
           )
         }
-        description={strategy.description || "结构化策略工作区。代码是信号的唯一来源。"}
+        description={
+          strategy.description || "结构化策略工作区。代码是信号的唯一来源。"
+        }
         action={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Badge tone="neutral">{labelStatus(strategy.status)}</Badge>
@@ -271,7 +312,11 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
                 研究笔记
               </Button>
             </Link>
-            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+            >
               删除
             </Button>
           </div>
@@ -282,11 +327,21 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
             开始
-            <Input type="date" className="w-[138px]" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input
+              type="date"
+              className="w-[138px]"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </label>
           <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
             结束
-            <Input type="date" className="w-[138px]" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Input
+              type="date"
+              className="w-[138px]"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
           </label>
           <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
             本金
@@ -329,7 +384,11 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
           <Button variant="ghost" onClick={() => setConfirmRestore("equal")}>
             加载等权横截面
           </Button>
-          <Button variant="secondary" onClick={() => save.mutate()} disabled={save.isPending || !dirty}>
+          <Button
+            variant="secondary"
+            onClick={() => save.mutate()}
+            disabled={save.isPending || !dirty}
+          >
             {save.isPending ? "保存中…" : "保存版本"}
           </Button>
           <Button onClick={() => run.mutate()} disabled={run.isPending}>
@@ -362,13 +421,16 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
       {code.includes("AfterMarketClose") ? (
         <p className="text-xs text-as-negative">
-          当前代码使用了已失效的 AfterMarketClose。请点击「恢复 SPY 200DMA」，否则回测会失败。
+          当前代码使用了已失效的 AfterMarketClose。请点击「恢复 SPY
+          200DMA」，否则回测会失败。
         </p>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 grid-cols-12 gap-4">
+      <div className="grid min-h-[520px] flex-1 grid-cols-12 gap-4">
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
-          <div className="border-b border-as-border px-4 py-3 text-sm font-medium">策略构建器</div>
+          <div className="border-b border-as-border px-4 py-3 text-sm font-medium">
+            策略构建器
+          </div>
           <BuilderPanel config={config} onChange={setConfig} />
         </Card>
 
@@ -387,14 +449,14 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
                 />
               ) : null}
             </div>
-            <span className="text-[11px] text-as-muted">
-              Python · Jedi 补全 · ⌘S 保存 · ⌘↵ 回测
+            <span className="hidden text-[11px] text-as-muted xl:block">
+              Python · ⌘S 保存 · ⌘↵ 回测
             </span>
           </div>
           {pane === "diff" && comparePair ? (
             <VersionDiff left={comparePair.left} right={comparePair.right} />
           ) : (
-            <div className="min-h-0 flex-1">
+            <div className="min-h-[420px] flex-1">
               <Editor
                 height="100%"
                 defaultLanguage="python"
@@ -423,7 +485,9 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
           <div className="border-b border-as-border px-4 py-3">
             <div className="text-sm font-medium">版本历史</div>
-            <p className="mt-0.5 text-[11px] text-as-muted">勾选两个版本对比；点击载入到编辑器</p>
+            <p className="mt-0.5 text-[11px] text-as-muted">
+              勾选两个版本对比；点击载入到编辑器
+            </p>
           </div>
           <VersionHistory
             versions={versions.data || []}
@@ -449,7 +513,11 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
       <ConfirmDialog
         open={confirmRestore != null}
-        title={confirmRestore === "equal" ? "加载等权横截面模板？" : "恢复 SPY 200DMA 模板？"}
+        title={
+          confirmRestore === "equal"
+            ? "加载等权横截面模板？"
+            : "恢复 SPY 200DMA 模板？"
+        }
         description="会覆盖编辑器中的当前代码。未保存的修改将丢失，除非你先保存版本。"
         confirmLabel="载入模板"
         onConfirm={() => {

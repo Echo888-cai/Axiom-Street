@@ -1,13 +1,13 @@
 # Axiom Street 架构
 
 > 本文描述**目标架构**，并标注每一层的当前状态。
-> 愿景见 `docs/VISION.md`，施工计划见 `docs/ROADMAP.md`。
+> 愿景见 `docs/VISION.md`，施工计划见 `docs/PLAN.md`，闸门规格见 `docs/validation-gates.md`。
 
 ## 仓库布局
 
 | 路径 | 职责 |
 |------|------|
-| `apps/web` | Next.js 研究工作台 UI |
+| `apps/web` | Next.js 研究工作台 UI（**唯一产品前端**） |
 | `services/api` | FastAPI；唯一的数据库写入路径 |
 | `services/worker` | Celery worker；持有 `docker.sock`，执行 LEAN |
 | `quant/` | 纯 Python 量化核心（不依赖 web framework） |
@@ -15,9 +15,13 @@
 | `tests/` | 单元测试 + Golden Backtest |
 | `design-system/axiom-street` | 设计令牌 |
 | `brand/` | 品牌主视觉 |
-| `docs/` | 愿景 / 路线图 / 架构 / 数据契约 |
+| `docs/` | 愿景 / 计划 / 架构 / 数据契约 / 闸门规格 |
 
 ---
+
+## 当前前端实现（2026-09-05）
+
+`apps/web/src/app` 负责路由；`features` 负责业务；`components` 负责通用外观；`lib/api` 按策略、回测、验证、数据、标的池、笔记和代码服务拆分。浏览器经 `/api/backend` 同源网关访问 FastAPI，`API_BASE_URL` 在 Next.js 服务端运行时读取。SSE 与下载均走同一链路。详细目录及运行约定见 [前端接手说明](frontend-handoff.md)。
 
 ## 1. 分层与边界
 
@@ -194,7 +198,7 @@ QUEUED ─▶ STARTING ─▶ RUNNING ─▶ COMPLETED
 | 编辑器 | **Monaco** | VS Code 同源，Python 生态成熟 |
 | 图表 | **Lightweight Charts** | 金融图表专用，性能好，Apache-2.0（需保留 attribution） |
 | 主库 | **PostgreSQL** | 事务性元数据 + JSON 字段的平衡 |
-| 分析查询 | **DuckDB + Parquet** | 列式扫描快，零运维 |
+| 分析查询 | **Parquet + pandas** | 零运维，Phase 8 若需列式扫描再引入 DuckDB |
 | 队列 | **Celery + Redis** | 成熟，支持 beat / group / chord（参数扫描需要） |
 | API | **FastAPI + SQLAlchemy + Alembic** | 类型化、OpenAPI 自动生成（可供前端 codegen） |
 | 前端 | **Next.js + TypeScript + Tailwind** | 约定清晰，无自研设计系统的负担 |
@@ -224,6 +228,13 @@ QUEUED ─▶ STARTING ─▶ RUNNING ─▶ COMPLETED
 
 用户提交的**任意 Python 代码**会在 LEAN 容器内执行。这是产品的核心攻击面。
 
+**部署模型（D2：单人自用、永不暴露）**
+
+- API 与 Web 只绑 `127.0.0.1`，**不绑 `0.0.0.0`**
+- `POST /api/v1/data/ingest` 是无认证的网络+磁盘 DoS 入口，**已知且接受的风险**，前提是它不可从外部到达
+- `users` 表、`created_by="local"`、`audit_logs.actor="local"` 为**已知空壳**，不假装有意义
+- 一旦有第二个人使用，认证与 `user_id` 贯穿立刻升级为 P0，插在当期工作包之后
+
 **现有隔离**：`--network none` · `--memory 2g` · `--cpus 2` · `--pids-limit 256` · 数据目录只读挂载。
 
-**待补**（Phase 2 之后）：seccomp profile · 只读根文件系统 · 非 root 用户 · 危险 import 的静态检查 · 认证与多用户隔离（当前**零认证**，所有接口公开，含可触发网络+磁盘负载的 `POST /data/ingest`）。
+**待补**（Phase 6 之前）：seccomp profile · 只读根文件系统 · 非 root 用户 · 危险 import 的静态检查

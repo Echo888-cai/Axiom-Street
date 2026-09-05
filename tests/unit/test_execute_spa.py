@@ -97,7 +97,9 @@ def _seed(
             start_date=date(2018, 1, 1),
             end_date=date(2019, 6, 1),
             status=BacktestStatus.COMPLETED,
-            universe_snapshot=[{"symbol": "SPY", "effective_from": "2018-01-01", "effective_to": None}],
+            universe_snapshot=[
+                {"symbol": "SPY", "effective_from": "2018-01-01", "effective_to": None}
+            ],
         )
         db.add(backtest)
         db.flush()

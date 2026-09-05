@@ -1,4 +1,5 @@
 "use client";
+import { chartColors } from "@/lib/chart-tokens";
 
 import { useEffect, useRef } from "react";
 import {
@@ -13,7 +14,7 @@ import type { SeriesPoint } from "@/lib/tearsheet";
 
 export function RollingChart({
   data,
-  color = "#1677FF",
+  color = chartColors.primary,
   caption,
   height = 180,
 }: {
@@ -31,13 +32,13 @@ export function RollingChart({
     const chart = createChart(ref.current, {
       height,
       layout: {
-        background: { type: ColorType.Solid, color: "#ffffff" },
-        textColor: "#667085",
+        background: { type: ColorType.Solid, color: chartColors.background },
+        textColor: chartColors.muted,
         fontFamily: "Inter, system-ui, sans-serif",
       },
       grid: {
-        vertLines: { color: "rgba(15,23,42,0.04)" },
-        horzLines: { color: "rgba(15,23,42,0.04)" },
+        vertLines: { color: chartColors.grid },
+        horzLines: { color: chartColors.grid },
       },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
@@ -73,7 +74,9 @@ export function RollingChart({
   return (
     <div>
       <div ref={ref} className="w-full" />
-      {caption ? <div className="mt-2 text-[10px] text-as-muted">{caption}</div> : null}
+      {caption ? (
+        <div className="mt-2 text-[10px] text-as-muted">{caption}</div>
+      ) : null}
     </div>
   );
 }

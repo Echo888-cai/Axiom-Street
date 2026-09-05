@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from quant.data.ingest_spy import data_status, load_symbol_parquet
+from quant.data.ingest import data_status, load_symbol_parquet
 from quant.data.quality import validate_ohlcv
 from quant.data.symbols import as_symbol_list, normalize_symbols
 from quant.data.universe import Membership

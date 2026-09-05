@@ -226,9 +226,7 @@ def _record_dsr_on_best(Session, run_id: str) -> ValidationRun:
     rows = [db.get(BacktestMetrics, item) for item in scan_ids]
     best = max(rows, key=lambda row: float(row.sharpe or 0.0))
     backtest = db.get(Backtest, best.backtest_id)
-    n_obs = (
-        db.query(BacktestEquity).filter(BacktestEquity.backtest_id == backtest.id).count() - 1
-    )
+    n_obs = db.query(BacktestEquity).filter(BacktestEquity.backtest_id == backtest.id).count() - 1
     record_dsr_for_backtest(
         db,
         backtest,
@@ -301,9 +299,7 @@ def test_spy_200dma_like_pipeline_is_weak_edge_not_overfit(monkeypatch):
     monkeypatch.setattr("services.worker.tasks.LeanQuantEngine", lambda **_k: fake)
     from services.worker.tasks import execute_pbo_scan
 
-    run_id, strategy_id, _version_id = _seed(
-        Session, values=_DMA_LOOKBACKS, stub_other_gates=False
-    )
+    run_id, strategy_id, _version_id = _seed(Session, values=_DMA_LOOKBACKS, stub_other_gates=False)
     result = execute_pbo_scan(run_id)
     assert result["status"] == "COMPLETED"
     assert result["passed"] is True

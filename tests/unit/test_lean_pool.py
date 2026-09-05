@@ -21,7 +21,13 @@ def test_build_lean_view_overlays_map_files_without_touching_snapshot(tmp_path: 
     (overlay / "spy.csv").write_text("20180101,spy\n", encoding="utf-8")
 
     view = build_lean_view(tmp_path / "job", snapshot, overlay)
-    assert (view / "equity" / "usa" / "daily" / "spy.zip").resolve() == (daily / "spy.zip").resolve()
-    assert (view / "equity" / "usa" / "map_files" / "spy.csv").read_text(encoding="utf-8") == "20180101,spy\n"
+    assert (view / "equity" / "usa" / "daily" / "spy.zip").resolve() == (
+        daily / "spy.zip"
+    ).resolve()
+    assert (view / "equity" / "usa" / "map_files" / "spy.csv").read_text(
+        encoding="utf-8"
+    ) == "20180101,spy\n"
     assert (maps / "spy.csv").read_text(encoding="utf-8") == "20000101,spy\n"
-    assert (view / "market-hours" / "db.json").resolve() == (snapshot / "market-hours" / "db.json").resolve()
+    assert (view / "market-hours" / "db.json").resolve() == (
+        snapshot / "market-hours" / "db.json"
+    ).resolve()

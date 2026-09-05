@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from quant.data.ingest_spy import ingest_spy
+from quant.data.ingest import ingest_spy
 from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
 
 
@@ -32,7 +32,7 @@ def _spy_frame() -> pd.DataFrame:
 def test_ingest_is_immutable_and_content_addressed(monkeypatch, tmp_path: Path):
     frame = _spy_frame()
     monkeypatch.setattr(
-        "quant.data.ingest_spy.fetch_daily",
+        "quant.data.ingest.fetch_daily",
         lambda *_a, **_k: FetchResult(frame.copy(), "yfinance", YFINANCE_CAPABILITIES),
     )
     first = ingest_spy(data_root=tmp_path, convert_lean=False)
@@ -58,7 +58,7 @@ def test_second_ingest_keeps_prior_snapshot(monkeypatch, tmp_path: Path):
         )
         return FetchResult(out, "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fetch)
     a = ingest_spy(data_root=tmp_path, convert_lean=False)
     b = ingest_spy(data_root=tmp_path, convert_lean=False)
     assert a["snapshot_key"] != b["snapshot_key"]

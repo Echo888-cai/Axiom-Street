@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,10 @@ const selectClass =
 
 export function SpaForm() {
   const qc = useQueryClient();
-  const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.listStrategies });
+  const strategies = useQuery({
+    queryKey: ["strategies"],
+    queryFn: api.listStrategies,
+  });
   const [strategyId, setStrategyId] = useState("");
 
   const items = strategies.data ?? [];
@@ -20,14 +23,11 @@ export function SpaForm() {
 
   const backtests = useQuery({
     queryKey: ["backtests", selected?.id, "COMPLETED"],
-    queryFn: () => api.listBacktests({ strategy_id: selected?.id, status: "COMPLETED" }),
+    queryFn: () =>
+      api.listBacktests({ strategy_id: selected?.id, status: "COMPLETED" }),
     enabled: Boolean(selected?.id),
   });
   const latest = backtests.data?.[0];
-
-  useEffect(() => {
-    if (!selected && items[0]) setStrategyId(items[0].id);
-  }, [items, selected]);
 
   const hint = useMemo(() => {
     if (!items.length) return "先建一条策略。";
@@ -81,7 +81,10 @@ export function SpaForm() {
         </select>
       </label>
       <p className="text-[11px] leading-relaxed text-as-muted">{hint}</p>
-      <Button type="submit" disabled={!versionId || !latest || create.isPending}>
+      <Button
+        type="submit"
+        disabled={!versionId || !latest || create.isPending}
+      >
         {create.isPending ? "提交中…" : "运行 Reality Check"}
       </Button>
     </form>

@@ -33,12 +33,12 @@ def test_syntax_still_fail_loud():
 
 
 def test_strategy_error_location_uses_last_frame():
-    message = '''Traceback (most recent call last):
+    message = """Traceback (most recent call last):
   File "/Lean/Algorithm.Python/strategy.py", line 12, in Initialize
     self.foo()
   File "/Lean/Algorithm.Python/strategy.py", line 44, in OnData
     x = missing
 NameError: name 'missing' is not defined
-'''
+"""
     assert strategy_error_location(message) == 44
     assert strategy_error_location("docker failed") is None

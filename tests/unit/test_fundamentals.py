@@ -89,7 +89,7 @@ def test_polygon_uses_filing_date_not_period_end(monkeypatch):
 
 
 def test_ingest_writes_fundamentals(monkeypatch, tmp_path):
-    from quant.data.ingest_spy import ingest
+    from quant.data.ingest import ingest
     from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
 
     rows = []
@@ -122,8 +122,8 @@ def test_ingest_writes_fundamentals(monkeypatch, tmp_path):
         sic=None,
         classified_as_of=date(2020, 1, 6),
     )
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_fundamentals", lambda symbol, **_k: fund)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_fundamentals", lambda symbol, **_k: fund)
     result = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False)
     assert "SPY" in result["manifest"]["fundamentals_symbols"]
     loaded = load_fundamentals(tmp_path, "SPY")

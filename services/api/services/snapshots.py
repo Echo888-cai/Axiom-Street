@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from quant.data.ingest_spy import prune_unreferenced_snapshots
+from quant.data.ingest import prune_unreferenced_snapshots
 from quant.data.manifest import load_manifest
 from quant.data.symbols import as_symbol_list
 from services.api.models import Backtest, DataSnapshot

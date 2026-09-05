@@ -146,9 +146,7 @@ def reconcile_orphan_backtests(*, worker_restart: bool = False) -> int:
                         ValidationKind.BOOTSTRAP,
                     ]
                 ),
-                ValidationRun.status.in_(
-                    [ValidationRunStatus.QUEUED, ValidationRunStatus.RUNNING]
-                ),
+                ValidationRun.status.in_([ValidationRunStatus.QUEUED, ValidationRunStatus.RUNNING]),
             )
             .all()
         )
@@ -643,7 +641,9 @@ def _run_scan_configs(
     return filled
 
 
-def _finish_validation(db, run: ValidationRun, payload: dict, *, passed: bool, log_event: str, **log_fields) -> dict:
+def _finish_validation(
+    db, run: ValidationRun, payload: dict, *, passed: bool, log_event: str, **log_fields
+) -> dict:
     run.result = payload
     run.passed = passed
     run.error = None
@@ -659,7 +659,6 @@ def _finish_validation(db, run: ValidationRun, payload: dict, *, passed: bool, l
     db.commit()
     log.info(log_event, passed=passed, **log_fields)
     return {"status": "COMPLETED", "passed": passed, "run_id": str(run.id)}
-
 
 
 def execute_walk_forward(run_id: str) -> dict:
@@ -683,7 +682,9 @@ def execute_walk_forward(run_id: str) -> dict:
         run.progress_step = "Preparing environment"
         db.commit()
 
-        version = db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+        version = (
+            db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+        )
         if version is None:
             return _fail_walk_forward(db, run, "version_missing", "策略版本不存在")
 
@@ -832,7 +833,9 @@ def execute_pbo_scan(run_id: str) -> dict:
         run.progress_step = "Preparing parameter scan"
         db.commit()
 
-        version = db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+        version = (
+            db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+        )
         if version is None:
             return _fail_walk_forward(db, run, "version_missing", "策略版本不存在")
 
@@ -929,7 +932,9 @@ def execute_sensitivity_scan(run_id: str) -> dict:
         run.progress_step = "Preparing sensitivity scan"
         db.commit()
 
-        version = db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+        version = (
+            db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+        )
         if version is None:
             return _fail_walk_forward(db, run, "version_missing", "策略版本不存在")
 
@@ -1023,7 +1028,9 @@ def execute_cost_scan(run_id: str) -> dict:
         run.progress_step = "Preparing cost scan"
         db.commit()
 
-        version = db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+        version = (
+            db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+        )
         if version is None:
             return _fail_walk_forward(db, run, "version_missing", "策略版本不存在")
 
@@ -1113,7 +1120,6 @@ def execute_cost_scan(run_id: str) -> dict:
 @celery_app.task(name="validation.cost")
 def run_cost_scan_task(run_id: str) -> dict:
     return execute_cost_scan(run_id)
-
 
 
 def execute_bootstrap(run_id: str) -> dict:
@@ -1246,10 +1252,14 @@ def execute_spa(run_id: str) -> dict:
         run.progress_step = "Reality Check"
         db.commit()
         if run.backtest_id is None:
-            return _fail_walk_forward(db, run, "backtest_missing", "Reality Check 需要一次已完成的回测作为模板")
+            return _fail_walk_forward(
+                db, run, "backtest_missing", "Reality Check 需要一次已完成的回测作为模板"
+            )
         backtest = db.get(Backtest, run.backtest_id)
         if backtest is None or backtest.status != BacktestStatus.COMPLETED:
-            return _fail_walk_forward(db, run, "backtest_missing", "Reality Check 需要一次已完成的回测作为模板")
+            return _fail_walk_forward(
+                db, run, "backtest_missing", "Reality Check 需要一次已完成的回测作为模板"
+            )
         params = dict(run.params or {})
         try:
             n_boot = int(params.get("n_boot") or DEFAULT_N_BOOT)
@@ -1261,10 +1271,16 @@ def execute_spa(run_id: str) -> dict:
             if raw_family:
                 family_id = UUID(str(raw_family))
             else:
-                version = db.get(StrategyVersion, run.strategy_version_id) if run.strategy_version_id else None
+                version = (
+                    db.get(StrategyVersion, run.strategy_version_id)
+                    if run.strategy_version_id
+                    else None
+                )
                 strategy = db.get(Strategy, version.strategy_id) if version is not None else None
                 if strategy is None:
-                    return _fail_walk_forward(db, run, "family_missing", "找不到策略家族，无法对齐试验台账")
+                    return _fail_walk_forward(
+                        db, run, "family_missing", "找不到策略家族，无法对齐试验台账"
+                    )
                 family_id = strategy.family_id or strategy.id
             snapshot_id = UUID(str(raw_snapshot)) if raw_snapshot else backtest.data_snapshot_id
         except (TypeError, ValueError) as exc:

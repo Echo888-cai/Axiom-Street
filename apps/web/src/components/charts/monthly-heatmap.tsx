@@ -3,7 +3,20 @@
 import type { MonthlyReturn } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+const MONTHS = [
+  "1月",
+  "2月",
+  "3月",
+  "4月",
+  "5月",
+  "6月",
+  "7月",
+  "8月",
+  "9月",
+  "10月",
+  "11月",
+  "12月",
+];
 
 function cellColor(value: number | null): string {
   if (value === null) return "bg-as-secondary text-as-muted";
@@ -17,7 +30,9 @@ function cellColor(value: number | null): string {
 }
 
 export function MonthlyHeatmap({ data }: { data: MonthlyReturn[] }) {
-  const years = Array.from(new Set(data.map((d) => d.year))).sort((a, b) => b - a);
+  const years = Array.from(new Set(data.map((d) => d.year))).sort(
+    (a, b) => b - a,
+  );
   const map = new Map(data.map((d) => [`${d.year}-${d.month}`, d.return_pct]));
 
   if (!data.length) {
@@ -40,7 +55,9 @@ export function MonthlyHeatmap({ data }: { data: MonthlyReturn[] }) {
         </thead>
         <tbody>
           {years.map((year) => {
-            const vals = MONTHS.map((_, idx) => map.get(`${year}-${idx + 1}`) ?? null);
+            const vals = MONTHS.map(
+              (_, idx) => map.get(`${year}-${idx + 1}`) ?? null,
+            );
             const present = vals.filter((v): v is number => v !== null);
             const ytd =
               present.length > 0
@@ -59,15 +76,20 @@ export function MonthlyHeatmap({ data }: { data: MonthlyReturn[] }) {
                         : {
                             backgroundColor:
                               v >= 0
-                                ? `rgba(18,183,106,${0.08 + Math.min(Math.abs(v) / 0.08, 1) * 0.2})`
-                                : `rgba(240,68,56,${0.08 + Math.min(Math.abs(v) / 0.08, 1) * 0.2})`,
+                                ? `rgba(52,128,106,${0.08 + Math.min(Math.abs(v) / 0.08, 1) * 0.2})`
+                                : `rgba(187,91,98,${0.08 + Math.min(Math.abs(v) / 0.08, 1) * 0.2})`,
                           }
                     }
                   >
                     {v === null ? "—" : `${(v * 100).toFixed(1)}`}
                   </td>
                 ))}
-                <td className={cn("px-2 py-2 text-right font-medium tabular", cellColor(ytd))}>
+                <td
+                  className={cn(
+                    "px-2 py-2 text-right font-medium tabular",
+                    cellColor(ytd),
+                  )}
+                >
                   {ytd === null ? "—" : `${(ytd * 100).toFixed(1)}`}
                 </td>
               </tr>

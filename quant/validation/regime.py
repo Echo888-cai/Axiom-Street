@@ -140,7 +140,9 @@ def in_stress_window(day: date, start: date, end: date) -> bool:
     return start <= day <= end
 
 
-def label_bull_bear(benchmark_levels: np.ndarray, *, threshold: float = BEAR_DRAWDOWN) -> np.ndarray:
+def label_bull_bear(
+    benchmark_levels: np.ndarray, *, threshold: float = BEAR_DRAWDOWN
+) -> np.ndarray:
     """Return-aligned labels: length n-1 for n benchmark levels.
 
     Label i is the state at level i+1 (the close that realizes return i).
@@ -321,7 +323,9 @@ def _pair_verdict(left: RegimeSlice, right: RegimeSlice, *, need_both: str) -> s
 
 
 def _concentration(*slices: RegimeSlice) -> tuple[bool, str | None]:
-    positive = [item for item in slices if item.covered and item.sharpe is not None and item.sharpe > 0]
+    positive = [
+        item for item in slices if item.covered and item.sharpe is not None and item.sharpe > 0
+    ]
     if len(positive) == 1:
         return True, positive[0].key
     return False, None
@@ -343,18 +347,12 @@ def score_regime(
     rate = label_rate(dates)
 
     slices = [
-        _metrics(
-            strat, trend == "bull", key="bull", axis="trend", ppy=ppy, min_obs=min_axis_obs
-        ),
-        _metrics(
-            strat, trend == "bear", key="bear", axis="trend", ppy=ppy, min_obs=min_axis_obs
-        ),
+        _metrics(strat, trend == "bull", key="bull", axis="trend", ppy=ppy, min_obs=min_axis_obs),
+        _metrics(strat, trend == "bear", key="bear", axis="trend", ppy=ppy, min_obs=min_axis_obs),
         _metrics(
             strat, vol == "high_vol", key="high_vol", axis="vol", ppy=ppy, min_obs=min_axis_obs
         ),
-        _metrics(
-            strat, vol == "low_vol", key="low_vol", axis="vol", ppy=ppy, min_obs=min_axis_obs
-        ),
+        _metrics(strat, vol == "low_vol", key="low_vol", axis="vol", ppy=ppy, min_obs=min_axis_obs),
         _metrics(strat, rate == "hike", key="hike", axis="rate", ppy=ppy, min_obs=min_axis_obs),
         _metrics(strat, rate == "cut", key="cut", axis="rate", ppy=ppy, min_obs=min_axis_obs),
         _metrics(strat, rate == "hold", key="hold", axis="rate", ppy=ppy, min_obs=min_axis_obs),
@@ -363,18 +361,14 @@ def score_regime(
     for sid, start, end, _title in STRESS_WINDOWS:
         mask = np.asarray([in_stress_window(day, start, end) for day in dates])
         slices.append(
-            _metrics(
-                strat, mask, key=sid, axis="stress", ppy=ppy, min_obs=min_stress_obs
-            )
+            _metrics(strat, mask, key=sid, axis="stress", ppy=ppy, min_obs=min_stress_obs)
         )
 
     failures: list[str] = []
     trend_fail = _pair_verdict(by_key["bull"], by_key["bear"], need_both="无法判定趋势稳定性")
     if trend_fail:
         failures.append(trend_fail)
-    vol_fail = _pair_verdict(
-        by_key["high_vol"], by_key["low_vol"], need_both="无法判定波动稳定性"
-    )
+    vol_fail = _pair_verdict(by_key["high_vol"], by_key["low_vol"], need_both="无法判定波动稳定性")
     if vol_fail:
         failures.append(vol_fail)
     rate_fail = _pair_verdict(by_key["hike"], by_key["cut"], need_both="无法判定利率周期稳定性")
@@ -420,5 +414,3 @@ def score_regime(
         min_axis_obs=int(min_axis_obs),
         slices=slices,
     )
-
-

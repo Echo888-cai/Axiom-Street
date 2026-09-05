@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from quant.data.ingest_spy import ingest
+from quant.data.ingest import ingest
 from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
 from services.api.settings import get_settings
 from services.worker.celery_app import celery_app
@@ -37,7 +37,7 @@ def test_full_ingest_flags_vendor_restatement_against_prior(monkeypatch, tmp_pat
     def first_fetch(symbol: str, **_k):
         return FetchResult(_bars(symbol, [2, 3, 6, 7]), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", first_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", first_fetch)
     first = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False, mode="full")
     prior_key = first["snapshot_key"]
 
@@ -48,7 +48,7 @@ def test_full_ingest_flags_vendor_restatement_against_prior(monkeypatch, tmp_pat
         frame.loc[mask, "high"] = 102.0
         return FetchResult(frame, "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", revised_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", revised_fetch)
     second = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False, mode="full")
     assert second["snapshot_key"] != prior_key
     assert any(i["rule"] == "vendor_restatement" for i in second["quality_report"]["issues"])
@@ -92,7 +92,7 @@ def test_schedule_market_reconcile_enqueues_full_job(client, monkeypatch, tmp_pa
     def fake_fetch(symbol: str, **_k):
         return FetchResult(_bars(symbol, [2, 3, 6, 7]), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
 
     seed = client.post(
         "/api/v1/data/ingest",
@@ -125,7 +125,7 @@ def test_schedule_skips_when_ingest_running(client, monkeypatch, tmp_path: Path)
     def fake_fetch(symbol: str, **_k):
         return FetchResult(_bars(symbol, [2, 3, 6, 7]), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
 
     seed = client.post(
         "/api/v1/data/ingest",
@@ -163,7 +163,7 @@ def test_manual_reconcile_still_runs_when_beat_disabled(client, monkeypatch, tmp
     def fake_fetch(symbol: str, **_k):
         return FetchResult(_bars(symbol, [2, 3, 6, 7]), "yfinance", YFINANCE_CAPABILITIES)
 
-    monkeypatch.setattr("quant.data.ingest_spy.fetch_daily", fake_fetch)
+    monkeypatch.setattr("quant.data.ingest.fetch_daily", fake_fetch)
 
     seed = client.post(
         "/api/v1/data/ingest",

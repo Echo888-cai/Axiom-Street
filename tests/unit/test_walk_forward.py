@@ -164,7 +164,9 @@ def test_score_passes_weak_consistent_edge():
     for i, (is_year, oos_year) in enumerate(((2018, 2019), (2019, 2020))):
         is_eq = _series(date(is_year, 1, 2), 80, start_value=100_000, daily=0.0003)
         oos_eq = _series(date(oos_year, 1, 2), 80, start_value=110_000, daily=0.0003)
-        obs.append(FoldObservation(fold=_fold(i, is_year, oos_year), is_equity=is_eq, oos_equity=oos_eq))
+        obs.append(
+            FoldObservation(fold=_fold(i, is_year, oos_year), is_equity=is_eq, oos_equity=oos_eq)
+        )
     score = score_walk_forward(obs)
     assert score.n_folds == 2
     assert score.overfit_collapse is False
@@ -178,7 +180,9 @@ def test_score_fails_is_strong_oos_negative():
     for i, (is_year, oos_year) in enumerate(((2018, 2019), (2019, 2020))):
         is_eq = _series(date(is_year, 1, 2), 80, start_value=100_000, daily=0.003)
         oos_eq = _series(date(oos_year, 1, 2), 80, start_value=200_000, daily=-0.002)
-        obs.append(FoldObservation(fold=_fold(i, is_year, oos_year), is_equity=is_eq, oos_equity=oos_eq))
+        obs.append(
+            FoldObservation(fold=_fold(i, is_year, oos_year), is_equity=is_eq, oos_equity=oos_eq)
+        )
     score = score_walk_forward(obs)
     assert score.mean_is_sharpe > 0.5
     assert score.combined_oos_sharpe < 0
