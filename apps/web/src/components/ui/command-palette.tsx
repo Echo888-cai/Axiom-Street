@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { NAV_ITEMS } from "@/components/layout/nav";
 import { labelStatus } from "@/lib/labels";
 import { formatPct } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 type Hit = {
   href: string;
@@ -25,6 +26,7 @@ export function CommandPalette({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -56,11 +58,11 @@ export function CommandPalette({
     const nav: Hit[] = NAV_ITEMS.filter(
       (item) =>
         !q ||
-        item.label.toLowerCase().includes(q) ||
+        t(`nav.${item.key}`).toLowerCase().includes(q) ||
         item.href.toLowerCase().includes(q),
     ).map((item) => ({
       href: item.href,
-      title: item.label,
+      title: t(`nav.${item.key}`),
       meta: "前往",
       group: "导航",
     }));

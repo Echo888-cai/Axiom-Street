@@ -11,8 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { formatRelative } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
+import { useT } from "@/lib/i18n";
 
 export function TopBar({ onMenu }: { onMenu: () => void }) {
+  const t = useT();
   const pathname = usePathname();
   const current = NAV_ITEMS.find((item) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
@@ -43,28 +45,28 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         <button
           type="button"
           onClick={onMenu}
-          aria-label="打开导航"
+          aria-label={t("layout.openMenuAria")}
           className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-white md:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
         <span className="hidden text-[11px] text-as-muted sm:block">
-          工作空间
+          {t("layout.breadcrumbWorkspace")}
         </span>
         <ChevronRight className="hidden h-3 w-3 text-as-muted/50 sm:block" />
         <span className="truncate text-xs font-medium">
-          {current?.label || "研究工作室"}
+          {current ? t(`nav.${current.key}`) : t("layout.researchStudio")}
         </span>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
         <button
           type="button"
-          aria-label="搜索策略、回测和页面"
+          aria-label={t("layout.searchAria")}
           onClick={() => setSearchOpen(true)}
           className="flex h-11 items-center gap-2.5 rounded-xl px-3 text-xs text-as-muted transition-colors hover:bg-white"
         >
           <Search className="h-4 w-4" strokeWidth={1.6} />
-          <span className="hidden lg:block">搜索任何内容…</span>
+          <span className="hidden lg:block">{t("layout.searchPlaceholder")}</span>
           <kbd className="hidden rounded-md border border-as-border bg-white px-1.5 py-0.5 text-[10px] sm:block">
             ⌘ K
           </kbd>
@@ -72,7 +74,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         <div className="relative">
           <button
             type="button"
-            aria-label="最近回测通知"
+            aria-label={t("layout.notesAria")}
             aria-expanded={notesOpen}
             onClick={() => setNotesOpen(!notesOpen)}
             className="relative flex h-11 w-11 items-center justify-center rounded-full text-as-muted hover:bg-white"
@@ -86,28 +88,27 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
             <>
               <button
                 type="button"
-                aria-label="关闭通知"
+                aria-label={t("layout.closeNotesAria")}
                 onClick={() => setNotesOpen(false)}
                 className="fixed inset-0 z-20 cursor-default"
               />
               <section
-                aria-label="回测通知"
+                aria-label={t("layout.notesSectionAria")}
                 className="as-glass absolute -right-10 top-12 z-30 w-80 max-w-[calc(100vw-40px)] overflow-hidden rounded-2xl border border-as-border shadow-as-lg as-scale-in"
               >
                 <div className="border-b border-as-border p-4 text-xs font-semibold">
-                  最近的研究动态
+                  {t("layout.recentActivity")}
                 </div>
                 {backtests.isError ? (
                   <p className="p-6 text-xs leading-relaxed text-as-muted">
-                    研究服务暂未连接，恢复连接后可查看动态。
+                    {t("layout.notesError")}
                   </p>
                 ) : backtests.isLoading ? (
-                  <p className="p-6 text-xs text-as-muted">正在读取动态…</p>
+                  <p className="p-6 text-xs text-as-muted">{t("layout.notesLoading")}</p>
                 ) : !recent.length ? (
                   <p className="p-6 text-xs leading-relaxed text-as-muted">
-                    这里很安静。运行回测后，研究进展会显示在这里。
-                  </p>
-                ) : (
+                    {t("layout.notesEmpty")}
+                  </p>                ) : (
                   <ul className="max-h-80 overflow-auto p-2">
                     {recent.map((b) => (
                       <li key={b.id}>
@@ -139,7 +140,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         </div>
         <Link
           href="/settings"
-          aria-label="工作区设置"
+          aria-label={t("layout.settingsAria")}
           className="as-icon-well h-9 w-9 rounded-full text-[11px] font-semibold"
         >
           A

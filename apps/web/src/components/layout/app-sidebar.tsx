@@ -11,30 +11,15 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { NAV_ITEMS } from "./nav";
+import { NAV_ITEMS, type NavKey } from "./nav";
 import { AxiomMark } from "@/components/brand/axiom-mark";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 
-const SECTIONS = [
-  {
-    label: "工作空间",
-    english: "WORKSPACE",
-    hrefs: [
-      "/",
-      "/strategies",
-      "/backtests",
-      "/validation",
-      "/universes",
-      "/experiments",
-      "/reports",
-    ],
-  },
-  {
-    label: "交易与风险",
-    english: "EXECUTION",
-    hrefs: ["/paper", "/live", "/risk"],
-  },
+const SECTIONS: { labelKey: keyof typeof import("@/locales").zhCN.layout; english: string; hrefs: string[] }[] = [
+  { labelKey: "workspace", english: "WORKSPACE", hrefs: ["/", "/strategies", "/backtests", "/validation", "/universes", "/experiments", "/reports"] },
+  { labelKey: "execution", english: "EXECUTION", hrefs: ["/paper", "/live", "/risk"] },
 ];
 
 function NavigationContent({
@@ -45,17 +30,20 @@ function NavigationContent({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const t = useT();
   const health = useQuery({
     queryKey: ["health"],
     queryFn: api.health,
     refetchInterval: 30_000,
   });
+  const navLabel = (key: NavKey) => t(`nav.${key}`);
+
   return (
     <>
       <Link
         href="/"
         onClick={onNavigate}
-        aria-label="Axiom Street 首页"
+        aria-label={t("layout.homeAria")}
         className={cn(
           "flex h-[94px] items-center gap-3 px-6",
           collapsed && "justify-center px-3",
@@ -83,23 +71,25 @@ function NavigationContent({
             A
           </span>
           <span className="flex-1">
-            <span className="block text-xs font-medium">个人研究空间</span>
+            <span className="block text-xs font-medium">
+              {t("layout.personalSpace")}
+            </span>
             <span className="mt-0.5 block text-[10px] text-as-muted">
-              本地工作区
+              {t("layout.localWorkspace")}
             </span>
           </span>
           <ChevronsUpDown className="h-3.5 w-3.5 text-as-muted" />
         </Link>
       )}
       <nav
-        aria-label="主导航"
+        aria-label={t("layout.mainNavAria")}
         className="flex-1 space-y-7 overflow-y-auto px-3"
       >
         {SECTIONS.map((section) => (
-          <div key={section.label}>
+          <div key={section.labelKey}>
             {!collapsed && (
               <div className="mb-2.5 flex items-center justify-between px-3 text-[10px] text-as-muted">
-                <span>{section.label}</span>
+                <span>{t(`layout.${section.labelKey}`)}</span>
                 <span className="text-[8px] tracking-[.13em] opacity-75">
                   {section.english}
                 </span>
@@ -122,7 +112,7 @@ function NavigationContent({
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    title={item.label}
+                    title={navLabel(item.key)}
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "group relative flex min-h-11 items-center gap-3 rounded-xl border border-transparent px-3 text-[13px] transition-all duration-200",
@@ -141,12 +131,12 @@ function NavigationContent({
                     />
                     {!collapsed && (
                       <>
-                        <span className="flex-1">{item.label}</span>
+                        <span className="flex-1">{navLabel(item.key)}</span>
                         {active ? (
                           <span className="h-1 w-1 rounded-full bg-as-primary" />
                         ) : planned ? (
                           <span className="rounded border border-as-border px-1 text-[8px] tracking-wide text-as-muted">
-                            规划中
+                            {t("layout.planned")}
                           </span>
                         ) : null}
                       </>
@@ -162,24 +152,24 @@ function NavigationContent({
         {!collapsed && (
           <div className="as-sidebar-note rounded-2xl border border-white bg-white/45 p-4">
             <div className="mb-2 text-[11px] font-medium">
-              少一点噪音，多一点确信。
+              {t("layout.quietNote")}
             </div>
             <p className="text-[10px] leading-relaxed text-as-muted">
-              从假设出发，让证据说话。
+              {t("layout.evidenceNote")}
             </p>
             <Link
               href="/reports"
               onClick={onNavigate}
               className="mt-3 inline-flex items-center gap-1 text-[10px] text-as-primary"
             >
-              打开研究笔记 <ArrowUpRight className="h-3 w-3" />
+              {t("layout.openNotes")} <ArrowUpRight className="h-3 w-3" />
             </Link>
           </div>
         )}
         <Link
           href="/settings"
           onClick={onNavigate}
-          title="设置与服务状态"
+          title={t("layout.workspaceSettings")}
           className={cn(
             "flex min-h-11 items-center gap-2.5 rounded-xl px-2 text-xs text-as-muted hover:bg-white",
             collapsed && "justify-center px-0",
@@ -199,10 +189,10 @@ function NavigationContent({
             <>
               <span className="flex-1">
                 {health.isLoading
-                  ? "正在连接"
+                  ? t("layout.connecting")
                   : health.isError
-                    ? "服务未连接"
-                    : "研究服务已连接"}
+                    ? t("layout.disconnected")
+                    : t("layout.connected")}
               </span>
               <NAV_SETTINGS_ICON />
             </>
@@ -219,6 +209,7 @@ function NAV_SETTINGS_ICON() {
 }
 
 export function AppSidebar() {
+  const t = useT();
   const [collapsed, setCollapsed] = useState(false);
   return (
     <aside
@@ -231,14 +222,16 @@ export function AppSidebar() {
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
-        aria-label={collapsed ? "展开侧栏" : "收起侧栏"}
+        aria-label={
+          collapsed ? t("layout.expandSidebarAria") : t("layout.collapseSidebarAria")
+        }
         className="mx-4 mb-4 flex min-h-9 items-center justify-center gap-2 rounded-lg text-[10px] text-as-muted hover:bg-white/70"
       >
         {collapsed ? (
           <PanelLeftOpen className="h-4 w-4" />
         ) : (
           <>
-            <PanelLeftClose className="h-3.5 w-3.5" /> 收起侧栏
+            <PanelLeftClose className="h-3.5 w-3.5" /> {t("layout.collapseSidebarAria")}
           </>
         )}
       </button>
@@ -253,6 +246,7 @@ export function MobileNavigation({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (open) ref.current?.showModal();
@@ -261,7 +255,7 @@ export function MobileNavigation({
   return (
     <dialog
       ref={ref}
-      aria-label="移动导航"
+      aria-label={t("layout.mobileNavAria")}
       onCancel={onClose}
       onClick={(e) => {
         if (e.target === ref.current) onClose();
@@ -272,7 +266,7 @@ export function MobileNavigation({
         <button
           type="button"
           onClick={onClose}
-          aria-label="关闭导航"
+          aria-label={t("layout.closeNavAria")}
           className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full text-as-muted hover:bg-white"
         >
           <X className="h-4 w-4" />
