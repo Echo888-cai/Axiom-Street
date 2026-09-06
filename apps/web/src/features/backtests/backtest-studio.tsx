@@ -1,72 +1,38 @@
 "use client";
-import { useBacktestAnalysis, peerLabel } from "./use-backtest-analysis";
+import { useBacktestAnalysis } from "./use-backtest-analysis";
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Copy, Download, LineChart, NotebookPen } from "lucide-react";
+import { LineChart, NotebookPen } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EquityCurve } from "@/components/charts/equity-curve";
-import { DrawdownChart } from "@/components/charts/drawdown-chart";
-import { MonthlyHeatmap } from "@/components/charts/monthly-heatmap";
-import { formatNumber, formatPct, formatUsd, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { Tabs } from "@/components/ui/tabs";
 import { ProgressSteps } from "@/components/ui/progress-steps";
-import { MetricTile, metricTone } from "@/components/ui/metric-tile";
+import { MonthlyHeatmap } from "@/components/charts/monthly-heatmap";
 import { toast } from "@/components/ui/toast";
-import { labelDirection, labelStatus, labelStep } from "@/lib/labels";
+import { labelStatus, labelStep, labelDirection } from "@/lib/labels";
 import { TruthStrip } from "@/features/tearsheet/truth-strip";
 import { DistributionPanel } from "@/features/tearsheet/distribution-panel";
 import { RollingPanel } from "@/features/tearsheet/rolling-panel";
 import { ExposurePanel } from "@/features/tearsheet/exposure-panel";
+import { MetricStrip } from "./metric-strip";
+import { StudioTopBar, type StudioTab } from "./studio-top-bar";
+import { CurveCard } from "./curve-card";
+import { TradesTable } from "./trades-table";
 import { ComparePanel } from "./compare-panel";
 import { MaeMfePanel } from "./mae-mfe-panel";
 
 const RUN_STEPS = ["排队中", "准备环境", "加载数据", "运行策略", "计算指标"];
 
-function Toggle({
-  pressed,
-  onPressed,
-  children,
-  disabled,
-}: {
-  pressed: boolean;
-  onPressed: () => void;
-  children: React.ReactNode;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onPressed}
-      className={cn(
-        "h-8 rounded-lg px-2.5 text-[11px] font-medium outline-none transition-colors duration-as",
-        "focus-visible:ring-2 focus-visible:ring-as-primary/30",
-        pressed
-          ? "bg-as-bg text-as-text shadow-sm"
-          : "text-as-muted hover:text-as-text",
-        disabled && "cursor-not-allowed opacity-40",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function BacktestStudio({ backtestId }: { backtestId: string }) {
   const qc = useQueryClient();
   const [liveStep, setLiveStep] = useState<string | null>(null);
-  const [tab, setTab] = useState("curve");
-  const [period, setPeriod] = useState<"1M" | "3M" | "YTD" | "1Y" | "ALL">(
-    "ALL",
-  );
+  const [tab, setTab] = useState<StudioTab>("curve");
+  const [period, setPeriod] = useState<"1M" | "3M" | "YTD" | "1Y" | "ALL">("ALL");
   const [logScale, setLogScale] = useState(false);
   const [normalized, setNormalized] = useState(false);
   const [showTrades, setShowTrades] = useState(false);
@@ -93,8 +59,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
 
   useEffect(() => {
     if (!backtest.data) return;
-    if (!["QUEUED", "STARTING", "RUNNING"].includes(backtest.data.status))
-      return;
+    if (!["QUEUED", "STARTING", "RUNNING"].includes(backtest.data.status)) return;
     const es = new EventSource(api.eventsUrl(backtestId));
     es.addEventListener("progress", (ev) => {
       try {
@@ -160,15 +125,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
   function exportTrades() {
     const rows = trades.data || [];
     const header = [
-      "日期",
-      "标的",
-      "方向",
-      "数量",
-      "入场价",
-      "出场价",
-      "盈亏",
-      "持有期",
-      "佣金",
+      "日期", "标的", "方向", "数量", "入场价", "出场价", "盈亏", "持有期", "佣金",
     ];
     const csv = [
       header.join(","),
@@ -256,10 +213,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
         <Card className="min-h-[320px]">
           {running ? (
             <div className="flex min-h-[280px] flex-col items-center justify-center gap-6 px-6">
-              <ProgressSteps
-                steps={RUN_STEPS}
-                current={currentStep || "排队中"}
-              />
+              <ProgressSteps steps={RUN_STEPS} current={currentStep || "排队中"} />
               <p className="text-sm text-as-muted">
                 {currentStep || "正在准备 LEAN 环境"}
               </p>
@@ -286,186 +240,35 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
       ) : (
         <>
           <TruthStrip metrics={m} pbo={pbo} strategyId={bt.strategy_id} />
-
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6 as-stagger">
-            <MetricTile
-              label="总收益"
-              value={formatPct(m?.total_return)}
-              tone={metricTone(m?.total_return)}
-            />
-            <MetricTile
-              label="年化 CAGR"
-              value={formatPct(m?.cagr)}
-              tone={metricTone(m?.cagr)}
-            />
-            <MetricTile
-              label="最大回撤"
-              value={formatPct(m?.max_drawdown)}
-              tone="neg"
-            />
-            <MetricTile label="波动率" value={formatPct(m?.volatility)} />
-            <MetricTile
-              label="超额收益"
-              value={formatPct(m?.excess_return)}
-              tone={metricTone(m?.excess_return)}
-            />
-            <MetricTile
-              label="CAPM α"
-              value={formatPct(m?.alpha_capm)}
-              tone={metricTone(m?.alpha_capm)}
-            />
-            <MetricTile label="β" value={formatNumber(m?.beta)} />
-            <MetricTile
-              label="信息比率"
-              value={formatNumber(m?.information_ratio)}
-            />
-            <MetricTile label="索提诺" value={formatNumber(m?.sortino)} />
-            <MetricTile label="卡尔玛" value={formatNumber(m?.calmar)} />
-            <MetricTile
-              label="成交笔数"
-              value={formatNumber(m?.trade_count, 0)}
-            />
-            <MetricTile label="期末权益" value={formatUsd(m?.final_equity)} />
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Tabs
-              value={tab}
-              onChange={setTab}
-              items={[
-                { id: "curve", label: "曲线" },
-                { id: "distribution", label: "分布" },
-                { id: "rolling", label: "滚动" },
-                { id: "exposure", label: "暴露" },
-                { id: "compare", label: "比较" },
-                { id: "mae-mfe", label: "MAE/MFE" },
-                { id: "trades", label: "成交" },
-                { id: "monthly", label: "月度" },
-              ]}
-            />
-            <div className="flex items-center gap-2 text-xs text-as-muted">
-              <button
-                type="button"
-                className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 hover:bg-as-secondary hover:text-as-text"
-                onClick={() => {
-                  navigator.clipboard.writeText(bt.data_version || "");
-                  toast("已复制数据指纹", "ok");
-                }}
-              >
-                <Copy className="h-3 w-3" />
-                数据{" "}
-                {bt.data_version ? `${bt.data_version.slice(0, 12)}…` : "—"}
-              </button>
-              <span>引擎 {bt.engine_version || "—"}</span>
-              <Button variant="secondary" size="sm" onClick={exportTrades}>
-                <Download className="h-3.5 w-3.5" />
-                导出 CSV
-              </Button>
-              <a
-                href={api.tearsheetPdfUrl(backtestId)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Button variant="secondary" size="sm">
-                  <Download className="h-3.5 w-3.5" />
-                  PDF
-                </Button>
-              </a>
-              <a
-                href={api.tearsheetHtmlUrl(backtestId)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Button variant="ghost" size="sm">
-                  HTML
-                </Button>
-              </a>
-            </div>
-          </div>
+          <MetricStrip m={m} />
+          <StudioTopBar
+            backtestId={backtestId}
+            dataVersion={bt.data_version}
+            engineVersion={bt.engine_version}
+            tab={tab}
+            onTabChange={setTab}
+            onExport={exportTrades}
+          />
 
           {tab === "curve" ? (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader
-                  title="权益曲线"
-                  hint={
-                    <span className="text-[11px] text-as-muted">
-                      {normalized
-                        ? "各序列独立归一到 100，才能叠在一起看"
-                        : "绝对净值"}
-                    </span>
-                  }
-                  action={
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <div className="inline-flex rounded-xl bg-as-secondary p-1">
-                        <Toggle
-                          pressed={logScale}
-                          disabled={!canLog}
-                          onPressed={() => setLogScale((v) => !v)}
-                        >
-                          对数
-                        </Toggle>
-                        <Toggle
-                          pressed={normalized}
-                          onPressed={() => setNormalized((v) => !v)}
-                        >
-                          归一到 100
-                        </Toggle>
-                        <Toggle
-                          pressed={showTrades}
-                          onPressed={() => setShowTrades((v) => !v)}
-                        >
-                          成交标记
-                        </Toggle>
-                      </div>
-                      <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
-                        对比
-                        <select
-                          className="h-8 max-w-[220px] rounded-lg border border-as-border bg-as-bg px-2 text-xs text-as-text outline-none focus:border-as-primary/40"
-                          value={compareId}
-                          onChange={(e) => setCompareId(e.target.value)}
-                        >
-                          <option value="">不叠加</option>
-                          {(peers.data || [])
-                            .filter((row) => row.id !== backtestId)
-                            .map((row) => (
-                              <option key={row.id} value={row.id}>
-                                {peerLabel(row, false)}
-                              </option>
-                            ))}
-                        </select>
-                      </label>
-                      <Tabs
-                        value={period}
-                        onChange={(id) => setPeriod(id as typeof period)}
-                        items={[
-                          { id: "1M", label: "1月" },
-                          { id: "3M", label: "3月" },
-                          { id: "YTD", label: "今年" },
-                          { id: "1Y", label: "1年" },
-                          { id: "ALL", label: "全部" },
-                        ]}
-                      />
-                    </div>
-                  }
-                />
-                {!canLog && logScale ? (
-                  <p className="mb-3 text-xs text-as-negative">
-                    权益含非正值，对数坐标不可用。
-                  </p>
-                ) : null}
-                <EquityCurve
-                  series={series}
-                  logScale={logScale && canLog}
-                  markers={markers}
-                  height={340}
-                />
-              </Card>
-              <Card>
-                <CardHeader title="回撤" />
-                <DrawdownChart data={drawdownPoints} />
-              </Card>
-            </div>
+            <CurveCard
+              backtestId={backtestId}
+              series={series}
+              markers={markers}
+              drawdownPoints={drawdownPoints}
+              peers={peers.data || []}
+              canLog={canLog}
+              logScale={logScale}
+              onLogScale={setLogScale}
+              normalized={normalized}
+              onNormalized={setNormalized}
+              showTrades={showTrades}
+              onShowTrades={setShowTrades}
+              compareId={compareId}
+              onCompareId={setCompareId}
+              period={period}
+              onPeriod={setPeriod}
+            />
           ) : null}
 
           {tab === "distribution" ? (
@@ -495,13 +298,8 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
             />
           ) : null}
 
-          {tab === "compare" ? (
-            <ComparePanel currentBacktestId={backtestId} />
-          ) : null}
-
-          {tab === "mae-mfe" ? (
-            <MaeMfePanel backtestId={backtestId} />
-          ) : null}
+          {tab === "compare" ? <ComparePanel currentBacktestId={backtestId} /> : null}
+          {tab === "mae-mfe" ? <MaeMfePanel backtestId={backtestId} /> : null}
 
           {tab === "monthly" ? (
             <Card>
@@ -510,90 +308,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
             </Card>
           ) : null}
 
-          {tab === "trades" ? (
-            <Card className="overflow-hidden p-0">
-              <div className="border-b border-as-border px-5 py-4">
-                <div className="text-sm font-medium">成交明细</div>
-                <p className="mt-1 text-[11px] text-as-muted">
-                  出场价、盈亏、持有期目前为空——引擎还没有 round-trip
-                  配对，这里不填假数。
-                </p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] text-left text-xs">
-                  <thead className="sticky top-0 bg-as-secondary/90 text-as-muted backdrop-blur-sm">
-                    <tr>
-                      {[
-                        "日期",
-                        "标的",
-                        "方向",
-                        "数量",
-                        "入场价",
-                        "出场价",
-                        "盈亏",
-                        "持有期",
-                        "佣金",
-                      ].map((h) => (
-                        <th key={h} className="px-4 py-3 font-medium">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(trades.data || []).slice(0, 200).map((t) => {
-                      const dir = labelDirection(t.direction, t.quantity);
-                      const sell = dir === "卖出";
-                      return (
-                        <tr
-                          key={t.id}
-                          className="border-t border-as-border/70 hover:bg-as-secondary/50"
-                        >
-                          <td className="px-4 py-2.5 tabular">
-                            {t.trade_date.slice(0, 10)}
-                          </td>
-                          <td className="px-4 py-2.5">{t.ticker}</td>
-                          <td
-                            className={`px-4 py-2.5 ${sell ? "text-as-negative" : "text-as-positive"}`}
-                          >
-                            {dir}
-                          </td>
-                          <td className="px-4 py-2.5 tabular">
-                            {formatNumber(t.quantity, 0)}
-                          </td>
-                          <td className="px-4 py-2.5 tabular">
-                            {formatNumber(t.entry_price)}
-                          </td>
-                          <td className="px-4 py-2.5 tabular">
-                            {formatNumber(t.exit_price)}
-                          </td>
-                          <td className="px-4 py-2.5 tabular">
-                            {formatNumber(t.pnl)}
-                          </td>
-                          <td className="px-4 py-2.5 tabular">
-                            {formatNumber(t.holding_period, 0)}
-                          </td>
-                          <td className="px-4 py-2.5 tabular">
-                            {formatNumber(t.commission)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {!trades.data?.length ? (
-                      <tr>
-                        <td
-                          colSpan={9}
-                          className="px-4 py-8 text-center text-as-muted"
-                        >
-                          暂无成交记录。
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          ) : null}
+          {tab === "trades" ? <TradesTable rows={trades.data || []} /> : null}
         </>
       )}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor from "@monaco-editor/react";
 import { Card } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import type { StrategyVersion } from "@/lib/api";
