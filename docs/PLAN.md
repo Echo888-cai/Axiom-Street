@@ -182,7 +182,7 @@ ValidationSpec
 
 - **2026-09-05**:产品所有者明确"白色、轻盈、克制、玻璃质感"方向,MASTER.md 重写为 **White Studio 单浅色主题**(面板 `#ffffff`/画布 `#f5f6f8`、玻璃表面 74% 白 24px 模糊、圆角 12/20/24px、强调色 `#4167ac`、克制的红绿)。
 - **2026-09-06 复核拍板**:锁定 White Studio 单浅色为 v1,**不再承诺正式双主题**。原 W3a"浅+深双主题收割 terminal"叙述作废;`globals.css` 里整套深色 `@media (prefers-color-scheme)` 覆盖为"尽力跟随系统",不做手动切换、不进 MASTER 承诺。旧双主题设计文件 `archive/v2.md` 已删除,git 历史即归档。
-- **遗留矛盾(需一次产品收口,不阻塞后端)**:VISION 信念六写死单一主色 `#1677FF` 且反模式含"禁玻璃拟态";MASTER 现用 `#4167ac` + 玻璃质感。两处已互斥。`.cursor/rules` 已同步为 White Studio(删双主题/禁玻璃旧条文);剩 VISION 措辞与 MASTER 令牌的一次收口。
+- **产品收口(2026-09-06 拍板,已解决)**:设计实现真值以 White Studio `MASTER.md` 为准(主色 `#4167ac`,玻璃质感仅限其令牌预算内面板);VISION 信念六措辞已同步(不再写死 `#1677FF`,玻璃以 MASTER 为限)。`.cursor/rules` 早已对齐。
 
 ### 7.2 【残余】RC-W3 前端接缝清单
 
@@ -191,7 +191,7 @@ ValidationSpec
 | # | 项 | 现状 |
 |---|----|------|
 | W3-2 | i18n 收尾 | ✅ 完成:**产品源码(tsx+ts)零 CJK**(组件并行迁移 + 10 个 .ts 集中库经 `tr()` 查字典;方向判定改语义 `isSellTrade`,消除文本耦合);仅 e2e 测试含中文(不计产品)。新增同步读取器 `lib/translate.ts` |
-| W3-6 | 白 Studio 收口 + codegen 换用 | `.cursor` 规则已对齐;剩 VISION vs MASTER(主色 `#1677FF` vs `#4167ac`/玻璃表述)一次拍板;前端仍用手工 `lib/api/types.ts`,生成 `api-types.gen.ts` 已可用但未整体替换(替换涉及全前端,谨慎分批) |
+| W3-6 | codegen 换用 | VISION/MASTER 已拍板对齐(White Studio 为真值);剩前端手工 `lib/api/types.ts` 未整体替换为 `api-types.gen.ts`(涉及全前端,谨慎分批) |
 
 ### 7.3 已完成的 W3 资产(不再重做)
 
