@@ -89,7 +89,7 @@
 | **W0** 文档融合 | ✅ 已关闭(09-04) | ROADMAP 删除;`validation-gates.md` 落地;阶段单一声明 |
 | **W1** 垃圾清除 | ✅ 主体已关闭(09-05) | terminal/risk/packages/duckdb 删除;无合成回测模块;**残余**:ingest shim、SPY.parquet 跟踪(§6.6) |
 | **W2** 架构整理 | ✅ 后端主体(09-06)+ 残余 W2-1…4 已收口;W2-5 codegen 转 RC-W3 | `ValidationSpec` 注册表 + `GET /specs`;`validation.py` 1161→629;worker 拆包完成,单文件 ≤500;quant 边界锁测试在;测试 346 全绿 |
-| **W3** 前端 UI v2 | 🚧 大部完成;方向已锁 White Studio | **W3-1 ✅**(统一 spec 表单)、**W3-3 ✅**、**W3-4 ✅(63)**、**W3-5 ✅(≤400)**、**W2-5 基建 ✅**;潜伏 tsc 债已清(tsc 0、build 过);剩 i18n 迁移 W3-2 与 codegen 整体换用 W3-6(§7.2) |
+| **W3** 前端 UI v2 | 🚧 收尾中;方向已锁 White Studio | **W3-1/3/4/5 ✅、W2-5 基建 ✅、W3-2 组件迁移 ✅**(产品 tsx 零 CJK,zh/en +600 键);tsc 0/build 过;剩 .ts 库消息本地化与 codegen 整体换用(W3-6,§7.2) |
 | **W4** Phase 4 收尾 | 🚧 特性已提前落地(09-05) | 多回测对比 + MAE/MFE 面板已接入;对比表字段、OpenAPI codegen、验收未完成(§8) |
 
 ---
@@ -186,11 +186,11 @@ ValidationSpec
 
 ### 7.2 【残余】RC-W3 前端接缝清单
 
-> **2026-09-06 推进**:✅ **W3-1**(/validation 与 /experiments 收敛到单一 spec 驱动表单,删 7 个旧表单);✅ **W3-5**(ValidationRunForm 424→282、strategy-lab 548→381、backtest-studio 601→316,**全部 ≤400 行**);✅ **W3-4**(测试 43→**63**,含 truth-strip 排序锁);✅ **W3-3**(e2e 脚本 + 按需全栈 workflow,label `e2e`/手动,不阻塞普通 CI);✅ **W2-5 基建**(离线导出 openapi.json 基线、`api-types.gen.ts` 生成、CI 漂移门)。另修复 W4 提交遗留的潜伏 tsc/类型债(tsc 0、next build 通过)。验证:tsc 0 · vitest 63 · next build ✓。下表仅剩开放项。
+> **2026-09-06 推进**:✅ **W3-1**(/validation 与 /experiments 收敛到单一 spec 驱动表单,删 7 个旧表单);✅ **W3-5**(ValidationRunForm 424→282、strategy-lab 548→381、backtest-studio 601→316,**全部 ≤400 行**);✅ **W3-4**(测试 43→**63**,含 truth-strip 排序锁);✅ **W3-3**(e2e 脚本 + 按需全栈 workflow,label `e2e`/手动,不阻塞普通 CI);✅ **W2-5 基建**(离线导出 openapi.json 基线、`api-types.gen.ts` 生成、CI 漂移门);✅ **W3-2 组件迁移**(字典按域拆 `zh/en/{11 域}.ts`,四簇并行迁移,**产品 tsx 组件零 CJK**,zh/en 各 +600 余键)。另修复 W4 提交遗留的潜伏 tsc/类型债。验证:tsc 0 · vitest 63 · next build ✓。下表为剩余收尾项。
 
 | # | 项 | 现状 |
 |---|----|------|
-| W3-2 | i18n 迁移 | 字典 zh-CN/en 已建,**组件迁移未做**(71/90 tsx 仍硬编码中文,`nav.ts` 起)。目标组件零中文字面量。量最大,单列专项 |
+| W3-2 | i18n 收尾 | ✅ 组件迁移完成(产品 tsx 零 CJK)。剩余:**10 个集中 `.ts` 库**(labels/utils/http/proxy/tearsheet/equal-weight/spec-schema/validation-status/python-lsp/use-backtest-analysis)仍含中文消息/标签——集中式函数,错误消息被单测断言,字典化需加"运行期按 locale 查字典"读取器,风险中等,单独一轮 |
 | W3-6 | 白 Studio 收口 + codegen 换用 | `.cursor` 规则已对齐;剩 VISION vs MASTER(主色 `#1677FF` vs `#4167ac`/玻璃表述)一次拍板;前端仍用手工 `lib/api/types.ts`,生成 `api-types.gen.ts` 已可用但未整体替换(替换涉及全前端,谨慎分批) |
 
 ### 7.3 已完成的 W3 资产(不再重做)
