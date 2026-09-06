@@ -1,6 +1,6 @@
 "use client";
 
-import Editor, { type OnMount } from "@monaco-editor/react";
+import type { OnMount } from "@monaco-editor/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,20 +9,17 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Tabs } from "@/components/ui/tabs";
-import { labelStatus } from "@/lib/labels";
+import { toast } from "@/components/ui/toast";
 import { SPY_200DMA_TEMPLATE } from "@/lib/spy-200dma";
 import { EQUAL_WEIGHT_CONFIG, EQUAL_WEIGHT_TEMPLATE } from "@/lib/equal-weight";
-import { toast } from "@/components/ui/toast";
 import { BuilderPanel } from "./builder-panel";
 import { RunToolbar } from "./run-toolbar";
-import { VersionHistory } from "./version-history";
-import { VersionDiff } from "./version-diff";
+import { StrategyLabHeader } from "./strategy-lab-header";
 import { RunDock } from "./run-dock";
+import { EditorPane, type VersionPair } from "./editor-pane";
+import { VersionHistoryCard } from "./version-history-card";
+import { LabBanners } from "./lab-banners";
+import { StrategyDialogs, type RestoreKind } from "./strategy-dialogs";
 import { registerPythonLanguageFeatures, applyEngineError } from "./python-lsp";
 
 function friendlyError(message: string): string {
@@ -69,9 +66,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
   const [universeId, setUniverseId] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState("");
-  const [confirmRestore, setConfirmRestore] = useState<"spy" | "equal" | null>(
-    null,
-  );
+  const [confirmRestore, setConfirmRestore] = useState<RestoreKind>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [pane, setPane] = useState<"code" | "diff">("code");
@@ -115,7 +110,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     return () => window.removeEventListener("beforeunload", onBefore);
   }, [dirty]);
 
-  const comparePair = useMemo(() => {
+  const comparePair: VersionPair | null = useMemo(() => {
     if (compareIds.length !== 2) return null;
     const left = (versions.data || []).find((v) => v.id === compareIds[0]);
     const right = (versions.data || []).find((v) => v.id === compareIds[1]);
@@ -264,64 +259,23 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
   return (
     <div className="flex min-h-[calc(100vh-12rem)] flex-col gap-4 as-enter">
-      <PageHeader
-        crumbs={[
-          { href: "/", label: "首页" },
-          { href: "/strategies", label: "策略实验室" },
-        ]}
-        title={
-          editingName ? (
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                rename.mutate();
-              }}
-            >
-              <Input
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-10 w-[280px] text-[20px] font-semibold"
-                onBlur={() => {
-                  if (name.trim() && name !== strategy.name) rename.mutate();
-                  else setEditingName(false);
-                }}
-              />
-            </form>
-          ) : (
-            <button
-              type="button"
-              className="cursor-text rounded-lg text-left hover:bg-as-secondary"
-              onClick={() => setEditingName(true)}
-              title="点击重命名"
-            >
-              {strategy.name}
-            </button>
-          )
-        }
-        description={
-          strategy.description || "结构化策略工作区。代码是信号的唯一来源。"
-        }
-        action={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Badge tone="neutral">{labelStatus(strategy.status)}</Badge>
-            <Badge tone="blue">v{strategy.latest_version?.version ?? 1}</Badge>
-            {dirty ? <Badge tone="amber">未保存</Badge> : null}
-            <Link href={`/reports?strategy_id=${strategyId}`}>
-              <Button variant="ghost" size="sm">
-                研究笔记
-              </Button>
-            </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setConfirmDelete(true)}
-            >
-              删除
-            </Button>
-          </div>
-        }
+      <StrategyLabHeader
+        strategy={strategy}
+        strategyId={strategyId}
+        editingName={editingName}
+        name={name}
+        dirty={dirty}
+        onNameChange={setName}
+        onStartEdit={() => setEditingName(true)}
+        onCommitName={() => {
+          if (name.trim() && name !== strategy.name) rename.mutate();
+          else setEditingName(false);
+        }}
+        onBlurName={() => {
+          if (name.trim() && name !== strategy.name) rename.mutate();
+          else setEditingName(false);
+        }}
+        onDelete={() => setConfirmDelete(true)}
       />
 
       <RunToolbar
@@ -356,22 +310,10 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         />
       ) : null}
 
-      {trialStats.data && trialStats.data.total_trials > 0 ? (
-        <p className="text-xs text-as-muted">
-          已在此策略族上试验 {trialStats.data.total_trials} 次
-          {trialStats.data.by_snapshot[0]
-            ? `（当前快照 ${trialStats.data.by_snapshot[0].snapshot_key || "—"}：${trialStats.data.by_snapshot[0].count} 次）`
-            : ""}
-          。多次试验会抬高过拟合风险。
-        </p>
-      ) : null}
-
-      {code.includes("AfterMarketClose") ? (
-        <p className="text-xs text-as-negative">
-          当前代码使用了已失效的 AfterMarketClose。请点击「恢复 SPY
-          200DMA」，否则回测会失败。
-        </p>
-      ) : null}
+      <LabBanners
+        trials={trialStats.data}
+        legacyCode={code.includes("AfterMarketClose")}
+      />
 
       <div className="grid min-h-[520px] flex-1 grid-cols-12 gap-4">
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
@@ -381,94 +323,47 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
           <BuilderPanel config={config} onChange={setConfig} />
         </Card>
 
-        <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-6">
-          <div className="flex items-center justify-between border-b border-as-border px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="text-sm font-medium">strategy.py</div>
-              {comparePair ? (
-                <Tabs
-                  value={pane}
-                  onChange={(id) => setPane(id as "code" | "diff")}
-                  items={[
-                    { id: "code", label: "编辑" },
-                    { id: "diff", label: "对比" },
-                  ]}
-                />
-              ) : null}
-            </div>
-            <span className="hidden text-[11px] text-as-muted xl:block">
-              Python · ⌘S 保存 · ⌘↵ 回测
-            </span>
-          </div>
-          {pane === "diff" && comparePair ? (
-            <VersionDiff left={comparePair.left} right={comparePair.right} />
-          ) : (
-            <div className="min-h-[420px] flex-1">
-              <Editor
-                height="100%"
-                defaultLanguage="python"
-                theme="vs"
-                value={code}
-                onMount={(editor, monacoApi) => {
-                  editorRef.current = editor;
-                  monacoRef.current = monacoApi;
-                  lspRef.current?.dispose();
-                  lspRef.current = registerPythonLanguageFeatures(monacoApi);
-                }}
-                onChange={(v) => setCode(v || "")}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  fontFamily: "SF Mono, Menlo, Monaco, Consolas, monospace",
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  padding: { top: 12 },
-                }}
-              />
-            </div>
-          )}
-        </Card>
+        <EditorPane
+          code={code}
+          onChange={setCode}
+          comparePair={comparePair}
+          pane={pane}
+          onPaneChange={setPane}
+          onMountEditor={(editor, monacoApi) => {
+            editorRef.current = editor;
+            monacoRef.current = monacoApi;
+            lspRef.current?.dispose();
+            lspRef.current = registerPythonLanguageFeatures(monacoApi);
+          }}
+        />
 
-        <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
-          <div className="border-b border-as-border px-4 py-3">
-            <div className="text-sm font-medium">版本历史</div>
-            <p className="mt-0.5 text-[11px] text-as-muted">
-              勾选两个版本对比；点击载入到编辑器
-            </p>
-          </div>
-          <VersionHistory
-            versions={versions.data || []}
-            currentId={strategy.latest_version?.id}
-            compareIds={compareIds}
-            onToggleCompare={(id) =>
-              setCompareIds((ids) => {
-                if (ids.includes(id)) return ids.filter((x) => x !== id);
-                if (ids.length >= 2) return [ids[1], id];
-                return [...ids, id];
-              })
-            }
-            onSelect={(v) => {
-              setCode(v.code);
-              setConfig(v.config || {});
-              setMessage(`恢复 v${v.version}`);
-              setPane("code");
-              toast(`已载入 v${v.version}`, "info");
-            }}
-          />
-        </Card>
+        <VersionHistoryCard
+          versions={versions.data || []}
+          currentId={strategy.latest_version?.id}
+          compareIds={compareIds}
+          onToggleCompare={(id) =>
+            setCompareIds((ids) => {
+              if (ids.includes(id)) return ids.filter((x) => x !== id);
+              if (ids.length >= 2) return [ids[1], id];
+              return [...ids, id];
+            })
+          }
+          onSelect={(v) => {
+            setCode(v.code);
+            setConfig(v.config || {});
+            setMessage(`恢复 v${v.version}`);
+            setPane("code");
+            toast(`已载入 v${v.version}`, "info");
+          }}
+        />
       </div>
 
-      <ConfirmDialog
-        open={confirmRestore != null}
-        title={
-          confirmRestore === "equal"
-            ? "加载等权横截面模板？"
-            : "恢复 SPY 200DMA 模板？"
-        }
-        description="会覆盖编辑器中的当前代码。未保存的修改将丢失，除非你先保存版本。"
-        confirmLabel="载入模板"
-        onConfirm={() => {
-          if (confirmRestore === "equal") {
+      <StrategyDialogs
+        restore={confirmRestore}
+        deleteOpen={confirmDelete}
+        onCloseRestore={() => setConfirmRestore(null)}
+        onConfirmRestore={(kind) => {
+          if (kind === "equal") {
             setCode(EQUAL_WEIGHT_TEMPLATE);
             setConfig(EQUAL_WEIGHT_CONFIG);
             setMessage("加载等权横截面模板");
@@ -479,16 +374,8 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
             toast("已载入最新模板", "info");
           }
         }}
-        onClose={() => setConfirmRestore(null)}
-      />
-      <ConfirmDialog
-        open={confirmDelete}
-        title="删除这条策略？"
-        description="删除后无法从界面恢复。相关回测记录仍会保留。"
-        confirmLabel="删除策略"
-        danger
-        onConfirm={() => remove.mutate()}
-        onClose={() => setConfirmDelete(false)}
+        onCloseDelete={() => setConfirmDelete(false)}
+        onConfirmDelete={() => remove.mutate()}
       />
     </div>
   );
