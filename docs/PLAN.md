@@ -89,7 +89,7 @@
 | **W0** 文档融合 | ✅ 已关闭(09-04) | ROADMAP 删除;`validation-gates.md` 落地;阶段单一声明 |
 | **W1** 垃圾清除 | ✅ 主体已关闭(09-05) | terminal/risk/packages/duckdb 删除;无合成回测模块;**残余**:ingest shim、SPY.parquet 跟踪(§6.6) |
 | **W2** 架构整理 | ✅ 后端主体(09-06)+ 残余 W2-1…4 已收口;W2-5 codegen 转 RC-W3 | `ValidationSpec` 注册表 + `GET /specs`;`validation.py` 1161→629;worker 拆包完成,单文件 ≤500;quant 边界锁测试在;测试 346 全绿 |
-| **W3** 前端 UI v2 | 🚧 部分完成;方向已锁 White Studio | 令牌/hex=0/i18n 结构已做;**W3-4 ✅(测试 63)、W3-3 ✅(e2e 脚本 + 按需全栈 workflow)**;修复 W4 潜伏 tsc 债(tsc 0、build 过);表单接线 W3-1、i18n 迁移 W3-2、压线 W3-5 未做(§7.2) |
+| **W3** 前端 UI v2 | 🚧 大部完成;方向已锁 White Studio | **W3-1 ✅**(统一 spec 表单)、**W3-3 ✅**、**W3-4 ✅(63)**、**W3-5 ✅(≤400)**、**W2-5 基建 ✅**;潜伏 tsc 债已清(tsc 0、build 过);剩 i18n 迁移 W3-2 与 codegen 整体换用 W3-6(§7.2) |
 | **W4** Phase 4 收尾 | 🚧 特性已提前落地(09-05) | 多回测对比 + MAE/MFE 面板已接入;对比表字段、OpenAPI codegen、验收未完成(§8) |
 
 ---
@@ -170,7 +170,7 @@ ValidationSpec
 | W2-2 | quant 边界扫描锁测试 | ✅ 完成:`tests/unit/test_quant_isolation.py`(AST 扫全部 quant/*.py,禁 fastapi/celery/sqlalchemy/redis/uvicorn/starlette/services;附带 vacuous 守卫)。随 `pytest tests/unit` 进 CI |
 | W2-3 | 清 ingest shim | ✅ 完成:删 `ingest_spy()`/`load_spy_parquet()`(quant/data/ingest/__init__.py);3 个测试改走通用 `ingest(symbols=["SPY"],…)`/`load_symbol_parquet`;`routers/data.py` SPY 端点改名 `ingest_single_symbol_endpoint`(仅命名清理,路由不变)。`grep ingest_spy` 代码内零命中 |
 | W2-4 | SPY.parquet 解除跟踪 | ✅ 完成:`git rm --cached`;文件留盘,`.gitignore` 已盖 |
-| W2-5 | OpenAPI codegen | ⏳ 未做(归 RC-W3 前端接线前,见 §6.5) |
+| W2-5 | OpenAPI codegen | ✅ 基建已做(离线 openapi.json 基线 + `api-types.gen.ts` + CI 漂移门);整体替换手工类型归 W3-6,谨慎分批 |
 
 **RC-W2 验收(截至 2026-09-06)**:`ruff` + `mypy quant services`(85 源文件)全绿;`pytest tests/unit` **346 passed**(新增边界锁 2 条);worker 无单文件 ≥500;`grep ingest_spy` 仅 git 历史命中;SPY.parquet 不再受控。
 
@@ -186,14 +186,12 @@ ValidationSpec
 
 ### 7.2 【残余】RC-W3 前端接缝清单
 
-> **2026-09-06 推进**:W3-4 ✅(测试 43 → **63**,含 truth-strip 排序锁"DSR/PBO 在原始 Sharpe 前");W3-3 ✅(补 `package.json` e2e 脚本 + 按需全栈工作流 `.github/workflows/e2e.yml`,label `e2e`/手动触发,不阻塞普通 CI);另修复 W4 提交遗留的潜伏 tsc/类型债(W4 的 compare/mae-mfe 从未通过 typecheck)——`npx tsc --noEmit` 0 错、`next build` 通过,typecheck 门恢复有效。下表仅剩未做项。
+> **2026-09-06 推进**:✅ **W3-1**(/validation 与 /experiments 收敛到单一 spec 驱动表单,删 7 个旧表单);✅ **W3-5**(ValidationRunForm 424→282、strategy-lab 548→381、backtest-studio 601→316,**全部 ≤400 行**);✅ **W3-4**(测试 43→**63**,含 truth-strip 排序锁);✅ **W3-3**(e2e 脚本 + 按需全栈 workflow,label `e2e`/手动,不阻塞普通 CI);✅ **W2-5 基建**(离线导出 openapi.json 基线、`api-types.gen.ts` 生成、CI 漂移门)。另修复 W4 提交遗留的潜伏 tsc/类型债(tsc 0、next build 通过)。验证:tsc 0 · vitest 63 · next build ✓。下表仅剩开放项。
 
 | # | 项 | 现状 |
 |---|----|------|
-| W3-1 | ValidationRunForm 接线 | 424 行组件写好但未接入任何页面;/validation 仍 7 份旧表单 + /experiments PBO 表单。目标单一 spec 驱动表单共用 |
-| W3-2 | i18n 迁移 | 字典已建;迁移 71/90 硬编码 tsx(`nav.ts` 起),目标组件零中文字面量 |
-| W3-5 | 压超线组件 | `backtest-studio` 601、`strategy-lab` 548、`ValidationRunForm` 424 → ≤400 |
-| W3-6 | 白 Studio 反模式收口 | VISION 措辞 vs MASTER 令牌(主色 `#1677FF` vs `#4167ac`、玻璃表述)一次对齐;深色 media query 残留清理 |
+| W3-2 | i18n 迁移 | 字典 zh-CN/en 已建,**组件迁移未做**(71/90 tsx 仍硬编码中文,`nav.ts` 起)。目标组件零中文字面量。量最大,单列专项 |
+| W3-6 | 白 Studio 收口 + codegen 换用 | `.cursor` 规则已对齐;剩 VISION vs MASTER(主色 `#1677FF` vs `#4167ac`/玻璃表述)一次拍板;前端仍用手工 `lib/api/types.ts`,生成 `api-types.gen.ts` 已可用但未整体替换(替换涉及全前端,谨慎分批) |
 
 ### 7.3 已完成的 W3 资产(不再重做)
 
