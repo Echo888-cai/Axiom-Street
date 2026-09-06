@@ -19,6 +19,7 @@ import { SPY_200DMA_TEMPLATE } from "@/lib/spy-200dma";
 import { EQUAL_WEIGHT_CONFIG, EQUAL_WEIGHT_TEMPLATE } from "@/lib/equal-weight";
 import { toast } from "@/components/ui/toast";
 import { BuilderPanel } from "./builder-panel";
+import { RunToolbar } from "./run-toolbar";
 import { VersionHistory } from "./version-history";
 import { VersionDiff } from "./version-diff";
 import { RunDock } from "./run-dock";
@@ -323,79 +324,25 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-as border border-as-border bg-as-bg px-3 py-2.5 shadow-as">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
-            开始
-            <Input
-              type="date"
-              className="w-[138px]"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
-            结束
-            <Input
-              type="date"
-              className="w-[138px]"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
-            本金
-            <Input
-              type="number"
-              min={1000}
-              step={1000}
-              className="w-28"
-              value={capital}
-              onChange={(e) => setCapital(e.target.value)}
-            />
-          </label>
-          <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
-            标的池
-            <select
-              className="h-9 rounded-lg border border-as-border bg-as-bg px-2 text-sm text-as-text outline-none focus:border-as-primary/40"
-              value={universeId}
-              onChange={(e) => setUniverseId(e.target.value)}
-            >
-              <option value="">快照全部标的</option>
-              {(universes.data || []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                  {item.member_count ? `（${item.member_count}）` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Input
-            className="w-44"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="版本说明"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="ghost" onClick={() => setConfirmRestore("spy")}>
-            恢复 SPY 200DMA
-          </Button>
-          <Button variant="ghost" onClick={() => setConfirmRestore("equal")}>
-            加载等权横截面
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => save.mutate()}
-            disabled={save.isPending || !dirty}
-          >
-            {save.isPending ? "保存中…" : "保存版本"}
-          </Button>
-          <Button onClick={() => run.mutate()} disabled={run.isPending}>
-            {run.isPending ? "提交中…" : "运行回测"}
-          </Button>
-        </div>
-      </div>
+      <RunToolbar
+        startDate={startDate}
+        endDate={endDate}
+        capital={capital}
+        universeId={universeId}
+        message={message}
+        universes={universes.data || []}
+        onStartDate={setStartDate}
+        onEndDate={setEndDate}
+        onCapital={setCapital}
+        onUniverseId={setUniverseId}
+        onMessage={setMessage}
+        dirty={dirty}
+        savePending={save.isPending}
+        onSave={() => save.mutate()}
+        runPending={run.isPending}
+        onRun={() => run.mutate()}
+        onRestore={(kind) => setConfirmRestore(kind)}
+      />
 
       {runId ? (
         <RunDock
