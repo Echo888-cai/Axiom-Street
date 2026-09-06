@@ -1,7 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { locales, Locale, defaultLocale, type ZhCN } from "@/locales";
+import { locales, defaultLocale, type ZhCN } from "@/locales";
+import { setLocale as storeSetLocale, getLocale, type Locale } from "./translate";
 
 const listeners = new Set<() => void>();
 const subscribe = (listener: () => void) => {
@@ -10,19 +11,14 @@ const subscribe = (listener: () => void) => {
     listeners.delete(listener);
   };
 };
-let currentLocale: Locale = defaultLocale;
 
 export function setLocale(locale: Locale) {
-  currentLocale = locale;
+  storeSetLocale(locale);
   listeners.forEach((listener) => listener());
 }
 
 export function useLocale() {
-  return useSyncExternalStore(
-    subscribe,
-    () => currentLocale,
-    () => defaultLocale,
-  );
+  return useSyncExternalStore(subscribe, getLocale, () => defaultLocale);
 }
 
 export function useI18n() {
@@ -46,3 +42,4 @@ export function useT() {
     return typeof value === "string" ? value : key;
   };
 }
+
