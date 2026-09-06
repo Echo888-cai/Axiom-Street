@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from quant.data.ingest import data_status, latest_snapshot_dir, load_spy_parquet
+from quant.data.ingest import data_status, latest_snapshot_dir, load_symbol_parquet
 from quant.data.lean_converter import (
     bars_to_lean_daily_csv,
     build_factor_file,
@@ -108,9 +108,9 @@ def test_ensure_lean_spy_data_missing_parquet(tmp_path: Path):
         ensure_lean_spy_data(tmp_path)
 
 
-def test_load_spy_parquet_missing(tmp_path: Path):
+def test_load_symbol_parquet_missing(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
-        load_spy_parquet(tmp_path)
+        load_symbol_parquet(tmp_path)
 
 
 def test_data_status_not_ready(tmp_path: Path):
