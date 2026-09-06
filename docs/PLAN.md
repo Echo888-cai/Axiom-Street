@@ -190,7 +190,7 @@ ValidationSpec
 
 | # | 项 | 现状 |
 |---|----|------|
-| W3-2 | i18n 收尾 | ✅ 组件迁移完成(产品 tsx 零 CJK)。剩余:**10 个集中 `.ts` 库**(labels/utils/http/proxy/tearsheet/equal-weight/spec-schema/validation-status/python-lsp/use-backtest-analysis)仍含中文消息/标签——集中式函数,错误消息被单测断言,字典化需加"运行期按 locale 查字典"读取器,风险中等,单独一轮 |
+| W3-2 | i18n 收尾 | ✅ 完成:**产品源码(tsx+ts)零 CJK**(组件并行迁移 + 10 个 .ts 集中库经 `tr()` 查字典;方向判定改语义 `isSellTrade`,消除文本耦合);仅 e2e 测试含中文(不计产品)。新增同步读取器 `lib/translate.ts` |
 | W3-6 | 白 Studio 收口 + codegen 换用 | `.cursor` 规则已对齐;剩 VISION vs MASTER(主色 `#1677FF` vs `#4167ac`/玻璃表述)一次拍板;前端仍用手工 `lib/api/types.ts`,生成 `api-types.gen.ts` 已可用但未整体替换(替换涉及全前端,谨慎分批) |
 
 ### 7.3 已完成的 W3 资产(不再重做)
