@@ -1,0 +1,15 @@
+export const data = {
+    title: "Data",
+    status: "Data Status",
+    ingest: "Ingest Market Data",
+    symbols: "Symbols",
+    provider: "Data Provider",
+    mode: "Mode",
+    full: "Full",
+    incremental: "Incremental",
+    reconcile: "Reconcile",
+    snapshots: "Snapshots",
+    progress: "Progress",
+    completed: "Completed",
+    total: "Total",
+  } as const;

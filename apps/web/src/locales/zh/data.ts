@@ -1,0 +1,15 @@
+export const data = {
+    title: "数据",
+    status: "数据状态",
+    ingest: "摄取行情",
+    symbols: "标的",
+    provider: "数据源",
+    mode: "模式",
+    full: "全量",
+    incremental: "增量",
+    reconcile: "对账",
+    snapshots: "快照",
+    progress: "进度",
+    completed: "已完成",
+    total: "总计",
+  } as const;
