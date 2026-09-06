@@ -435,29 +435,6 @@ def ingest(
     }
 
 
-def ingest_spy(
-    *,
-    data_root: Optional[Path] = None,
-    start: str = "2010-01-01",
-    end: Optional[str] = None,
-    provider: Optional[str] = None,
-    convert_lean: bool = True,
-    mode: str = "full",
-    reconcile_with: str | None = None,
-) -> dict[str, Any]:
-    """Compat shim: ingest SPY only."""
-    return ingest(
-        symbols=["SPY"],
-        data_root=data_root,
-        start=start,
-        end=end,
-        provider=provider,
-        convert_lean=convert_lean,
-        mode=mode,
-        reconcile_with=reconcile_with,
-    )
-
-
 def load_symbol_parquet(data_root: Optional[Path] = None, symbol: str = "SPY") -> pd.DataFrame:
     root = Path(data_root or os.getenv("STREET_DATA_ROOT") or _repo_data_root())
     ticker = normalize_symbols([symbol])[0]
@@ -465,11 +442,6 @@ def load_symbol_parquet(data_root: Optional[Path] = None, symbol: str = "SPY") -
     if not path.exists():
         raise FileNotFoundError(f"Missing {ticker} parquet at {path}. Run ingest first.")
     return pd.read_parquet(path)
-
-
-def load_spy_parquet(data_root: Optional[Path] = None) -> pd.DataFrame:
-    """Compat shim."""
-    return load_symbol_parquet(data_root, "SPY")
 
 
 def data_status(data_root: Optional[Path] = None) -> dict:
@@ -522,9 +494,7 @@ def data_status(data_root: Optional[Path] = None) -> dict:
 
 __all__ = [
     "ingest",
-    "ingest_spy",
     "load_symbol_parquet",
-    "load_spy_parquet",
     "load_symbols_file",
     "latest_snapshot_dir",
     "prune_unreferenced_snapshots",

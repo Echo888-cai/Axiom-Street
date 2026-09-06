@@ -7,6 +7,8 @@ import type {
   TimeSeriesPoint,
   MonthlyReturn,
   Page,
+  MaeMfePoint,
+  CompareEquityResponse,
 } from "./types";
 
 export const backtestsApi = {
@@ -60,4 +62,10 @@ export const backtestsApi = {
   tearsheetHtmlUrl: (id: string) =>
     `${API_URL}/api/v1/backtests/${id}/tearsheet.html`,
   eventsUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/events`,
+  compareEquity: (ids: string[], normalized: boolean = false, period: string = "ALL") =>
+    request<CompareEquityResponse>("/api/v1/backtests/compare/equity", {
+      method: "POST",
+      body: JSON.stringify({ ids, normalized, period }),
+    }),
+  getMaeMfe: (id: string) => request<MaeMfePoint[]>(`/api/v1/backtests/${id}/mae-mfe`),
 };

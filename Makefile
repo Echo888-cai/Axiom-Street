@@ -1,6 +1,6 @@
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 
-.PHONY: up down api web lint typecheck test test-all ingest golden migrate prune-snapshots
+.PHONY: up down api web lint typecheck test test-all ingest golden migrate prune-snapshots prune-jobs clean
 
 up:
 	docker compose up --build
@@ -41,3 +41,11 @@ migrate:
 
 prune-snapshots:
 	$(PYTHON) -m services.api.prune_snapshots
+
+prune-jobs:
+	$(PYTHON) -m services.api.prune_jobs --keep-recent 20
+
+clean:
+	rm -rf apps/web/.next apps/web/.mypy_cache .venv __pycache__ .pytest_cache .mypy_cache .ruff_cache
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name .mypy_cache -exec rm -rf {} + 2>/dev/null || true

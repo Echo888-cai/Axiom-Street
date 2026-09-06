@@ -471,3 +471,93 @@ def get_logs(backtest_id: UUID) -> dict[str, str]:
         "stdout": stdout.read_text(encoding="utf-8") if stdout.exists() else "",
         "stderr": stderr.read_text(encoding="utf-8") if stderr.exists() else "",
     }
+
+
+def get_mae_mfe(db: Session, backtest_id: UUID) -> list[dict]:
+    """Calculate MAE/MFE per trade using equity curve and trade data."""
+    from datetime import timedelta
+
+    from services.api.models import BacktestEquity, BacktestTrade
+
+    trades = (
+        db.query(BacktestTrade)
+        .filter(BacktestTrade.backtest_id == backtest_id)
+        .order_by(BacktestTrade.trade_date.asc())
+        .all()
+    )
+    if not trades:
+        return []
+
+    equity = (
+        db.query(BacktestEquity)
+        .filter(BacktestEquity.backtest_id == backtest_id)
+        .order_by(BacktestEquity.ts.asc())
+        .all()
+    )
+    if not equity:
+        return []
+
+    equity_series = {e.ts: (e.strategy_value, e.benchmark_value) for e in equity}
+    equity_times = sorted(equity_series.keys())
+
+    def get_equity_at(t: datetime) -> float | None:
+        for et in equity_times:
+            if et >= t:
+                return equity_series[et][0]
+        return equity_series[equity_times[-1]][0] if equity_times else None
+
+    result = []
+    for t in trades:
+        entry_time = t.trade_date
+        holding_days = int(t.holding_period or 0)
+        exit_time = entry_time + timedelta(days=holding_days)
+        entry_val = get_equity_at(entry_time)
+
+        pnl = None
+        if t.exit_price and t.entry_price and entry_val:
+            if t.direction.upper() in ("BUY", "LONG"):
+                pnl = (t.exit_price - t.entry_price) * t.quantity
+            else:
+                pnl = (t.entry_price - t.exit_price) * t.quantity
+
+        mfe = 0.0
+        mae = 0.0
+        if entry_val:
+            for et in equity_times:
+                if et < entry_time:
+                    continue
+                if exit_time and et > exit_time:
+                    break
+                val = equity_series[et][0]
+                if val is None:
+                    continue
+                change = val - entry_val
+                if t.direction.upper() in ("BUY", "LONG"):
+                    if change > mfe:
+                        mfe = change
+                    if change < mae:
+                        mae = change
+                else:
+                    if change > mfe:
+                        mfe = change
+                    if change < mae:
+                        mae = change
+
+        result.append(
+            {
+                "trade_id": t.id,
+                "trade_date": t.trade_date.isoformat(),
+                "ticker": t.ticker,
+                "direction": t.direction,
+                "entry_price": t.entry_price,
+                "exit_price": t.exit_price,
+                "pnl": pnl,
+                "mae": round(mae, 4) if mae else None,
+                "mfe": round(mfe, 4) if mfe else None,
+                "holding_period": t.holding_period,
+                "entry_drawdown": None,
+                "exit_drawdown": None,
+            }
+        )
+
+    return result

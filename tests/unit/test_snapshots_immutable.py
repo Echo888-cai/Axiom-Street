@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from quant.data.ingest import ingest_spy
+from quant.data.ingest import ingest
 from quant.data.types import YFINANCE_CAPABILITIES, FetchResult
 
 
@@ -35,8 +35,8 @@ def test_ingest_is_immutable_and_content_addressed(monkeypatch, tmp_path: Path):
         "quant.data.ingest.fetch_daily",
         lambda *_a, **_k: FetchResult(frame.copy(), "yfinance", YFINANCE_CAPABILITIES),
     )
-    first = ingest_spy(data_root=tmp_path, convert_lean=False)
-    second = ingest_spy(data_root=tmp_path, convert_lean=False)
+    first = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False)
+    second = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False)
     assert first["snapshot_key"] == second["snapshot_key"]
     assert second["deduplicated"] is True
     snap_dirs = list((tmp_path / "snapshots").iterdir())
@@ -59,8 +59,8 @@ def test_second_ingest_keeps_prior_snapshot(monkeypatch, tmp_path: Path):
         return FetchResult(out, "yfinance", YFINANCE_CAPABILITIES)
 
     monkeypatch.setattr("quant.data.ingest.fetch_daily", fetch)
-    a = ingest_spy(data_root=tmp_path, convert_lean=False)
-    b = ingest_spy(data_root=tmp_path, convert_lean=False)
+    a = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False)
+    b = ingest(symbols=["SPY"], data_root=tmp_path, convert_lean=False)
     assert a["snapshot_key"] != b["snapshot_key"]
     keys = {p.name for p in (tmp_path / "snapshots").iterdir() if p.is_dir()}
     assert a["snapshot_key"] in keys

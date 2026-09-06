@@ -6,35 +6,36 @@ function token(name: string, fallback: string): string {
         .getPropertyValue(name)
         .trim() || fallback;
 }
+
 export const chartColors = {
   get primary() {
-    return token("--as-primary", "#4167ac");
+    return token("--as-primary", "#1677FF");
   },
   get background() {
-    return token("--as-bg", "#ffffff");
+    return token("--as-bg", "#FFFFFF");
   },
   get muted() {
-    return token("--as-text-secondary", "#737984");
+    return token("--as-text-muted", "#667085");
   },
   get positive() {
-    return token("--as-positive", "#34806a");
+    return token("--as-positive", "#3fa97c");
   },
   get negative() {
-    return token("--as-negative", "#bb5b62");
+    return token("--as-negative", "#d9635e");
   },
   get benchmark() {
     return token("--as-chart-benchmark", "#a4adba");
   },
   get grid() {
-    return token("--as-grid", "rgba(34,45,61,.045)");
+    return token("--as-border-subtle", "rgba(15,23,42,0.065)");
   },
   get crosshair() {
-    return token("--as-chart-crosshair", "rgba(65,103,172,.25)");
+    return token("--as-border-strong", "rgba(15,23,42,0.13)");
   },
   get negativeArea() {
-    return token("--as-chart-negative-area", "rgba(187,91,98,.16)");
+    return token("--as-negative", "#d9635e") + "26"; // 15% opacity
   },
   get negativeFade() {
-    return token("--as-chart-negative-fade", "rgba(187,91,98,.01)");
+    return token("--as-negative", "#d9635e") + "04"; // 1% opacity
   },
 };

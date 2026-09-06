@@ -134,6 +134,34 @@ export type MonthlyReturn = {
   return_pct: number;
 };
 
+export type MaeMfePoint = {
+  trade_id: string;
+  trade_date: string | null;
+  ticker: string;
+  direction: string;
+  entry_price: number | null;
+  exit_price: number | null;
+  pnl: number | null;
+  mae: number | null;
+  mfe: number | null;
+  holding_period: number | null;
+};
+
+export type CompareSeries = {
+  id: string;
+  label: string;
+  data: Array<{ time: string; value: number }>;
+  cagr?: number | null;
+  sharpe?: number | null;
+  maxDrawdown?: number | null;
+  volatility?: number | null;
+  tradeCount?: number | null;
+};
+
+export type CompareEquityResponse = {
+  series: CompareSeries[];
+};
+
 export type ResearchNote = {
   id: string;
   strategy_id: string;

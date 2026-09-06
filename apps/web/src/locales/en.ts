@@ -157,6 +157,26 @@ export const en = {
       deflatedSharpe: "Deflated Sharpe",
       probabilisticSharpe: "Probabilistic Sharpe",
     },
+    compare: {
+      title: "Multi-backtest Compare",
+      selectLabel: "Select backtests",
+      normalized: "Normalized to 100",
+      period: "Period",
+      table: {
+        strategy: "Strategy",
+        finalEquity: "Final Equity",
+        totalReturn: "Total Return",
+        cagr: "CAGR",
+        sharpe: "Sharpe",
+        maxDD: "Max Drawdown",
+        volatility: "Volatility",
+        trades: "Trades",
+      },
+    },
+    maeMfe: {
+      noData: "No MAE/MFE data",
+      description: "Needs a completed backtest with trades",
+    },
   },
   tearsheet: {
     title: "Tearsheet",

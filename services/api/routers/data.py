@@ -113,7 +113,8 @@ def ingest_endpoint(payload: IngestRequest, db: Session = Depends(get_db)) -> di
 
 
 @router.post("/ingest/spy", status_code=status.HTTP_202_ACCEPTED)
-def ingest_spy_endpoint(payload: IngestRequest, db: Session = Depends(get_db)) -> dict:
+def ingest_single_symbol_endpoint(payload: IngestRequest, db: Session = Depends(get_db)) -> dict:
+    """Legacy single-symbol convenience: force a SPY-only ingest."""
     payload.symbols = ["SPY"]
     return _create_job(payload, db)
 
