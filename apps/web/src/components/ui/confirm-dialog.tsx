@@ -2,13 +2,14 @@
 
 import { Modal } from "./modal";
 import { Button } from "./button";
+import { useT } from "@/lib/i18n";
 
 export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "确认",
-  cancelLabel = "取消",
+  confirmLabel,
+  cancelLabel,
   danger,
   onConfirm,
   onClose,
@@ -22,6 +23,9 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
+  const resolvedConfirm = confirmLabel ?? t("common.confirm");
+  const resolvedCancel = cancelLabel ?? t("common.cancel");
   if (!open) return null;
   return (
     <Modal open={open} onClose={onClose} label={title} className="max-w-sm p-6">
@@ -35,7 +39,7 @@ export function ConfirmDialog({
       ) : null}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onClose}>
-          {cancelLabel}
+          {resolvedCancel}
         </Button>
         <Button
           variant={danger ? "danger" : "primary"}
@@ -45,7 +49,7 @@ export function ConfirmDialog({
             onClose();
           }}
         >
-          {confirmLabel}
+          {resolvedConfirm}
         </Button>
       </div>
     </Modal>

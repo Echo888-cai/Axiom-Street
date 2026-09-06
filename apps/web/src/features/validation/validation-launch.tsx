@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { request } from "@/lib/api/http";
+import { useT } from "@/lib/i18n";
 import type { ValidationKind, ValidationRun } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -24,6 +25,7 @@ const MANUAL_KINDS: ValidationKind[] = [
 ];
 
 export function ValidationLaunch({ kinds = MANUAL_KINDS }: { kinds?: ValidationKind[] }) {
+  const t = useT();
   const qc = useQueryClient();
 
   const specsQuery = useQuery({
@@ -84,7 +86,7 @@ export function ValidationLaunch({ kinds = MANUAL_KINDS }: { kinds?: ValidationK
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-1">
-          <Label htmlFor="vlaunch-strategy">策略</Label>
+          <Label htmlFor="vlaunch-strategy">{t("validation.launch.strategy")}</Label>
           <select
             id="vlaunch-strategy"
             className={selectClass}
@@ -98,13 +100,15 @@ export function ValidationLaunch({ kinds = MANUAL_KINDS }: { kinds?: ValidationK
                 </option>
               ))
             ) : (
-              <option value="">还没有策略</option>
+              <option value="">{t("validation.launch.noStrategies")}</option>
             )}
           </select>
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="vlaunch-backtest">已完成回测</Label>
+          <Label htmlFor="vlaunch-backtest">
+            {t("validation.launch.completedBacktest")}
+          </Label>
           <select
             id="vlaunch-backtest"
             className={selectClass}
@@ -121,13 +125,17 @@ export function ValidationLaunch({ kinds = MANUAL_KINDS }: { kinds?: ValidationK
                 </option>
               ))
             ) : (
-              <option value="">先跑完一次全样本回测</option>
+              <option value="">
+                {t("validation.launch.runFullBacktestFirst")}
+              </option>
             )}
           </select>
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="vlaunch-kind">验证类型</Label>
+          <Label htmlFor="vlaunch-kind">
+            {t("validation.form.kindLabel")}
+          </Label>
           {availableKinds.length > 1 ? (
             <select
               id="vlaunch-kind"
@@ -154,13 +162,13 @@ export function ValidationLaunch({ kinds = MANUAL_KINDS }: { kinds?: ValidationK
 
       {!strategies.length ? (
         <EmptyState
-          title="还没有策略"
-          description="先建一条策略并跑完一次回测，验证任务需要借用回测的标的池与数据快照。"
+          title={t("validation.launch.noStrategies")}
+          description={t("validation.launch.noStrategiesHint")}
         />
       ) : !backtests.length ? (
         <EmptyState
-          title="还没有已完成回测"
-          description="验证借用回测的标的池与快照；部分类型还需要日期区间。先对该版本跑完一次全样本回测。"
+          title={t("validation.launch.noCompletedBacktests")}
+          description={t("validation.launch.noCompletedBacktestsHint")}
         />
       ) : spec && versionId ? (
         <ValidationRunForm

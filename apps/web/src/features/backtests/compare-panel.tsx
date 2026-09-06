@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { EquityCurve } from "@/components/charts/equity-curve";
 import { api, type Backtest, type CompareSeries } from "@/lib/api";
 import { formatNumber } from "@/lib/utils";
-import { useT, useI18n } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 
 interface ComparePanelProps {
   currentBacktestId: string;
@@ -17,7 +17,6 @@ interface ComparePanelProps {
 
 export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
   const t = useT();
-  const i18n = useI18n();
   const [selectedIds, setSelectedIds] = useState<string[]>([currentBacktestId]);
   const [normalized, setNormalized] = useState(false);
   const [period, setPeriod] = useState<"1M" | "3M" | "YTD" | "1Y" | "ALL">("ALL");
@@ -44,16 +43,16 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
   return (
     <Card className="mt-4">
       <CardHeader
-        title={i18n?.backtest?.compare?.title || "多回测对比"}
-        hint={<span className="text-xs text-muted-foreground">选择 2-6 个已完成的回测进行跨策略对比</span>}
+        title={t("backtest.compare.title")}
+        hint={<span className="text-xs text-muted-foreground">{t("backtest.compare.hint")}</span>}
       />
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[280px]">
-            <Label htmlFor="backtest-select">{t("backtest.compare.selectLabel") || "选择回测"}</Label>
+            <Label htmlFor="backtest-select">{t("backtest.compare.selectLabel")}</Label>
             <div className="flex flex-wrap gap-2 pt-1" id="backtest-select">
               {availableBacktests.length === 0 ? (
-                <span className="text-xs text-muted-foreground">暂无已完成回测</span>
+                <span className="text-xs text-muted-foreground">{t("backtest.compare.noCompleted")}</span>
               ) : (
                 availableBacktests.map((bt) => {
                   const selected = selectedIds.includes(bt.id);
@@ -81,7 +80,7 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
               )}
             </div>
             {selectedIds.length < 2 && (
-              <p className="mt-1 text-xs text-amber-600">至少选择 2 个回测</p>
+              <p className="mt-1 text-xs text-amber-600">{t("backtest.compare.minTwo")}</p>
             )}
           </div>
 
@@ -93,20 +92,20 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
                 onChange={(e) => setNormalized(e.target.checked)}
                 className="accent-as-primary"
               />
-              <span className="text-muted-foreground">{t("backtest.compare.normalized") || "归一化到 100"}</span>
+              <span className="text-muted-foreground">{t("backtest.compare.normalized")}</span>
             </label>
             <div className="space-y-1">
-              <Label htmlFor="period">{t("backtest.compare.period") || "周期"}</Label>
+              <Label htmlFor="period">{t("backtest.compare.period")}</Label>
               <Select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value as typeof period)}
                 className="w-[140px]"
               >
-                <SelectItem value="1M">1 月</SelectItem>
-                <SelectItem value="3M">3 月</SelectItem>
-                <SelectItem value="YTD">今年以来</SelectItem>
-                <SelectItem value="1Y">1 年</SelectItem>
-                <SelectItem value="ALL">全部</SelectItem>
+                <SelectItem value="1M">{t("backtest.compare.periods.m1")}</SelectItem>
+                <SelectItem value="3M">{t("backtest.compare.periods.m3")}</SelectItem>
+                <SelectItem value="YTD">{t("backtest.compare.periods.ytd")}</SelectItem>
+                <SelectItem value="1Y">{t("backtest.compare.periods.y1")}</SelectItem>
+                <SelectItem value="ALL">{t("backtest.period.all")}</SelectItem>
               </Select>
             </div>
           </div>
@@ -133,7 +132,7 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
                   onChange={(e) => setNormalized(e.target.checked)}
                   className="accent-as-primary"
                 />
-                <span className="text-muted-foreground">{t("backtest.compare.normalized") || "归一化到 100"}</span>
+                <span className="text-muted-foreground">{t("backtest.compare.normalized")}</span>
               </label>
             </div>
 
@@ -160,14 +159,14 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
               <table className="w-full min-w-[700px] text-left text-sm">
                 <thead className="sticky top-0 bg-as-secondary/90 text-as-muted backdrop-blur-sm">
                   <tr className="border-b border-as-border">
-                    <th className="px-4 py-2 font-medium">{t("backtest.compare.table.strategy") || "策略"}</th>
-                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.finalEquity") || "期末权益"}</th>
-                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.totalReturn") || "总收益"}</th>
-                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.cagr") || "年化收益"}</th>
-                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.sharpe") || "夏普"}</th>
-                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.maxDD") || "最大回撤"}</th>
-                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.volatility") || "波动率"}</th>
-                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.trades") || "成交数"}</th>
+                    <th className="px-4 py-2 font-medium">{t("backtest.compare.table.strategy")}</th>
+                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.finalEquity")}</th>
+                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.totalReturn")}</th>
+                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.cagr")}</th>
+                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.sharpe")}</th>
+                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.maxDD")}</th>
+                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.volatility")}</th>
+                    <th className="px-4 py-2 font-medium tabular">{t("backtest.compare.table.trades")}</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -24,8 +24,8 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
     return (
       <Card>
         <EmptyState
-          title={t("backtest.maeMfe.noData") || "暂无 MAE/MFE 数据"}
-          description={t("backtest.maeMfe.description") || "需要已完成且有成交记录的回测"}
+          title={t("backtest.maeMfe.noData")}
+          description={t("backtest.maeMfe.description")}
         />
       </Card>
     );
@@ -41,44 +41,57 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
 
   const mfeMaeRatio = avgMae && avgMfe ? avgMfe / Math.abs(avgMae) : 0;
 
+  const headers = [
+    t("backtest.tradeColumns.date"),
+    t("backtest.tradeColumns.ticker"),
+    t("backtest.tradeColumns.direction"),
+    t("backtest.tradeColumns.entry"),
+    t("backtest.tradeColumns.exit"),
+    t("backtest.tradeColumns.pnl"),
+    "MAE",
+    "MFE",
+    "MFE/MAE",
+    t("backtest.maeMfe.holdingPeriod"),
+  ];
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader
-          title="MAE / MFE 分析"
-          hint={<span className="text-[11px] text-muted-foreground">每笔交易的最大不利/有利波动 (MAE/MFE)</span>}
+          title={t("backtest.maeMfe.title")}
+          hint={<span className="text-[11px] text-muted-foreground">{t("backtest.maeMfe.hint")}</span>}
         />
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-4">
             <div className="rounded-lg border border-as-border bg-as-bg p-4">
-              <div className="text-[11px] text-muted-foreground">平均 MAE</div>
+              <div className="text-[11px] text-muted-foreground">{t("backtest.maeMfe.avgMae")}</div>
               <div className="mt-1 text-2xl font-semibold tabular text-as-negative">
                 {formatPct(avgMae)}
               </div>
             </div>
             <div className="rounded-lg border border-as-border bg-as-bg p-4">
-              <div className="text-[11px] text-muted-foreground">平均 MFE</div>
+              <div className="text-[11px] text-muted-foreground">{t("backtest.maeMfe.avgMfe")}</div>
               <div className="mt-1 text-2xl font-semibold tabular text-as-positive">
                 {formatPct(avgMfe)}
               </div>
             </div>
             <div className="rounded-lg border border-as-border bg-as-bg p-4">
-              <div className="text-[11px] text-muted-foreground">MFE/MAE 比</div>
+              <div className="text-[11px] text-muted-foreground">{t("backtest.maeMfe.ratio")}</div>
               <div className="mt-1 text-2xl font-semibold tabular">
                 {mfeMaeRatio.toFixed(2)}
               </div>
             </div>
             <div className="rounded-lg border border-as-border bg-as-bg p-4">
-              <div className="text-[11px] text-muted-foreground">平均持仓期</div>
+              <div className="text-[11px] text-muted-foreground">{t("backtest.maeMfe.avgHold")}</div>
               <div className="mt-1 text-2xl font-semibold tabular">
-                {avgHold.toFixed(1)} 天
+                {avgHold.toFixed(1)} {t("tearsheet.day")}
               </div>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-as-border bg-as-bg p-4">
-              <h4 className="text-sm font-medium mb-3">MAE 分布 (最大不利波动)</h4>
+              <h4 className="text-sm font-medium mb-3">{t("backtest.maeMfe.maeDist")}</h4>
               <EquityCurve
                 series={[
                   {
@@ -95,7 +108,7 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
             </div>
 
             <div className="rounded-lg border border-as-border bg-as-bg p-4">
-              <h4 className="text-sm font-medium mb-3">MFE 分布 (最大有利波动)</h4>
+              <h4 className="text-sm font-medium mb-3">{t("backtest.maeMfe.mfeDist")}</h4>
               <EquityCurve
                 series={[
                   {
@@ -114,12 +127,12 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-as-border bg-as-bg p-4">
-              <h4 className="text-sm font-medium mb-3">持仓期分布</h4>
+              <h4 className="text-sm font-medium mb-3">{t("backtest.maeMfe.holdingDist")}</h4>
               <EquityCurve
                 series={[
                   {
                     id: "holding",
-                    label: "持仓天数",
+                    label: t("backtest.maeMfe.holdingDays"),
                     data: holdingPeriods
                       .sort((a, b) => a - b)
                       .map((v, i) => ({ time: String(i), value: v })),
@@ -131,7 +144,7 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
             </div>
 
             <div className="rounded-lg border border-as-border bg-as-bg p-4">
-              <h4 className="text-sm font-medium mb-3">MFE vs MAE 散点</h4>
+              <h4 className="text-sm font-medium mb-3">{t("backtest.maeMfe.scatter")}</h4>
               <EquityCurve
                 series={[
                   {
@@ -151,24 +164,13 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
       </Card>
 
       <Card>
-        <CardHeader title="明细表" />
+        <CardHeader title={t("backtest.maeMfe.detailTitle")} />
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left text-xs">
               <thead className="sticky top-0 bg-as-secondary/90 text-as-muted backdrop-blur-sm">
                 <tr className="border-b border-as-border">
-                  {[
-                    "日期",
-                    "标的",
-                    "方向",
-                    "入场价",
-                    "出场价",
-                    "盈亏",
-                    "MAE",
-                    "MFE",
-                    "MFE/MAE",
-                    "持仓期",
-                  ].map((h) => (
+                  {headers.map((h) => (
                     <th key={h} className="px-3 py-2 font-medium">
                       {h}
                     </th>
@@ -197,7 +199,7 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
                     <td className="px-3 py-2 tabular text-as-text">
                       {d.mae && d.mfe && d.mae !== 0 ? (d.mfe / Math.abs(d.mae)).toFixed(2) : "—"}
                     </td>
-                    <td className="px-3 py-2 tabular">{d.holding_period ? `${d.holding_period} 天` : "—"}</td>
+                    <td className="px-3 py-2 tabular">{d.holding_period ? `${d.holding_period} ${t("tearsheet.day")}` : "—"}</td>
                   </tr>
                 ))}
               </tbody>

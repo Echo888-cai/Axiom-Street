@@ -15,46 +15,48 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 import { cn, formatRelative } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const SECTIONS: Array<{
   key: "hypothesis" | "method" | "conclusion" | "failure_modes";
-  label: string;
-  hint: string;
-  placeholder: string;
+  labelKey: string;
+  hintKey: string;
+  placeholderKey: string;
   rows: number;
 }> = [
   {
     key: "hypothesis",
-    label: "假设",
-    hint: "这条策略为什么应该赚钱。来自构建器时会预填。",
-    placeholder: "在什么市场状态下、凭什么机制产生期望为正的超额收益。",
+    labelKey: "common.research.sections.hypothesis.label",
+    hintKey: "common.research.sections.hypothesis.hint",
+    placeholderKey: "common.research.sections.hypothesis.placeholder",
     rows: 5,
   },
   {
     key: "method",
-    label: "检验",
-    hint: "实际跑过的回测与验证闸门，不要写计划中的检验。",
-    placeholder: "全样本回测区间、DSR、Walk-forward、PBO、敏感性……写做过的，不写打算做的。",
+    labelKey: "common.research.sections.method.label",
+    hintKey: "common.research.sections.method.hint",
+    placeholderKey: "common.research.sections.method.placeholder",
     rows: 6,
   },
   {
     key: "conclusion",
-    label: "结论",
-    hint: "对假设的裁决。VALIDATED 只能由验证管线给出。",
-    placeholder: "假设成立、被削弱，还是被证伪。不要把原始夏普写成结论。",
+    labelKey: "common.research.sections.conclusion.label",
+    hintKey: "common.research.sections.conclusion.hint",
+    placeholderKey: "common.research.sections.conclusion.placeholder",
     rows: 5,
   },
   {
     key: "failure_modes",
-    label: "失效模式",
-    hint: "什么情况下这条策略会坏掉。",
-    placeholder: "趋势反转、成本抬升、制度切换、容量……",
+    labelKey: "common.research.sections.failure_modes.label",
+    hintKey: "common.research.sections.failure_modes.hint",
+    placeholderKey: "common.research.sections.failure_modes.placeholder",
     rows: 5,
   },
 ];
 
 export function ResearchDesk() {
   const qc = useQueryClient();
+  const t = useT();
   const params = useSearchParams();
   const initialStrategy = params.get("strategy_id") || "";
   const initialBacktest = params.get("backtest_id") || "";
@@ -107,7 +109,7 @@ export function ResearchDesk() {
     onSuccess: (note) => {
       qc.invalidateQueries({ queryKey: ["research-notes"] });
       setActiveId(note.id);
-      toast("已从策略假设创建笔记", "ok");
+      toast(t("common.research.createFromStrategyToast"), "ok");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -123,7 +125,7 @@ export function ResearchDesk() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["research-notes"] });
-      toast("笔记已保存", "ok");
+      toast(t("common.research.savedToast"), "ok");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -133,7 +135,7 @@ export function ResearchDesk() {
     onSuccess: () => {
       setActiveId(null);
       qc.invalidateQueries({ queryKey: ["research-notes"] });
-      toast("笔记已删除", "info");
+      toast(t("common.research.deletedToast"), "info");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -154,12 +156,12 @@ export function ResearchDesk() {
   return (
     <div className="flex h-[calc(100vh-7rem)] flex-col gap-4 as-enter">
       <PageHeader
-        title="研究笔记"
-        description="假设 → 检验 → 结论 → 失效模式。这里不生成回测数字，也不改验证状态。"
+        title={t("common.researchNote")}
+        description={t("common.research.pageDescription")}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
-              策略
+              {t("common.research.strategyLabel")}
               <select
                 className="h-9 min-w-[180px] rounded-lg border border-as-border bg-as-bg px-2 text-sm text-as-text outline-none focus:border-as-primary/40"
                 value={strategyId}
@@ -168,7 +170,7 @@ export function ResearchDesk() {
                   setActiveId(null);
                 }}
               >
-                <option value="">全部笔记</option>
+                <option value="">{t("common.research.allNotes")}</option>
                 {(strategies.data || []).map((s: Strategy) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -180,7 +182,7 @@ export function ResearchDesk() {
               onClick={() => create.mutate()}
               disabled={!strategyId || create.isPending}
             >
-              {create.isPending ? "创建中…" : "新建笔记"}
+              {create.isPending ? t("common.creating") : t("common.research.newNote")}
             </Button>
           </div>
         }
@@ -190,11 +192,11 @@ export function ResearchDesk() {
         <Card className="min-h-[280px]">
           <EmptyState
             icon={FileBarChart2}
-            title="还没有策略"
-            description="研究笔记挂在策略上。先到实验室写一条假设。"
+            title={t("common.research.noStrategiesTitle")}
+            description={t("common.research.noStrategiesDesc")}
             action={
               <Link href="/strategies">
-                <Button size="sm">策略实验室</Button>
+                <Button size="sm">{t("common.research.strategyLab")}</Button>
               </Link>
             }
           />
@@ -203,18 +205,20 @@ export function ResearchDesk() {
         <Card className="min-h-[280px]">
           <EmptyState
             icon={FileBarChart2}
-            title="研究笔记接口不可用"
+            title={t("common.research.apiUnavailableTitle")}
             description={
               notes.error instanceof Error
-                ? `当前 API 没有研究笔记接口（${notes.error.message}）。需要跑过 Alembic 0008 的 API 进程。`
-                : "API 还没有 research-notes。需要带 0008 迁移的 API 进程。"
+                ? t("common.research.apiErrorTemplate")
+                    .split("{message}")
+                    .join(notes.error.message)
+                : t("common.research.apiMissing")
             }
           />
         </Card>
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-4">
           <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
-            <div className="border-b border-as-border px-4 py-3 text-sm font-medium">目录</div>
+            <div className="border-b border-as-border px-4 py-3 text-sm font-medium">{t("common.research.toc")}</div>
             <ul className="flex-1 space-y-1 overflow-auto p-3">
               {(notes.data?.items || []).map((note) => (
                 <li key={note.id}>
@@ -228,14 +232,16 @@ export function ResearchDesk() {
                   >
                     <div className="truncate text-sm font-medium text-as-text">{note.title}</div>
                     <p className="mt-0.5 truncate text-[11px] text-as-muted">
-                      {note.hypothesis || "假设还是空的"} · {formatRelative(note.updated_at)}
+                      {note.hypothesis || t("common.research.emptyHypothesis")} · {formatRelative(note.updated_at)}
                     </p>
                   </button>
                 </li>
               ))}
               {!notes.data?.items.length ? (
                 <p className="px-2 py-8 text-center text-xs text-as-muted">
-                  {strategyId ? "这篇策略还没有笔记。" : "选择策略后新建。"}
+                  {strategyId
+                    ? t("common.research.strategyNoNotes")
+                    : t("common.research.selectThenCreate")}
                 </p>
               ) : null}
             </ul>
@@ -245,8 +251,8 @@ export function ResearchDesk() {
             {!selected ? (
               <EmptyState
                 icon={FileBarChart2}
-                title="选择或新建一篇笔记"
-                description="假设字段会从策略构建器带过来。其余三栏要你自己写，系统不会代填结论。"
+                title={t("common.research.selectNoteTitle")}
+                description={t("common.research.selectNoteDesc")}
               />
             ) : (
               <div className="flex min-h-0 flex-1 flex-col">
@@ -264,12 +270,16 @@ export function ResearchDesk() {
                           href={`/backtests/${selected.backtest_id}`}
                           className="text-as-primary hover:underline"
                         >
-                          关联 tearsheet
+                          {t("common.research.linkTearsheet")}
                         </Link>
                       ) : initialBacktest ? (
-                        <Badge tone="blue">将关联本次回测</Badge>
+                        <Badge tone="blue">{t("common.research.willLinkBacktest")}</Badge>
                       ) : null}
-                      {dirty ? <Badge tone="amber">未保存</Badge> : <span>⌘S 保存</span>}
+                      {dirty ? (
+                        <Badge tone="amber">{t("common.research.unsaved")}</Badge>
+                      ) : (
+                        <span>{t("common.research.cmdSave")}</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -279,10 +289,10 @@ export function ResearchDesk() {
                       disabled={!dirty || save.isPending}
                       onClick={() => save.mutate()}
                     >
-                      {save.isPending ? "保存中…" : "保存"}
+                      {save.isPending ? t("common.saving") : t("common.save")}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>
-                      删除
+                      {t("common.delete")}
                     </Button>
                   </div>
                 </div>
@@ -290,14 +300,14 @@ export function ResearchDesk() {
                   {SECTIONS.map((section) => (
                     <label key={section.key} className="block">
                       <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                        <span className="text-sm font-medium text-as-text">{section.label}</span>
-                        <span className="text-[11px] text-as-muted">{section.hint}</span>
+                        <span className="text-sm font-medium text-as-text">{t(section.labelKey)}</span>
+                        <span className="text-[11px] text-as-muted">{t(section.hintKey)}</span>
                       </div>
                       <textarea
                         value={String(draft[section.key] ?? "")}
                         onChange={(e) => setDraft((d) => ({ ...d, [section.key]: e.target.value }))}
                         rows={section.rows}
-                        placeholder={section.placeholder}
+                        placeholder={t(section.placeholderKey)}
                         className="w-full resize-y rounded-lg border border-as-border bg-as-bg px-3 py-2.5 text-sm leading-relaxed text-as-text outline-none placeholder:text-as-muted focus:border-as-primary/40 focus-visible:ring-2 focus-visible:ring-as-primary/20"
                       />
                     </label>
@@ -311,9 +321,9 @@ export function ResearchDesk() {
 
       <ConfirmDialog
         open={confirmDelete}
-        title="删除这篇研究笔记？"
-        description="删除后无法从界面恢复。回测与验证记录不受影响。"
-        confirmLabel="删除笔记"
+        title={t("common.research.deleteNoteTitle")}
+        description={t("common.research.deleteNoteDesc")}
+        confirmLabel={t("common.research.deleteNoteLabel")}
         danger
         onConfirm={() => remove.mutate()}
         onClose={() => setConfirmDelete(false)}

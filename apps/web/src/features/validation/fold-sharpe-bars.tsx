@@ -1,9 +1,14 @@
+"use client";
+
+import { useT } from "@/lib/i18n";
+
 function widthPct(value: number, maxAbs: number): number {
   if (maxAbs <= 0) return 8;
   return Math.max(8, Math.min(100, (Math.abs(value) / maxAbs) * 100));
 }
 
 export function FoldSharpeBars({ folds }: { folds: Array<Record<string, unknown>> }) {
+  const t = useT();
   const maxAbs = Math.max(
     0.5,
     ...folds.flatMap((fold) => [
@@ -25,7 +30,12 @@ export function FoldSharpeBars({ folds }: { folds: Array<Record<string, unknown>
             className="grid gap-2 sm:grid-cols-[7.5rem_1fr] sm:items-center"
           >
             <div className="text-[11px] text-as-muted">
-              <div className="font-medium text-as-text">第 {Number(fold.index ?? i) + 1} 折</div>
+              <div className="font-medium text-as-text">
+                {t("validation.bars.foldLabel").replace(
+                  "{n}",
+                  String(Number(fold.index ?? i) + 1),
+                )}
+              </div>
               <div className="tabular-nums">{oosYear || "—"} OOS</div>
             </div>
             <div className="space-y-1.5">

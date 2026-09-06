@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import { useT } from "@/lib/i18n";
 import { SPY_200DMA_TEMPLATE } from "@/lib/spy-200dma";
 import { EQUAL_WEIGHT_CONFIG, EQUAL_WEIGHT_TEMPLATE } from "@/lib/equal-weight";
 import { BuilderPanel } from "./builder-panel";
@@ -21,12 +22,21 @@ import { LabBanners } from "./lab-banners";
 import { StrategyDialogs, type RestoreKind } from "./strategy-dialogs";
 import { registerPythonLanguageFeatures, applyEngineError } from "./python-lsp";
 
-function friendlyError(message: string): string {
+function fmt(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) =>
+    String(vars[key] ?? ""),
+  );
+}
+
+function friendlyError(
+  message: string,
+  t: (key: string) => string,
+): string {
   if (message.includes("Docker is required") || message.includes("Docker")) {
-    return "需要 Docker（Colima）才能跑 LEAN 回测。请先执行 colima start，并确认 worker 容器在运行。";
+    return t("strategy.dockerRequired");
   }
   if (message.includes("AfterMarketClose")) {
-    return "当前策略代码使用了已失效的 LEAN API。请点击「恢复 SPY 200DMA」后再运行回测。";
+    return t("strategy.deprecatedLeanApi");
   }
   return message;
 }
@@ -34,6 +44,7 @@ function friendlyError(message: string): string {
 export function StrategyLab({ strategyId }: { strategyId: string }) {
   const router = useRouter();
   const qc = useQueryClient();
+  const t = useT();
   const {
     data: strategy,
     isLoading,
@@ -58,7 +69,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
   const [code, setCode] = useState("");
   const [config, setConfig] = useState<Record<string, unknown>>({});
-  const [message, setMessage] = useState("更新策略代码");
+  const [message, setMessage] = useState(t("strategy.defaultCommitMessage"));
   const [startDate, setStartDate] = useState("2018-01-01");
   const [endDate, setEndDate] = useState("2020-12-31");
   const [capital, setCapital] = useState("100000");
@@ -141,7 +152,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
               startColumn: result.column || 1,
               endLineNumber: result.line || 1,
               endColumn: (result.column || 1) + 12,
-              message: result.message || "语法错误",
+              message: result.message || t("strategy.syntaxMarker"),
               severity: monacoApi.MarkerSeverity.Error,
             },
           ],
@@ -154,9 +165,9 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["strategy", strategyId] });
       qc.invalidateQueries({ queryKey: ["versions", strategyId] });
-      toast("版本已保存", "ok");
+      toast(t("strategy.versionSavedToast"), "ok");
     },
-    onError: (err: Error) => toast(friendlyError(err.message), "err"),
+    onError: (err: Error) => toast(friendlyError(err.message, t), "err"),
   });
 
   const rename = useMutation({
@@ -165,7 +176,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
       qc.invalidateQueries({ queryKey: ["strategy", strategyId] });
       qc.invalidateQueries({ queryKey: ["strategies"] });
       setEditingName(false);
-      toast("名称已更新", "ok");
+      toast(t("strategy.nameUpdatedToast"), "ok");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -174,7 +185,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     mutationFn: () => api.deleteStrategy(strategyId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["strategies"] });
-      toast("策略已删除", "info");
+      toast(t("strategy.strategyDeletedToast"), "info");
       router.push("/strategies");
     },
     onError: (err: Error) => toast(err.message, "err"),
@@ -185,16 +196,17 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
       const lint = await api.checkSyntax(code);
       applyMarkers(lint);
       if (!lint.ok) {
-        throw new Error(
-          `语法错误：第 ${lint.line} 行 ${lint.message || ""}`.trim(),
-        );
+        const base = fmt(t("strategy.syntaxErrorLine"), {
+          line: lint.line as number,
+        });
+        throw new Error(lint.message ? `${base} ${lint.message}` : base);
       }
       let versionId = strategy?.latest_version?.id;
       if (!versionId || dirty) {
         const version = await api.createVersion(strategyId, {
           code,
           config,
-          commit_message: message || "回测前保存",
+          commit_message: message || t("strategy.saveBeforeRun"),
         });
         versionId = version.id;
         await qc.invalidateQueries({ queryKey: ["strategy", strategyId] });
@@ -211,15 +223,15 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     },
     onSuccess: (bt) => {
       if (bt.cache_hit) {
-        toast("命中结果缓存，未重复计入试验台账", "ok");
+        toast(t("strategy.cacheHitToast"), "ok");
       } else {
-        toast("回测已提交，留在实验室继续改", "ok");
+        toast(t("strategy.backtestSubmittedToast"), "ok");
       }
       setRunId(bt.id);
       qc.invalidateQueries({ queryKey: ["backtests"] });
       qc.invalidateQueries({ queryKey: ["trial-stats", strategyId] });
     },
-    onError: (err: Error) => toast(friendlyError(err.message), "err"),
+    onError: (err: Error) => toast(friendlyError(err.message, t), "err"),
   });
 
   useEffect(() => {
@@ -241,11 +253,11 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     return (
       <Card>
         <EmptyState
-          title="无法读取这项研究"
+          title={t("strategy.labLoadErrorTitle")}
           description={error.message}
           action={
             <Button variant="secondary" onClick={() => refetch()}>
-              重新读取
+              {t("strategy.retryLoad")}
             </Button>
           }
         />
@@ -317,7 +329,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
       <div className="grid min-h-[520px] flex-1 grid-cols-12 gap-4">
         <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
           <div className="border-b border-as-border px-4 py-3 text-sm font-medium">
-            策略构建器
+            {t("strategy.builderTitle")}
           </div>
           <BuilderPanel config={config} onChange={setConfig} />
         </Card>
@@ -350,9 +362,14 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
           onSelect={(v) => {
             setCode(v.code);
             setConfig(v.config || {});
-            setMessage(`恢复 v${v.version}`);
+            setMessage(
+              fmt(t("strategy.restoredVersionMessage"), { version: v.version }),
+            );
             setPane("code");
-            toast(`已载入 v${v.version}`, "info");
+            toast(
+              fmt(t("strategy.versionLoadedToast"), { version: v.version }),
+              "info",
+            );
           }}
         />
       </div>
@@ -365,12 +382,12 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
           if (kind === "equal") {
             setCode(EQUAL_WEIGHT_TEMPLATE);
             setConfig(EQUAL_WEIGHT_CONFIG);
-            setMessage("加载等权横截面模板");
-            toast("已载入等权 1/N 模板", "info");
+            setMessage(t("strategy.equalRestoreMessage"));
+            toast(t("strategy.equalTemplateLoadedToast"), "info");
           } else {
             setCode(SPY_200DMA_TEMPLATE);
-            setMessage("恢复 SPY 200 日均线模板");
-            toast("已载入最新模板", "info");
+            setMessage(t("strategy.spyRestoreMessage"));
+            toast(t("strategy.latestTemplateLoadedToast"), "info");
           }
         }}
         onCloseDelete={() => setConfirmDelete(false)}

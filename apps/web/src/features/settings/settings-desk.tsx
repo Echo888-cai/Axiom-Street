@@ -21,9 +21,11 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export default function SettingsPage() {
   const qc = useQueryClient();
+  const t = useT();
   const [tickers, setTickers] = useState("SPY");
   const [job, setJob] = useState<IngestJob | null>(null);
   const sourceRef = useRef<EventSource | null>(null);
@@ -58,10 +60,10 @@ export default function SettingsPage() {
         if (finalJob.status === "COMPLETED") {
           toast(doneOk, "ok");
         } else {
-          toast(finalJob.error?.message || "行情任务失败", "err");
+          toast(finalJob.error?.message || t("common.settings.marketJobFailed"), "err");
         }
       } catch {
-        toast("行情任务结束，但无法解析结果", "err");
+        toast(t("common.settings.parseFailedToast"), "err");
       } finally {
         es.close();
         sourceRef.current = null;
@@ -81,8 +83,12 @@ export default function SettingsPage() {
       return api.ingest({ provider: "auto", start: "2010-01-01", symbols });
     },
     onSuccess: (created) => {
-      const names = (created.symbols || []).join(", ") || "行情";
-      watchJob(created, `${names} 行情已更新`);
+      const names =
+        (created.symbols || []).join(", ") || t("common.settings.marketDataWord");
+      watchJob(
+        created,
+        t("common.settings.updatedToastTemplate").split("{names}").join(names),
+      );
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -90,7 +96,7 @@ export default function SettingsPage() {
   const reconcile = useMutation({
     mutationFn: () => api.reconcileMarket(false),
     onSuccess: (body) => {
-      watchJob(body.job, "全量校验完成（新旧快照均保留）");
+      watchJob(body.job, t("common.settings.reconcileDoneToast"));
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -99,28 +105,29 @@ export default function SettingsPage() {
     ingest.isPending ||
     reconcile.isPending ||
     (job != null && !["COMPLETED", "FAILED", "CANCELLED"].includes(job.status));
-  const cadence = formatReconcileCadence(status.data?.market_reconcile);
+  const cadence = formatReconcileCadence(status.data?.market_reconcile, t);
 
   const m = status.data?.manifest || {};
   const lean = status.data?.lean_engine;
   const symbolsLabel =
     (status.data?.symbols || []).join(", ") || String(m.symbol || "—");
+  const apiKeyExplainParts = t("common.settings.apiKeyExplain").split("{key}");
 
   return (
     <div className="space-y-6 as-enter">
       <PageHeader
-        title="设置"
-        description="管理研究环境、行情数据与引擎连接。让每一次运行都有可靠的起点。"
+        title={t("settings.title")}
+        description={t("common.settings.description")}
       />
 
       {status.isError && (
         <Card>
           <EmptyState
-            title="研究服务未连接"
+            title={t("common.settings.serviceNotConnected")}
             description={status.error.message}
             action={
               <Button variant="secondary" onClick={() => status.refetch()}>
-                重新连接
+                {t("common.reconnect")}
               </Button>
             }
           />
@@ -129,38 +136,38 @@ export default function SettingsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 as-stagger">
         <Card>
-          <CardHeader title="运行环境" />
+          <CardHeader title={t("common.settings.runEnvironment")} />
           <dl className="space-y-3 text-sm">
             <Row label="API" value={API_URL} />
-            <Row label="登录" value="本地用户（无需登录）" />
-            <Row label="量化引擎" value="LEAN（Docker / Colima）" />
+            <Row label={t("common.settings.login")} value={t("common.settings.loginLocalUser")} />
+            <Row label={t("common.settings.quantEngine")} value={t("common.settings.leanRuntimeValue")} />
           </dl>
         </Card>
 
         <Card>
           <CardHeader
-            title="行情数据"
+            title={t("common.settings.marketData")}
             action={
               status.data?.ready ? (
-                <Badge tone="green">已就绪</Badge>
+                <Badge tone="green">{t("common.settings.ready")}</Badge>
               ) : (
-                <Badge tone="amber">缺失</Badge>
+                <Badge tone="amber">{t("common.settings.missing")}</Badge>
               )
             }
           />
           <dl className="space-y-3 text-sm">
-            <Row label="标的" value={symbolsLabel} />
-            <Row label="数据源" value={String(m.source || "—")} />
+            <Row label={t("data.symbols")} value={symbolsLabel} />
+            <Row label={t("data.provider")} value={String(m.source || "—")} />
             <Row
-              label="默认主源"
+              label={t("common.settings.defaultProvider")}
               value={String(
                 (status.data?.providers as { active?: string } | undefined)
                   ?.active || "—",
               )}
             />
-            <Row label="K 线数量" value={String(m.rows ?? "—")} />
+            <Row label={t("common.settings.klineCount")} value={String(m.rows ?? "—")} />
             <Row
-              label="区间"
+              label={t("common.settings.range")}
               value={`${m.start ? String(m.start).slice(0, 10) : "—"} → ${m.end ? String(m.end).slice(0, 10) : "—"}`}
             />
             <div className="flex items-center justify-between gap-4">
@@ -173,7 +180,7 @@ export default function SettingsPage() {
                     className="cursor-pointer text-as-primary"
                     onClick={() => {
                       navigator.clipboard.writeText(String(m.sha256));
-                      toast("已复制指纹", "ok");
+                      toast(t("common.settings.fingerprintCopied"), "ok");
                     }}
                   >
                     <Copy className="h-3.5 w-3.5" />
@@ -182,35 +189,35 @@ export default function SettingsPage() {
               </dd>
             </div>
             <Row
-              label="快照"
+              label={t("data.snapshots")}
               value={String(status.data?.snapshot_key || m.snapshot_key || "—")}
             />
             <Row
-              label="分红/拆分"
+              label={t("common.settings.dividendsSplits")}
               value={
                 status.data?.corporate_actions_verified === true ||
                 m.corporate_actions_verified === true
-                  ? "已核验"
+                  ? t("common.settings.verified")
                   : status.data?.corporate_actions_verified === false ||
                       m.corporate_actions_verified === false
-                    ? "未核验（不可做调整价）"
+                    ? t("common.settings.notVerified")
                     : "—"
               }
             />
             <Row
-              label="LEAN 数据"
-              value={status.data?.lean_ready ? "已转换" : "未转换"}
+              label={t("common.settings.leanData")}
+              value={status.data?.lean_ready ? t("common.settings.converted") : t("common.settings.notConverted")}
             />
-            <Row label="全量校验" value={cadence} />
+            <Row label={t("common.settings.fullReconcile")} value={cadence} />
             <Row
-              label="吞吐"
-              value={formatIngestLimits(status.data?.ingest_limits)}
+              label={t("common.settings.throughput")}
+              value={formatIngestLimits(status.data?.ingest_limits, t)}
             />
           </dl>
           {status.data?.quality_report?.issues &&
           status.data.quality_report.issues.length > 0 ? (
             <div className="mt-4 rounded-as border border-as-border bg-as-secondary px-3 py-2 text-xs">
-              <div className="mb-1 font-medium text-as-text">数据质量</div>
+              <div className="mb-1 font-medium text-as-text">{t("common.settings.dataQuality")}</div>
               <ul className="space-y-1 text-as-muted">
                 {status.data.quality_report.issues.map((issue) => (
                   <li key={`${issue.rule}-${issue.severity}`}>
@@ -219,8 +226,9 @@ export default function SettingsPage() {
                         issue.severity === "blocking" ? "text-as-negative" : ""
                       }
                     >
-                      {issue.severity === "blocking" ? "阻断" : "警告"} ·{" "}
-                      {issue.rule}
+                      {issue.severity === "blocking"
+                        ? t("common.blocking")
+                        : t("common.warning")} · {issue.rule}
                     </span>
                     {" — "}
                     {issue.message}
@@ -230,7 +238,7 @@ export default function SettingsPage() {
             </div>
           ) : status.data?.ready ? (
             <p className="mt-4 text-xs text-as-muted">
-              质量校验通过，无阻断问题。
+              {t("common.settings.qualityPass")}
             </p>
           ) : null}
           <ReconcileReports
@@ -247,7 +255,7 @@ export default function SettingsPage() {
               className="block text-xs text-as-muted"
               htmlFor="ingest-symbols"
             >
-              标的（逗号分隔）
+              {t("common.settings.symbolsCsvLabel")}
             </label>
             <div className="flex flex-wrap items-center gap-2">
               <Input
@@ -255,7 +263,7 @@ export default function SettingsPage() {
                 value={tickers}
                 onChange={(e) => setTickers(e.target.value)}
                 placeholder="SPY, QQQ"
-                aria-label="要拉取的标的代码"
+                aria-label={t("common.settings.ingestAria")}
                 className="max-w-[220px]"
               />
               <Button
@@ -263,57 +271,57 @@ export default function SettingsPage() {
                 onClick={() => ingest.mutate()}
                 disabled={running}
               >
-                {running ? "正在拉取…" : "拉取行情"}
+                {running ? t("common.settings.fetching") : t("common.settings.fetchMarketData")}
               </Button>
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={() => reconcile.mutate()}
                 disabled={running || !status.data?.ready}
-                aria-label="对当前标的池做一次全量再拉，检测 vendor 改历史"
+                aria-label={t("common.settings.reconcileAria")}
               >
-                立即全量校验
+                {t("common.settings.reconcileNow")}
               </Button>
             </div>
             {running && job ? (
               <div className="rounded-as border border-as-border bg-as-secondary/60 px-3 py-2 text-[11px] text-as-muted">
                 <div className="flex items-center justify-between gap-3 text-as-text">
                   <span className="font-medium">
-                    {job.progress_step || "排队中"}
+                    {job.progress_step || t("common.queued")}
                   </span>
                   <span className="tabular-nums">
                     {job.completed_symbols}/{job.total_symbols || "—"}
                   </span>
                 </div>
                 {job.current_symbol ? (
-                  <p className="mt-1">当前标的 {job.current_symbol}</p>
-                ) : (
                   <p className="mt-1">
-                    任务在 worker 中执行，完成后自动刷新数据状态。
+                    {t("common.settings.currentSymbol")
+                      .split("{sym}")
+                      .join(job.current_symbol)}
                   </p>
+                ) : (
+                  <p className="mt-1">{t("common.settings.workerHint")}</p>
                 )}
               </div>
             ) : (
               <p className="text-[11px] text-as-muted">
-                每次拉取写入新的不可变快照，不会覆盖旧数据。全量校验按当前标的池再拉一遍，用来发现
-                vendor 改历史。一次最多 500 只（可调
-                STREET_INGEST_MAX_SYMBOLS）。
+                {t("common.settings.ingestInfo")}
               </p>
             )}
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="LEAN / Docker" />
+          <CardHeader title={t("common.settings.leanDocker")} />
           <dl className="space-y-3 text-sm">
-            <Row label="镜像" value={String(lean?.image || "—")} />
+            <Row label={t("common.settings.imageLabel")} value={String(lean?.image || "—")} />
             <Row
-              label="探活来源"
+              label={t("common.settings.probeSource")}
               value={
                 lean?.source === "worker"
-                  ? "Worker"
+                  ? t("common.settings.workerSource")
                   : lean?.source === "api"
-                    ? "API 本地"
+                    ? t("common.settings.apiLocalSource")
                     : "—"
               }
             />
@@ -329,35 +337,34 @@ export default function SettingsPage() {
                   )}
                 />
                 {lean?.docker_available ? (
-                  <Badge tone="green">可用</Badge>
+                  <Badge tone="green">{t("common.settings.available")}</Badge>
                 ) : (
-                  <Badge tone="red">未就绪</Badge>
+                  <Badge tone="red">{t("common.settings.notReady")}</Badge>
                 )}
               </dd>
             </div>
           </dl>
           <p className="mt-4 text-xs leading-relaxed text-as-muted">
-            {lean?.note ||
-              "真实回测由 worker 通过 Docker 运行 LEAN。本机可用 Colima 替代 Docker Desktop。"}
+            {lean?.note || t("common.settings.leanNote")}
           </p>
         </Card>
 
         <Card>
-          <CardHeader title="API Key（可选，后续）" />
+          <CardHeader title={t("common.settings.apiKeyCard")} />
           <p className="text-sm leading-relaxed text-as-muted">
-            有 <code className="text-as-text">POLYGON_API_KEY</code> 时默认
-            Polygon 主源，并对账 yfinance。没有 key 时仍走
-            Yahoo。市值/行业来自摄取时的基本面快照，不会用今天的市值回填历史。
+            {apiKeyExplainParts[0]}
+            <code className="text-as-text">POLYGON_API_KEY</code>
+            {apiKeyExplainParts[1]}
           </p>
           <ul className="mt-4 space-y-2 text-xs text-as-muted">
             <li>
-              <span className="text-as-text">POLYGON_API_KEY</span> — 有 key
-              即为默认主源（对账 yfinance）
+              <span className="text-as-text">POLYGON_API_KEY</span>
+              {t("common.settings.apiKeyDefaultSource")}
             </li>
             <li>
               <span className="text-as-text">ALPACA_API_KEY</span> +{" "}
-              <span className="text-as-text">ALPACA_API_SECRET</span> —
-              行情与模拟盘
+              <span className="text-as-text">ALPACA_API_SECRET</span>{" — "}
+              {t("common.settings.marketAndPaper")}
             </li>
             <li>
               <span className="text-as-text">ALPHA_VANTAGE_API_KEY</span>

@@ -1,7 +1,10 @@
+"use client";
+
 import { type ValidationRun } from "@/lib/api";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EquityCurve } from "@/components/charts/equity-curve";
 import { FoldSharpeBars } from "@/features/validation/fold-sharpe-bars";
+import { useT } from "@/lib/i18n";
 
 export function asFolds(
   result: Record<string, unknown>,
@@ -30,6 +33,7 @@ export function asEquity(
 }
 
 export function WalkForwardReport({ run }: { run: ValidationRun }) {
+  const t = useT();
   const folds = asFolds(run.result);
   const equity = asEquity(run.result);
   const combined =
@@ -41,12 +45,12 @@ export function WalkForwardReport({ run }: { run: ValidationRun }) {
   return (
     <Card>
       <CardHeader
-        title="最近一次 Walk-forward"
+        title={t("validation.reports.walkForward.title")}
         hint={
           <p className="text-xs text-as-muted">
-            {run.params.mode === "anchored" ? "锚定" : "滚动"} · 训练{" "}
-            {String(run.params.train_years ?? "—")} 年 / 测试{" "}
-            {String(run.params.test_years ?? "—")} 年
+            {`${run.params.mode === "anchored"
+              ? t("validation.reports.walkForward.anchored")
+              : t("validation.reports.walkForward.rolling")} · ${t("validation.reports.walkForward.trainLabel")} ${String(run.params.train_years ?? "—")} ${t("validation.reports.walkForward.yearsUnit")} / ${t("validation.reports.walkForward.testLabel")} ${String(run.params.test_years ?? "—")} ${t("validation.reports.walkForward.yearsUnit")}`}
           </p>
         }
       />
@@ -55,18 +59,20 @@ export function WalkForwardReport({ run }: { run: ValidationRun }) {
       ) : null}
       {combined != null ? (
         <p className="mb-4 text-xs text-as-muted">
-          拼接样本外 Sharpe{" "}
+          {t("validation.reports.walkForward.combinedLabel")}{" "}
           <span className="tabular-nums text-as-text">
             {combined.toFixed(2)}
           </span>
-          {run.result.overfit_collapse === true ? " · 判定为过拟合塌缩" : ""}
+          {run.result.overfit_collapse === true
+            ? ` · ${t("validation.reports.walkForward.collapse")}`
+            : ""}
         </p>
       ) : null}
       {folds.length ? <FoldSharpeBars folds={folds} /> : null}
       {equity.length ? (
         <div className="mt-6">
           <h4 className="mb-2 text-xs font-medium text-as-muted">
-            拼接样本外净值
+            {t("validation.reports.walkForward.equityHeading")}
           </h4>
           <EquityCurve data={equity} height={220} />
         </div>

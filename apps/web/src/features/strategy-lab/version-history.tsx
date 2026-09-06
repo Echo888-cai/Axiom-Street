@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { StrategyVersion } from "@/lib/api";
 
 export function VersionHistory({
@@ -16,8 +17,9 @@ export function VersionHistory({
   onSelect: (version: StrategyVersion) => void;
   onToggleCompare: (id: string) => void;
 }) {
+  const t = useT();
   if (!versions.length) {
-    return <p className="p-4 text-xs text-as-muted">还没有版本记录。</p>;
+    return <p className="p-4 text-xs text-as-muted">{t("strategy.historyEmpty")}</p>;
   }
   return (
     <ul className="space-y-1 overflow-auto p-3">
@@ -35,7 +37,7 @@ export function VersionHistory({
               <button
                 type="button"
                 aria-pressed={comparing}
-                aria-label={`对比 v${v.version}`}
+                aria-label={`${t("strategy.compareVersionPrefix")}${v.version}`}
                 onClick={() => onToggleCompare(v.id)}
                 className="mt-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-as-primary/30"
               >
@@ -58,7 +60,7 @@ export function VersionHistory({
                   </span>
                 </div>
                 <p className="mt-0.5 truncate text-[11px] text-as-muted">
-                  {v.commit_message || "无说明"}
+                  {v.commit_message || t("strategy.noCommitMessage")}
                 </p>
               </button>
             </div>

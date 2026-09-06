@@ -2,21 +2,7 @@
 
 import type { MonthlyReturn } from "@/lib/api";
 import { cn } from "@/lib/utils";
-
-const MONTHS = [
-  "1月",
-  "2月",
-  "3月",
-  "4月",
-  "5月",
-  "6月",
-  "7月",
-  "8月",
-  "9月",
-  "10月",
-  "11月",
-  "12月",
-];
+import { useT } from "@/lib/i18n";
 
 function cellColor(value: number | null): string {
   if (value === null) return "bg-as-secondary text-as-muted";
@@ -30,32 +16,48 @@ function cellColor(value: number | null): string {
 }
 
 export function MonthlyHeatmap({ data }: { data: MonthlyReturn[] }) {
+  const t = useT();
   const years = Array.from(new Set(data.map((d) => d.year))).sort(
     (a, b) => b - a,
   );
   const map = new Map(data.map((d) => [`${d.year}-${d.month}`, d.return_pct]));
 
   if (!data.length) {
-    return <p className="text-sm text-as-muted">暂无月度收益。</p>;
+    return <p className="text-sm text-as-muted">{t("tearsheet.heat.empty")}</p>;
   }
+
+  const months = [
+    t("tearsheet.heat.months.jan"),
+    t("tearsheet.heat.months.feb"),
+    t("tearsheet.heat.months.mar"),
+    t("tearsheet.heat.months.apr"),
+    t("tearsheet.heat.months.may"),
+    t("tearsheet.heat.months.jun"),
+    t("tearsheet.heat.months.jul"),
+    t("tearsheet.heat.months.aug"),
+    t("tearsheet.heat.months.sep"),
+    t("tearsheet.heat.months.oct"),
+    t("tearsheet.heat.months.nov"),
+    t("tearsheet.heat.months.dec"),
+  ];
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] border-collapse text-xs">
         <thead>
           <tr className="text-as-muted">
-            <th className="px-2 py-2 text-left font-medium">年份</th>
-            {MONTHS.map((m) => (
+            <th className="px-2 py-2 text-left font-medium">{t("tearsheet.heat.year")}</th>
+            {months.map((m) => (
               <th key={m} className="px-2 py-2 text-right font-medium">
                 {m}
               </th>
             ))}
-            <th className="px-2 py-2 text-right font-medium">本年</th>
+            <th className="px-2 py-2 text-right font-medium">{t("tearsheet.heat.ytd")}</th>
           </tr>
         </thead>
         <tbody>
           {years.map((year) => {
-            const vals = MONTHS.map(
+            const vals = months.map(
               (_, idx) => map.get(`${year}-${idx + 1}`) ?? null,
             );
             const present = vals.filter((v): v is number => v !== null);

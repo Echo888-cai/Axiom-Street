@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "@/lib/i18n";
 
 type Point = {
   value?: number;
@@ -14,6 +17,7 @@ function widthPct(value: number, maxAbs: number): number {
 }
 
 export function SharpeSurfaceBars({ points }: { points: Point[] }) {
+  const t = useT();
   const maxAbs = Math.max(0.5, ...points.map((row) => Math.abs(Number(row.sharpe) || 0)));
 
   return (
@@ -38,7 +42,11 @@ export function SharpeSurfaceBars({ points }: { points: Point[] }) {
             <div className="text-[11px] text-as-muted">
               <div className="font-medium tabular-nums text-as-text">
                 lookback {row.value ?? "—"}
-                {row.is_peak ? " · 峰" : row.on_plateau ? " · 高原" : ""}
+                {row.is_peak
+                  ? ` · ${t("validation.shapes.peak")}`
+                  : row.on_plateau
+                    ? ` · ${t("validation.shapes.plateau")}`
+                    : ""}
               </div>
               {row.backtest_id ? (
                 <Link href={`/backtests/${row.backtest_id}`} className="text-as-primary hover:underline">
@@ -74,6 +82,7 @@ export function CostAlphaBars({
   points: CostPoint[];
   realisticBps?: number | null;
 }) {
+  const t = useT();
   const maxAbs = Math.max(0.01, ...points.map((row) => Math.abs(Number(row.alpha_capm) || 0)));
 
   return (
@@ -91,7 +100,9 @@ export function CostAlphaBars({
             <div className="text-[11px] text-as-muted">
               <div className="font-medium tabular-nums text-as-text">
                 {row.cost_bps == null ? "—" : `${row.cost_bps} bps`}
-                {atRealistic ? " · 真实" : ""}
+                {atRealistic
+                  ? ` · ${t("validation.reports.cost.realistic")}`
+                  : ""}
               </div>
               {row.backtest_id ? (
                 <Link href={`/backtests/${row.backtest_id}`} className="text-as-primary hover:underline">
@@ -128,13 +139,14 @@ export type RegimeSliceBar = {
 };
 
 const AXIS_TITLE: Record<string, string> = {
-  trend: "趋势",
-  vol: "波动",
-  rate: "利率周期",
-  stress: "压力窗口",
+  trend: "trend",
+  vol: "vol",
+  rate: "rate",
+  stress: "stress",
 };
 
 export function RegimeSharpeBars({ slices }: { slices: RegimeSliceBar[] }) {
+  const t = useT();
   const grouped = ["trend", "vol", "rate", "stress"].map((axis) => ({
     axis,
     rows: slices.filter((row) => row.axis === axis),
@@ -150,7 +162,9 @@ export function RegimeSharpeBars({ slices }: { slices: RegimeSliceBar[] }) {
         rows.length ? (
           <div key={axis}>
             <h4 className="mb-2 text-[11px] uppercase tracking-wide text-as-muted">
-              {AXIS_TITLE[axis] || axis}
+              {AXIS_TITLE[axis]
+                ? t(`validation.axis.${AXIS_TITLE[axis]}`)
+                : axis}
             </h4>
             <div className="space-y-2">
               {rows.map((row) => {
@@ -171,8 +185,10 @@ export function RegimeSharpeBars({ slices }: { slices: RegimeSliceBar[] }) {
                     <div className="text-[11px] text-as-muted">
                       <div className="font-medium text-as-text">{row.label}</div>
                       <div className="tabular-nums">
-                        {row.n_obs} 日
-                        {row.win_rate != null ? ` · 胜率 ${(row.win_rate * 100).toFixed(0)}%` : ""}
+                        {`${row.n_obs} ${t("validation.bars.days")}`}
+                        {row.win_rate != null
+                          ? ` · ${t("validation.bars.winRate")} ${(row.win_rate * 100).toFixed(0)}%`
+                          : ""}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -202,6 +218,7 @@ export type SpaModelBar = {
 };
 
 export function SpaTStatBars({ models }: { models: SpaModelBar[] }) {
+  const t = useT();
   const maxAbs = Math.max(
     0.5,
     ...models.map((row) => (typeof row.t_stat === "number" ? Math.abs(row.t_stat) : 0)),
@@ -225,12 +242,14 @@ export function SpaTStatBars({ models }: { models: SpaModelBar[] }) {
           <div key={key} className="grid gap-2 sm:grid-cols-[7.5rem_1fr] sm:items-center">
             <div className="text-[11px] text-as-muted">
               <div className="font-medium tabular-nums text-as-text">
-                {row.is_best ? "最优 · " : ""}
-                {row.backtest_id ? `${row.backtest_id.slice(0, 8)}…` : `试验 ${index + 1}`}
+                {row.is_best ? `${t("validation.bars.best")} · ` : ""}
+                {row.backtest_id
+                  ? `${row.backtest_id.slice(0, 8)}…`
+                  : `${t("validation.bars.trial")} ${index + 1}`}
               </div>
               {row.backtest_id ? (
                 <Link href={`/backtests/${row.backtest_id}`} className="text-as-primary hover:underline">
-                  回测
+                  {t("validation.table.backtest")}
                 </Link>
               ) : null}
             </div>

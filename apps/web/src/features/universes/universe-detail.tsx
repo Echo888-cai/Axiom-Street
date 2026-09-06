@@ -12,14 +12,12 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
-
-function spanLabel(from: string, to: string | null): string {
-  return `${from.slice(0, 10)} → ${to ? to.slice(0, 10) : "仍在池中"}`;
-}
+import { useT } from "@/lib/i18n";
 
 export function UniverseDetail({ universeId }: { universeId: string }) {
   const router = useRouter();
   const qc = useQueryClient();
+  const t = useT();
   const universe = useQuery({
     queryKey: ["universe", universeId],
     queryFn: () => api.getUniverse(universeId),
@@ -51,7 +49,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
       setTo("");
       setInfer(false);
       setPreview(null);
-      toast("成分已加入", "ok");
+      toast(t("common.universeDetail.addedToast"), "ok");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -61,7 +59,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
     onSuccess: () => {
       invalidate();
       setPreview(null);
-      toast("成分已移除", "ok");
+      toast(t("common.universeDetail.removedToast"), "ok");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -70,7 +68,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
     mutationFn: () => api.deleteUniverse(universeId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["universes"] });
-      toast("标的池已删除", "info");
+      toast(t("common.universeDetail.deletedToast"), "info");
       router.push("/universes");
     },
     onError: (err: Error) => toast(err.message, "err"),
@@ -86,7 +84,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
     mutationFn: () => api.rebuildUniverse(universeId),
     onSuccess: () => {
       invalidate();
-      toast("已按规则重建成分", "ok");
+      toast(t("common.universeDetail.rebuiltToast"), "ok");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -97,10 +95,17 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
       invalidate();
       const n = result.applied.length;
       if (n === 0 && result.errors.length === 0) {
-        toast("没有需要关闭的开放区间", "info");
+        toast(t("common.universeDetail.noOpenSpansToast"), "info");
         return;
       }
-      if (n > 0) toast(`已写入 ${n} 个退市日`, "ok");
+      if (n > 0) {
+        toast(
+          t("common.universeDetail.writtenDaysToast")
+            .split("{n}")
+            .join(String(n)),
+          "ok",
+        );
+      }
       if (result.errors.length > 0) {
         toast(result.errors[0].message, "err");
       }
@@ -114,7 +119,10 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
   if (universe.error || !universe.data) {
     return (
       <Card>
-        <EmptyState title="找不到这个标的池" description="它可能已被删除。" />
+        <EmptyState
+          title={t("common.universeDetail.notFoundTitle")}
+          description={t("common.universeDetail.notFoundDesc")}
+        />
       </Card>
     );
   }
@@ -128,12 +136,34 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
   const isRule = row.kind === "RULE";
   const ruleHint = isRule
     ? [
-        row.rules?.min_price != null ? `最低价 ${row.rules.min_price}` : null,
-        row.rules?.min_adv_usd != null ? `最低 ADV$ ${row.rules.min_adv_usd}` : null,
-        row.rules?.min_market_cap_usd != null ? `最低市值$ ${row.rules.min_market_cap_usd}` : null,
-        row.rules?.sectors?.length ? `板块 ${row.rules.sectors.join("/")}` : null,
-        row.rules?.industries?.length ? `行业 ${row.rules.industries.join("/")}` : null,
-        `回看 ${row.rules?.lookback_days ?? 21} 个交易日`,
+        row.rules?.min_price != null
+          ? t("common.universeDetail.minPriceClause")
+              .split("{n}")
+              .join(String(row.rules.min_price))
+          : null,
+        row.rules?.min_adv_usd != null
+          ? t("common.universeDetail.minAdvClause")
+              .split("{n}")
+              .join(String(row.rules.min_adv_usd))
+          : null,
+        row.rules?.min_market_cap_usd != null
+          ? t("common.universeDetail.minCapClause")
+              .split("{n}")
+              .join(String(row.rules.min_market_cap_usd))
+          : null,
+        row.rules?.sectors?.length
+          ? t("common.universeDetail.sectorsClause")
+              .split("{v}")
+              .join(row.rules.sectors.join("/"))
+          : null,
+        row.rules?.industries?.length
+          ? t("common.universeDetail.industriesClause")
+              .split("{v}")
+              .join(row.rules.industries.join("/"))
+          : null,
+        t("common.universeDetail.lookbackClause")
+          .split("{n}")
+          .join(String(row.rules?.lookback_days ?? 21)),
       ]
         .filter(Boolean)
         .join(" · ")
@@ -143,15 +173,17 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
     <div className="space-y-6 as-enter">
       <PageHeader
         crumbs={[
-          { href: "/", label: "首页" },
-          { href: "/universes", label: "标的池" },
+          { href: "/", label: t("navigation.home") },
+          { href: "/universes", label: t("universe.title") },
         ]}
         title={row.name}
         description={
           row.description ||
           (isRule
-            ? `规则池。${ruleHint}。成分由已摄取行情计算，不能手工改区间。`
-            : "成分区间两端都包含。摄取退市标的后会自动写上退出日；已有 effective_to 不会被覆盖。")
+            ? t("common.universeDetail.ruleDescription")
+                .split("{hint}")
+                .join(ruleHint ?? "")
+            : t("common.universeDetail.staticDescription"))
         }
         action={
           <div className="flex items-center gap-2">
@@ -161,7 +193,9 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
                 onClick={() => rebuild.mutate()}
                 disabled={rebuild.isPending}
               >
-                {rebuild.isPending ? "重建中…" : "按规则重建"}
+                {rebuild.isPending
+                  ? t("common.universeDetail.rebuilding")
+                  : t("universe.rebuild")}
               </Button>
             ) : (
               <Button
@@ -169,11 +203,13 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
                 onClick={() => syncDelist.mutate()}
                 disabled={syncDelist.isPending}
               >
-                {syncDelist.isPending ? "推断中…" : "按行情关闭退市成分"}
+                {syncDelist.isPending
+                  ? t("common.universeDetail.inferring")
+                  : t("common.universeDetail.closeDelisted")}
               </Button>
             )}
             <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
-              删除标的池
+              {t("common.universeDetail.deleteUniverse")}
             </Button>
           </div>
         }
@@ -183,8 +219,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
         <Card>
           <p className="text-sm text-as-text">{ruleHint}</p>
           <p className="mt-2 text-xs text-as-muted">
-            用当前快照里每只标的的收盘价、成交额滚动均值、时点股本×收盘价、以及分类 as-of
-            之后的板块/行业做筛选。未过线的交易日不进入成分；缺少基本面会失败而不是静默剔除。
+            {t("common.universeDetail.ruleExplain")}
           </p>
         </Card>
       ) : (
@@ -197,7 +232,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
           }}
         >
           <label className="space-y-1 text-[11px] text-as-muted">
-            标的
+            {t("common.universeDetail.symbol")}
             <Input
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
@@ -206,11 +241,11 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
             />
           </label>
           <label className="space-y-1 text-[11px] text-as-muted">
-            进入日
+            {t("common.universeDetail.entryDate")}
             <Input type="date" className="w-[148px]" value={from} onChange={(e) => setFrom(e.target.value)} />
           </label>
           <label className="space-y-1 text-[11px] text-as-muted">
-            退出日（可空）
+            {t("common.universeDetail.exitDate")}
             <Input
               type="date"
               className="w-[148px]"
@@ -226,33 +261,32 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
               checked={infer}
               onChange={(e) => setInfer(e.target.checked)}
             />
-            从行情推断退市日
+            {t("common.universeDetail.inferExitDate")}
           </label>
           <Button type="submit" disabled={add.isPending || !symbol.trim()}>
-            {add.isPending ? "加入中…" : "加入成分"}
+            {add.isPending ? t("common.universeDetail.adding") : t("common.universeDetail.addMember")}
           </Button>
         </form>
         <p className="mt-3 text-xs text-as-muted">
-          最后一根 K 线若早于 14 个自然日，则记为 inclusive 退出日。拉取行情会自动关闭匹配的开放区间；已填写的
-          effective_to 不会被覆盖。
+          {t("common.universeDetail.memberHint")}
         </p>
       </Card>
       )}
 
       <Card className="p-0">
-        <div className="border-b border-as-border px-5 py-3 text-sm font-medium">成分</div>
+        <div className="border-b border-as-border px-5 py-3 text-sm font-medium">{t("common.universeDetail.membersHeader")}</div>
         {!members.length ? (
           <EmptyState
-            title="这个标的池还没有成分"
-            description="没有成分的区间无法开跑回测。加入至少一支股票，并写上有效区间。"
+            title={t("common.universeDetail.noMembersTitle")}
+            description={t("common.universeDetail.noMembersDesc")}
           />
         ) : (
           <table className="w-full text-sm">
             <thead className="text-left text-[11px] uppercase tracking-wide text-as-muted">
               <tr className="border-b border-as-border">
-                <th className="px-5 py-2 font-medium">标的</th>
-                <th className="px-5 py-2 font-medium">有效区间</th>
-                <th className="px-5 py-2 font-medium">状态</th>
+                <th className="px-5 py-2 font-medium">{t("common.universeDetail.symbol")}</th>
+                <th className="px-5 py-2 font-medium">{t("common.universeDetail.effectiveRange")}</th>
+                <th className="px-5 py-2 font-medium">{t("common.universeDetail.status")}</th>
                 <th className="px-5 py-2" />
               </tr>
             </thead>
@@ -261,13 +295,15 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
                 <tr key={member.id} className="border-b border-as-border last:border-0">
                   <td className="px-5 py-3 font-medium tabular-nums">{member.symbol}</td>
                   <td className="px-5 py-3 tabular-nums text-as-muted">
-                    {spanLabel(member.effective_from, member.effective_to)}
+                    {member.effective_to
+                      ? `${member.effective_from.slice(0, 10)} → ${member.effective_to.slice(0, 10)}`
+                      : `${member.effective_from.slice(0, 10)} → ${t("common.universeDetail.stillInPool")}`}
                   </td>
                   <td className="px-5 py-3">
                     {member.effective_to ? (
-                      <Badge tone="amber">已退出</Badge>
+                      <Badge tone="amber">{t("common.universeDetail.exited")}</Badge>
                     ) : (
-                      <Badge tone="green">仍在池中</Badge>
+                      <Badge tone="green">{t("common.universeDetail.stillInPool")}</Badge>
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
@@ -278,7 +314,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
                       onClick={() => removeMember.mutate(member.id)}
                       disabled={removeMember.isPending}
                     >
-                      移除
+                      {t("common.universeDetail.remove")}
                     </Button>
                     )}
                   </td>
@@ -290,7 +326,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
       </Card>
 
       <Card>
-        <div className="mb-3 text-sm font-medium">时点预览</div>
+        <div className="mb-3 text-sm font-medium">{t("common.universeDetail.previewHeader")}</div>
         <form
           className="flex flex-wrap items-end gap-3"
           onSubmit={(e) => {
@@ -299,27 +335,31 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
           }}
         >
           <label className="space-y-1 text-[11px] text-as-muted">
-            查询日
+            {t("common.universeDetail.asOfLabel")}
             <Input type="date" className="w-[148px]" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
           </label>
           <Button type="submit" variant="secondary" disabled={runPreview.isPending}>
-            {runPreview.isPending ? "查询中…" : "查看当日成分"}
+            {runPreview.isPending
+              ? t("common.universeDetail.querying")
+              : t("common.universeDetail.viewMembers")}
           </Button>
         </form>
         {preview ? (
           <p className="mt-3 text-sm tabular-nums text-as-text">
-            {preview.length ? preview.join(", ") : "该日没有任何成分"}
+            {preview.length ? preview.join(", ") : t("common.universeDetail.noMembersOnDate")}
           </p>
         ) : (
-          <p className="mt-3 text-xs text-as-muted">不会编造成分。未查询时不显示结果。</p>
+          <p className="mt-3 text-xs text-as-muted">
+            {t("common.universeDetail.previewHint")}
+          </p>
         )}
       </Card>
 
       <ConfirmDialog
         open={confirmDelete}
-        title="删除这个标的池？"
-        description="已完成的回测仍保留当时冻结的成分快照。新回测将无法再引用它。"
-        confirmLabel="删除"
+        title={t("common.universeDetail.deleteTitle")}
+        description={t("common.universeDetail.deleteDesc")}
+        confirmLabel={t("common.delete")}
         danger
         onConfirm={() => removeUniverse.mutate()}
         onClose={() => setConfirmDelete(false)}

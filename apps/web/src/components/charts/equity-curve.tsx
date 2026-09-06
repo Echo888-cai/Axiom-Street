@@ -14,6 +14,7 @@ import {
   type LineData,
   type Time,
 } from "lightweight-charts";
+import { useT } from "@/lib/i18n";
 
 export type EquitySeries = {
   id: string;
@@ -35,11 +36,14 @@ type LegacyPoint = {
   benchmark?: number | null;
 };
 
-function fromLegacy(data: LegacyPoint[]): EquitySeries[] {
+function fromLegacy(
+  data: LegacyPoint[],
+  labels: { strategy: string; benchmark: string },
+): EquitySeries[] {
   const series: EquitySeries[] = [
     {
       id: "strategy",
-      label: "策略",
+      label: labels.strategy,
       color: chartColors.primary,
       data: data.map((d) => ({ time: d.time, value: d.strategy })),
     },
@@ -48,7 +52,7 @@ function fromLegacy(data: LegacyPoint[]): EquitySeries[] {
   if (bench.length) {
     series.push({
       id: "benchmark",
-      label: "基准",
+      label: labels.benchmark,
       color: chartColors.benchmark,
       dashed: true,
       data: bench.map((d) => ({ time: d.time, value: d.benchmark as number })),
@@ -70,7 +74,13 @@ export function EquityCurve({
   markers?: EquityMarker[];
   height?: number;
 }) {
-  const resolved = series ?? fromLegacy(data || []);
+  const t = useT();
+  const resolved =
+    series ??
+    fromLegacy(data || [], {
+      strategy: t("tearsheet.series.strategy"),
+      benchmark: t("tearsheet.series.benchmark"),
+    });
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRefs = useRef<ISeriesApi<"Line">[]>([]);
@@ -194,7 +204,7 @@ export function EquityCurve({
             </span>
           ))}
         </div>
-        <span>图表：TradingView Lightweight Charts（Apache-2.0）</span>
+        <span>{t("tearsheet.chartCredit")}</span>
       </div>
     </div>
   );

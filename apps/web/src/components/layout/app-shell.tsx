@@ -4,8 +4,10 @@ import { useState } from "react";
 import { AppSidebar, MobileNavigation } from "./app-sidebar";
 import { TopBar } from "./top-bar";
 import { ToastViewport } from "@/components/ui/toast";
+import { useT } from "@/lib/i18n";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const t = useT();
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div className="as-workspace flex min-h-screen">
@@ -13,7 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         href="#main-content"
         className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-xl bg-white p-3 text-sm shadow-as-lg focus:translate-y-0"
       >
-        跳到主要内容
+        {t("layout.skipToMain")}
       </a>
       <AppSidebar />
       <MobileNavigation open={menuOpen} onClose={() => setMenuOpen(false)} />
@@ -31,7 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             AXIOM STREET <span className="mx-2 opacity-40">/</span> HONEST QUANT
             RESEARCH
           </span>
-          <span>让每一个结论，都经得起验证。</span>
+          <span>{t("layout.tagline")}</span>
         </footer>
       </div>
       <ToastViewport />

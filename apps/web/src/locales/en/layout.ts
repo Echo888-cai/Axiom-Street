@@ -30,4 +30,6 @@ export const layout = {
     quietNote: "Less noise, more certainty.",
     evidenceNote: "Start from a hypothesis, let the evidence speak.",
     openNotes: "Open research notes",
-  } as const;
+    skipToMain: "Skip to main content",
+    tagline: "Let every conclusion stand up to scrutiny.",
+} as const;

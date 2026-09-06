@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { useT } from "@/lib/i18n";
 import type { StrategyVersion } from "@/lib/api";
 import { VersionHistory } from "./version-history";
 
@@ -16,12 +17,13 @@ export function VersionHistoryCard({
   onToggleCompare: (id: string) => void;
   onSelect: (v: StrategyVersion) => void;
 }) {
+  const t = useT();
   return (
     <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
       <div className="border-b border-as-border px-4 py-3">
-        <div className="text-sm font-medium">版本历史</div>
+        <div className="text-sm font-medium">{t("strategy.versions")}</div>
         <p className="mt-0.5 text-[11px] text-as-muted">
-          勾选两个版本对比；点击载入到编辑器
+          {t("strategy.versionHistoryHint")}
         </p>
       </div>
       <VersionHistory

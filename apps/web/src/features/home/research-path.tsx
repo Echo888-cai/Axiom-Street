@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -7,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
+import { useT } from "@/lib/i18n";
 
 export function ResearchPath({
   hasStrategy,
@@ -15,24 +18,25 @@ export function ResearchPath({
   hasStrategy: boolean;
   hasBacktest: boolean;
 }) {
+  const t = useT();
   const steps = [
     {
-      label: "提出一个假设",
-      detail: "记录逻辑，构建策略",
+      label: t("common.path.hypothesis"),
+      detail: t("common.path.hypothesisDetail"),
       href: "/strategies",
       icon: FlaskConical,
       done: hasStrategy,
     },
     {
-      label: "让历史数据回答",
-      detail: "冻结数据，复现结果",
+      label: t("common.path.history"),
+      detail: t("common.path.historyDetail"),
       href: "/backtests",
       icon: LineChart,
       done: hasBacktest,
     },
     {
-      label: "检验它的稳健性",
-      detail: "样本外验证，审视偏差",
+      label: t("common.path.robust"),
+      detail: t("common.path.robustDetail"),
       href: "/validation",
       icon: ShieldCheck,
       done: false,
@@ -41,10 +45,10 @@ export function ResearchPath({
   return (
     <Card className="flex flex-col">
       <CardHeader
-        title="从想法，到证据"
+        title={t("common.path.title")}
         hint={
           <p className="mt-1 text-[11px] text-as-muted">
-            好的研究，有一条清晰的路径。
+            {t("common.path.hint")}
           </p>
         }
       />
@@ -84,7 +88,7 @@ export function ResearchPath({
         href="/validation"
         className="mt-3 flex items-center justify-between border-t border-as-border pt-4 text-[11px] text-as-muted hover:text-as-primary"
       >
-        比一个好结果更重要的，是可信的过程。
+        {t("common.path.process")}
         <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
       </Link>
     </Card>

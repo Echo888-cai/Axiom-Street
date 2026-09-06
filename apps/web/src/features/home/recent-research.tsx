@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight, ArrowRight, FlaskConical, History } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -6,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BACKTEST_TONE, labelStatus } from "@/lib/labels";
 import { formatRelative, formatPct } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { Backtest, Strategy } from "@/lib/api";
 
 export function RecentResearch({
@@ -19,17 +22,18 @@ export function RecentResearch({
   loading?: boolean;
   unavailable?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
       <Card>
         <CardHeader
-          title="我的策略"
+          title={t("common.recent.myStrategies")}
           action={
             <Link
               href="/strategies"
               className="flex items-center gap-1 text-[11px] text-as-muted hover:text-as-primary"
             >
-              查看全部 <ArrowUpRight className="h-3.5 w-3.5" />
+              {t("common.recent.viewAll")} <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           }
         />
@@ -62,15 +66,19 @@ export function RecentResearch({
         ) : (
           <EmptyState
             icon={FlaskConical}
-            title={unavailable ? "等待连接你的策略" : "下一个发现，从这里开始"}
+            title={
+              unavailable
+                ? t("common.recent.connectStrategiesTitle")
+                : t("common.recent.discoverTitle")
+            }
             description={
               unavailable
-                ? "连接恢复后，已保存的研究会自动呈现。"
-                : "将一个值得探索的想法，保存为你的第一条策略。"
+                ? t("common.recent.connectStrategiesDesc")
+                : t("common.recent.discoverDesc")
             }
             action={
               <Link href="/strategies" className="text-xs text-as-primary">
-                进入策略实验室 →
+                {t("common.recent.enterLab")}
               </Link>
             }
           />
@@ -78,13 +86,13 @@ export function RecentResearch({
       </Card>
       <Card>
         <CardHeader
-          title="最近回测"
+          title={t("common.recent.backtestsTitle")}
           action={
             <Link
               href="/backtests"
               className="flex items-center gap-1 text-[11px] text-as-muted hover:text-as-primary"
             >
-              全部记录 <ArrowUpRight className="h-3.5 w-3.5" />
+              {t("common.recent.allRecords")} <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           }
         />
@@ -100,7 +108,7 @@ export function RecentResearch({
                 >
                   <div className="min-w-0">
                     <div className="truncate text-xs font-medium">
-                      {b.strategy_name || "策略回测"}
+                      {b.strategy_name || t("common.recent.fallbackName")}
                     </div>
                     <div className="mt-1.5 text-[10px] text-as-muted">
                       {b.start_date} — {b.end_date}
@@ -123,8 +131,12 @@ export function RecentResearch({
         ) : (
           <EmptyState
             icon={History}
-            title={unavailable ? "等待同步研究记录" : "留下一次探索的轨迹"}
-            description="每一次回测的结果、参数与数据版本，都将在这里留存。"
+            title={
+              unavailable
+                ? t("common.recent.syncTitle")
+                : t("common.recent.traceTitle")
+            }
+            description={t("common.recent.traceDesc")}
           />
         )}
       </Card>

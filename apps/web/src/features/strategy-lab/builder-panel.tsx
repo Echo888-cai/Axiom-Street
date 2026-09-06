@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { useT } from "@/lib/i18n";
 
 type Config = Record<string, unknown>;
 
@@ -15,6 +16,7 @@ export function BuilderPanel({
   config: Config;
   onChange: (next: Config) => void;
 }) {
+  const t = useT();
   const universe = nested(config, "universe");
   const signal = nested(config, "signal");
   const risk = nested(config, "risk");
@@ -32,19 +34,21 @@ export function BuilderPanel({
   return (
     <div className="space-y-4 overflow-auto p-4">
       <label className="block">
-        <div className="mb-1.5 text-[11px] font-medium text-as-muted">投资假设</div>
+        <div className="mb-1.5 text-[11px] font-medium text-as-muted">
+          {t("strategy.hypothesisLabel")}
+        </div>
         <textarea
           value={hypothesis}
           onChange={(e) => onChange({ ...config, hypothesis: e.target.value })}
           rows={4}
-          placeholder="用一句话写下这条策略为什么应该赚钱。"
+          placeholder={t("strategy.hypothesisPlaceholder")}
           className="w-full resize-none rounded-lg border border-as-border bg-as-bg px-3 py-2 text-sm leading-relaxed text-as-text outline-none placeholder:text-as-muted focus:border-as-primary/40 focus-visible:ring-2 focus-visible:ring-as-primary/20"
         />
         <p className="mt-1.5 text-[10px] leading-relaxed text-as-muted">
-          保存版本后，研究笔记会带上这段假设。它不影响回测。
+          {t("strategy.hypothesisHint")}
         </p>
       </label>
-      <Field label="标的">
+      <Field label={t("strategy.symbolsLabel")}>
         <Input
           value={symbols}
           onChange={(e) =>
@@ -61,11 +65,14 @@ export function BuilderPanel({
       </Field>
       {universe.universe_filter === "equal_weight" ? (
         <p className="text-[11px] leading-relaxed text-as-muted">
-          每月等权再平衡；成交约定为收盘信号、下一根 K 线成交。回测时以标的池/快照为准，不读这里的演示列表。
+          {t("strategy.equalWeightNote")}
         </p>
       ) : (
         <>
-          <Field label="均线周期" hint="记录假设；实际信号以代码为准">
+          <Field
+            label={t("strategy.movingAverageLabel")}
+            hint={t("strategy.movingAverageHint")}
+          >
             <Input
               type="number"
               min={20}
@@ -74,11 +81,13 @@ export function BuilderPanel({
             />
           </Field>
           <p className="text-[11px] leading-relaxed text-as-muted">
-            入场：{String(signal.entry_signal || "close > SMA")}。成交约定为收盘信号、下一根 K 线成交。
+            {t("strategy.entrySignalPrefix")}
+            {String(signal.entry_signal || "close > SMA")}
+            {t("strategy.settlementConvention")}
           </p>
         </>
       )}
-      <Field label="滑点（bps）">
+      <Field label={t("strategy.slippageLabel")}>
         <Input
           type="number"
           min={0}
@@ -86,7 +95,7 @@ export function BuilderPanel({
           onChange={(e) => patch("execution", "slippage_bps", Number(e.target.value) || 0)}
         />
       </Field>
-      <Field label="单票上限 %">
+      <Field label={t("strategy.maxPositionLabel")}>
         <Input
           type="number"
           min={1}

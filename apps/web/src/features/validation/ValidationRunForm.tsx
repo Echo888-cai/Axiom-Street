@@ -67,7 +67,7 @@ export function ValidationRunForm({
       }
     } catch (err) {
       form.setError("root", {
-        message: err instanceof Error ? err.message : "提交失败",
+        message: err instanceof Error ? err.message : t("validation.form.error"),
       });
     } finally {
       setIsSubmitting(false);
@@ -182,13 +182,13 @@ export function ValidationRunForm({
                         form.setValue(key, e.target.value === "true")
                       }
                     >
-                      <option value="true">是</option>
-                      <option value="false">否</option>
+                      <option value="true">{t("validation.form.yes")}</option>
+                      <option value="false">{t("validation.form.no")}</option>
                     </Select>
                   ) : type === "array" ? (
                     <Textarea
                       {...form.register(key)}
-                      placeholder="JSON 数组，如 [1, 2, 3]"
+                      placeholder={t("validation.form.jsonArrayPlaceholder")}
                       className="font-mono text-sm min-h-[80px]"
                       onChange={(e) => {
                         try {
@@ -264,11 +264,12 @@ export function ValidationRunFormWrapper({
   backtestId?: string;
   specs: ValidationSpec[];
 }) {
+  const t = useT();
   const spec = specs.find((s) => s.kind === kind);
   if (!spec) {
     return (
       <div className="p-4 text-center text-muted-foreground">
-        未找到验证类型: {kind}
+        {t("validation.form.specNotFound")}: {kind}
       </div>
     );
   }

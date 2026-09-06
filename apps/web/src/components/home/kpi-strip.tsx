@@ -4,6 +4,7 @@ import { Activity, FlaskConical, TrendingDown, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatNumber, formatPct } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export function KpiStrip({
   totalReturn,
@@ -20,13 +21,14 @@ export function KpiStrip({
   hasBacktest: boolean;
   unavailable?: boolean;
 }) {
+  const t = useT();
   const items = [
     {
       key: "return",
-      label: "最近回测收益",
+      label: t("common.kpi.returnLabel"),
       icon: TrendingUp,
       value: hasBacktest ? formatPct(totalReturn) : "—",
-      hint: hasBacktest ? "研究指标，非实盘组合" : "跑完第一次回测后显示",
+      hint: hasBacktest ? t("common.kpi.returnHint") : t("common.kpi.pendingHint"),
       tone: hasBacktest
         ? (totalReturn ?? 0) >= 0
           ? "text-as-positive"
@@ -35,26 +37,26 @@ export function KpiStrip({
     },
     {
       key: "sharpe",
-      label: "夏普",
+      label: t("common.kpi.sharpeLabel"),
       icon: Activity,
       value: hasBacktest ? formatNumber(sharpe) : "—",
-      hint: hasBacktest ? "年化超额 / 波动" : "跑完第一次回测后显示",
+      hint: hasBacktest ? t("common.kpi.sharpeHint") : t("common.kpi.pendingHint"),
       tone: "text-as-text",
     },
     {
       key: "dd",
-      label: "最大回撤",
+      label: t("common.kpi.drawdownLabel"),
       icon: TrendingDown,
       value: hasBacktest ? formatPct(maxDrawdown) : "—",
-      hint: hasBacktest ? "从峰值回落的最大幅度" : "跑完第一次回测后显示",
+      hint: hasBacktest ? t("common.kpi.drawdownHint") : t("common.kpi.pendingHint"),
       tone: hasBacktest ? "text-as-negative" : "text-as-text",
     },
     {
       key: "strategies",
-      label: "策略数量",
+      label: t("common.kpi.strategiesLabel"),
       icon: FlaskConical,
       value: unavailable ? "—" : String(strategyCount),
-      hint: strategyCount ? "实验室中的策略" : "还没有策略",
+      hint: strategyCount ? t("common.kpi.strategiesHint") : t("common.kpi.noStrategiesHint"),
       tone: "text-as-text",
     },
   ];

@@ -1,6 +1,9 @@
+"use client";
+
 import { type ValidationRun } from "@/lib/api";
 import { Card, CardHeader } from "@/components/ui/card";
 import { RegimeSharpeBars } from "@/features/validation/surface-bars";
+import { useT } from "@/lib/i18n";
 
 export function asSlices(
   result: Record<string, unknown>,
@@ -11,6 +14,7 @@ export function asSlices(
 }
 
 export function RegimeReport({ run }: { run: ValidationRun }) {
+  const t = useT();
   const reason =
     typeof run.result.reason === "string" ? run.result.reason : null;
   const concentrated =
@@ -21,11 +25,10 @@ export function RegimeReport({ run }: { run: ValidationRun }) {
   return (
     <Card>
       <CardHeader
-        title="最近一次制度稳定性"
+        title={t("validation.reports.regime.title")}
         hint={
           <p className="text-xs text-as-muted">
-            按基准牛/熊、实现波动、FOMC 利率周期与指定压力窗口切片。互补制度
-            Sharpe 为负不能进入 VALIDATED。
+            {t("validation.reports.regime.hint")}
           </p>
         }
       />
@@ -34,7 +37,9 @@ export function RegimeReport({ run }: { run: ValidationRun }) {
       ) : null}
       {run.result.single_regime === true ? (
         <p className="mb-4 text-xs text-as-muted">
-          edge 集中在 {concentrated || "单一制度"}，互补制度未塌缩，已标注。
+          {t("validation.reports.regime.edgePrefix")}{" "}
+          {concentrated || t("validation.reports.regime.singleRegime")}
+          {t("validation.reports.regime.edgeSuffix")}
         </p>
       ) : null}
       {slices.length ? (

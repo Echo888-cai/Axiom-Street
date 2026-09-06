@@ -1,6 +1,9 @@
+"use client";
+
 import { type ValidationRun } from "@/lib/api";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SharpeSurfaceBars } from "@/features/validation/surface-bars";
+import { useT } from "@/lib/i18n";
 
 export function asPoints(
   result: Record<string, unknown>,
@@ -11,6 +14,7 @@ export function asPoints(
 }
 
 export function SensitivityReport({ run }: { run: ValidationRun }) {
+  const t = useT();
   const reason =
     typeof run.result.reason === "string" ? run.result.reason : null;
   const shape = typeof run.result.shape === "string" ? run.result.shape : null;
@@ -24,11 +28,10 @@ export function SensitivityReport({ run }: { run: ValidationRun }) {
   return (
     <Card>
       <CardHeader
-        title="最近一次参数敏感性"
+        title={t("validation.reports.sensitivity.title")}
         hint={
           <p className="text-xs text-as-muted">
-            最优点周围 Sharpe 是否形成高原。孤峰是过拟合特征，不能进入
-            VALIDATED。
+            {t("validation.reports.sensitivity.hint")}
           </p>
         }
       />
@@ -37,12 +40,16 @@ export function SensitivityReport({ run }: { run: ValidationRun }) {
       ) : null}
       <p className="mb-4 text-xs text-as-muted">
         {shape === "plateau"
-          ? "高原"
+          ? t("validation.shapes.plateau")
           : shape === "knife_edge"
-            ? "孤峰"
-            : "形态未记录"}
-        {peakSharpe != null ? ` · 峰值 Sharpe ${peakSharpe.toFixed(2)}` : ""}
-        {width != null ? ` · 带宽 ${width} 点` : ""}
+            ? t("validation.shapes.knifeEdge")
+            : t("validation.reports.sensitivity.shapeUnrecorded")}
+        {peakSharpe != null
+          ? ` · ${t("validation.reports.sensitivity.peakSharpePrefix")} ${peakSharpe.toFixed(2)}`
+          : ""}
+        {width != null
+          ? ` · ${t("validation.reports.sensitivity.bandPrefix")} ${width} ${t("validation.reports.sensitivity.bandUnit")}`
+          : ""}
       </p>
       {points.length ? (
         <SharpeSurfaceBars

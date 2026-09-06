@@ -1,6 +1,7 @@
 "use client";
 
 import { DiffEditor } from "@monaco-editor/react";
+import { useT } from "@/lib/i18n";
 import type { StrategyVersion } from "@/lib/api";
 import { diffLines } from "@/lib/diff";
 
@@ -11,6 +12,7 @@ export function VersionDiff({
   left: StrategyVersion;
   right: StrategyVersion;
 }) {
+  const t = useT();
   const [older, newer] = left.version <= right.version ? [left, right] : [right, left];
   const summary = diffLines(older.code, newer.code);
 
@@ -21,7 +23,7 @@ export function VersionDiff({
           v{older.version} → v{newer.version}
         </div>
         <p className="text-[11px] tabular text-as-muted">
-          +{summary.added} / −{summary.removed} 行
+          +{summary.added} / −{summary.removed} {t("strategy.diffLineUnit")}
         </p>
       </div>
       <div className="min-h-0 flex-1">

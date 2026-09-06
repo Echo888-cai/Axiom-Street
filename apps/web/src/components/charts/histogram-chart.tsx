@@ -2,8 +2,10 @@
 
 import type { HistogramBin } from "@/lib/tearsheet";
 import { formatPct } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export function HistogramChart({ bins }: { bins: HistogramBin[] }) {
+  const t = useT();
   const max = Math.max(...bins.map((b) => b.count), 1);
   const zero = bins.findIndex((b) => b.x0 <= 0 && b.x1 >= 0);
 
@@ -14,7 +16,7 @@ export function HistogramChart({ bins }: { bins: HistogramBin[] }) {
           <div
             key={`${bin.x0}-${bin.x1}`}
             className="group relative flex min-w-0 flex-1 flex-col justify-end"
-            title={`${formatPct(bin.x0)} – ${formatPct(bin.x1)} · ${bin.count} 天`}
+            title={`${formatPct(bin.x0)} – ${formatPct(bin.x1)} · ${bin.count} ${t("tearsheet.day")}`}
           >
             <div
               className={`w-full rounded-t-[2px] transition-colors duration-as ${

@@ -21,16 +21,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, type Backtest, type Strategy } from "@/lib/api";
 import { filterEquityByPeriod } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { ResearchHero } from "./research-hero";
 import { ResearchPath } from "./research-path";
 import { RecentResearch } from "./recent-research";
 
-const PERIODS = [
-  { id: "1M", label: "1月" },
-  { id: "3M", label: "3月" },
-  { id: "1Y", label: "1年" },
-  { id: "ALL", label: "全部" },
-] as const;
+const PERIODS = ["1M", "3M", "1Y", "ALL"] as const;
 
 export function HomeDashboard({
   strategies,
@@ -46,7 +42,8 @@ export function HomeDashboard({
   onRetry?: () => void;
 }) {
   const qc = useQueryClient();
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]["id"]>("ALL");
+  const t = useT();
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]>("ALL");
   const latest = [...backtests]
     .filter((b) => b.status === "COMPLETED")
     .sort((a, b) =>
@@ -76,21 +73,25 @@ export function HomeDashboard({
       ),
     [equity.data, period],
   );
+  const periodItems = PERIODS.map((id) => ({
+    id,
+    label: t(`common.overview.period.${id}`),
+  }));
   return (
     <div className="space-y-7 as-enter">
       <PageHeader
-        title="研究概览"
-        description="保持好奇，保持严谨。欢迎回到你的研究空间。"
+        title={t("common.overview.title")}
+        description={t("common.overview.tagline")}
         action={
           <>
             <span className="mr-2 hidden items-center gap-2 text-[11px] text-as-muted xl:flex">
-              <CalendarDays className="h-3.5 w-3.5" /> 研究工作台
+              <CalendarDays className="h-3.5 w-3.5" /> {t("common.overview.workspaceTag")}
             </span>
             <Button
               variant="secondary"
               size="sm"
               onClick={() => qc.invalidateQueries()}
-              aria-label="刷新研究数据"
+              aria-label={t("common.overview.refreshAria")}
             >
               <RefreshCw className="h-3.5 w-3.5" />
             </Button>
@@ -98,7 +99,7 @@ export function HomeDashboard({
               href="/strategies"
               className="as-button-primary inline-flex min-h-9 items-center gap-2 rounded-xl px-3.5 text-xs font-medium text-white"
             >
-              <Plus className="h-3.5 w-3.5" /> 新建研究
+              <Plus className="h-3.5 w-3.5" /> {t("common.overview.newResearch")}
             </Link>
           </>
         }
@@ -111,13 +112,13 @@ export function HomeDashboard({
         >
           <WifiOff className="h-4 w-4 text-as-muted" />
           <span className="flex-1 text-as-muted">
-            研究服务暂未连接，连接恢复后将自动同步你的数据。
+            {t("common.overview.serviceDown")}
           </span>
           <Button variant="ghost" size="sm" onClick={onRetry}>
-            重新连接 <RefreshCw className="h-3 w-3" />
+            {t("common.reconnect")} <RefreshCw className="h-3 w-3" />
           </Button>
           <Link href="/settings" className="text-as-primary">
-            检查设置
+            {t("common.overview.checkSettings")}
           </Link>
         </div>
       )}
@@ -144,12 +145,12 @@ export function HomeDashboard({
       <div className="grid gap-5 xl:grid-cols-[1.8fr_1fr]">
         <Card className="min-w-0 overflow-hidden">
           <CardHeader
-            title="研究表现"
+            title={t("common.overview.performance")}
             hint={
               <p className="mt-1 text-[11px] text-as-muted">
                 {latest
-                  ? `${latest.strategy_name || "最近完成回测"} · ${latest.start_date} — ${latest.end_date}`
-                  : "最近一次完成回测的权益走势"}
+                  ? `${latest.strategy_name || t("common.overview.recentBacktestName")} · ${latest.start_date} — ${latest.end_date}`
+                  : t("common.overview.latestBacktestHint")}
               </p>
             }
             action={
@@ -157,11 +158,11 @@ export function HomeDashboard({
                 <Tabs
                   value={period}
                   onChange={(id) => setPeriod(id as typeof period)}
-                  items={[...PERIODS]}
+                  items={[...periodItems]}
                 />
               ) : (
                 <span className="rounded-full border border-as-border px-2.5 py-1 text-[10px] text-as-muted">
-                  等待回测
+                  {t("common.overview.waitingBacktest")}
                 </span>
               )
             }
@@ -179,15 +180,15 @@ export function HomeDashboard({
                 </span>
                 <h3 className="text-sm font-medium">
                   {equity.isError
-                    ? "权益数据暂时无法读取"
+                    ? t("common.overview.equityReadError")
                     : latest
-                      ? "此区间暂无权益数据"
-                      : "给想法一点时间，让数据描绘答案"}
+                      ? t("common.overview.equityEmptyForPeriod")
+                      : t("common.overview.equityEmpty")}
                 </h3>
                 <p className="mt-2 max-w-xs text-[11px] leading-5 text-as-muted">
                   {latest
-                    ? "尝试切换时间范围，或重新读取回测结果。"
-                    : "完成首次回测后，权益曲线与基准表现将在这里呈现。"}
+                    ? t("common.overview.switchPeriodHint")
+                    : t("common.overview.completeFirstHint")}
                 </p>
                 {equity.isError ? (
                   <Button
@@ -196,14 +197,16 @@ export function HomeDashboard({
                     variant="secondary"
                     onClick={() => equity.refetch()}
                   >
-                    重新读取
+                    {t("common.overview.reload")}
                   </Button>
                 ) : (
                   <Link
                     href={latest ? `/backtests/${latest.id}` : "/strategies"}
                     className="mt-4 flex items-center gap-1.5 text-[11px] text-as-primary"
                   >
-                    {latest ? "查看回测详情" : "开始第一次回测"}
+                    {latest
+                      ? t("common.overview.viewBacktest")
+                      : t("common.overview.startFirstBacktest")}
                     <ArrowUpRight className="h-3 w-3" />
                   </Link>
                 )}
@@ -212,7 +215,7 @@ export function HomeDashboard({
           )}
           <div className="mt-4 flex items-start gap-1.5 border-t border-as-border pt-3 text-[10px] leading-4 text-as-muted">
             <CircleHelp className="mt-0.5 h-3 w-3 shrink-0" />
-            历史回测用于研究假设，不代表实盘表现。
+            {t("common.overview.disclaimer")}
           </div>
         </Card>
         <ResearchPath

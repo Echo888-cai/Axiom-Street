@@ -5,10 +5,9 @@ import { useEffect, useState, useRef } from "react";
 import { api, type Backtest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ProgressSteps } from "@/components/ui/progress-steps";
+import { useT } from "@/lib/i18n";
 import { labelStatus, labelStep } from "@/lib/labels";
 import { formatNumber } from "@/lib/utils";
-
-const RUN_STEPS = ["排队中", "准备环境", "加载数据", "运行策略", "计算指标"];
 
 export function RunDock({
   backtestId,
@@ -19,6 +18,14 @@ export function RunDock({
   onDismiss: () => void;
   onFailure?: (error: { message?: string; line?: number }) => void;
 }) {
+  const t = useT();
+  const runSteps = [
+    t("strategy.runStepQueued"),
+    t("strategy.runStepPreparing"),
+    t("strategy.runStepLoading"),
+    t("strategy.runStepRunning"),
+    t("strategy.runStepMetrics"),
+  ];
   const failureRef = useRef(onFailure);
   useEffect(() => {
     failureRef.current = onFailure;
@@ -81,30 +88,33 @@ export function RunDock({
             {running ? (
               <>
                 <span className="h-1.5 w-1.5 rounded-full bg-as-primary as-live-dot" />
-                回测进行中
+                {t("strategy.dockRunningTitle")}
               </>
             ) : bt.status === "COMPLETED" ? (
-              "回测完成"
+              t("strategy.dockCompletedTitle")
             ) : (
               labelStatus(bt.status)
             )}
             {!running && bt.sharpe != null ? (
               <span className="text-[11px] font-normal tabular text-as-muted">
-                夏普 {formatNumber(bt.sharpe)}
+                {t("strategy.sharpeLabel")} {formatNumber(bt.sharpe)}
               </span>
             ) : null}
           </div>
           {running ? (
             <div className="mt-2 max-w-xl">
-              <ProgressSteps steps={RUN_STEPS} current={step || "排队中"} />
+              <ProgressSteps
+                steps={runSteps}
+                current={step || t("strategy.runStepQueued")}
+              />
             </div>
           ) : bt.status === "FAILED" ? (
             <p className="mt-1 text-xs text-as-negative">
-              {bt.error?.message || "回测失败"}
+              {bt.error?.message || t("strategy.dockFailed")}
             </p>
           ) : (
             <p className="mt-1 text-xs text-as-muted">
-              留在实验室继续改，或打开 tearsheet。
+              {t("strategy.dockHint")}
             </p>
           )}
         </div>
@@ -114,11 +124,11 @@ export function RunDock({
               size="sm"
               variant={bt.status === "COMPLETED" ? "primary" : "secondary"}
             >
-              打开 tearsheet
+              {t("strategy.openTearsheet")}
             </Button>
           </Link>
           <Button size="sm" variant="ghost" onClick={onDismiss}>
-            收起
+            {t("strategy.collapseDock")}
           </Button>
         </div>
       </div>

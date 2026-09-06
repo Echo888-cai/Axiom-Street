@@ -63,8 +63,8 @@ export function CommandPalette({
     ).map((item) => ({
       href: item.href,
       title: t(`nav.${item.key}`),
-      meta: "前往",
-      group: "导航",
+      meta: t("common.command.goTo"),
+      group: "navigation",
     }));
     const s: Hit[] = (strategies.data || [])
       .filter(
@@ -78,7 +78,7 @@ export function CommandPalette({
         href: `/strategies/${item.id}`,
         title: item.name,
         meta: labelStatus(item.status),
-        group: "策略",
+        group: "strategies",
       }));
     const b: Hit[] = (backtests.data || [])
       .filter(
@@ -95,7 +95,7 @@ export function CommandPalette({
         meta: `${item.start_date} → ${item.end_date}${
           item.total_return != null ? ` · ${formatPct(item.total_return)}` : ""
         }`,
-        group: "回测",
+        group: "backtests",
       }));
     const n: Hit[] = (notes.data?.items || [])
       .filter(
@@ -108,8 +108,8 @@ export function CommandPalette({
       .map((item) => ({
         href: `/reports?strategy_id=${item.strategy_id}`,
         title: item.title,
-        meta: "研究笔记",
-        group: "笔记",
+        meta: t("common.researchNote"),
+        group: "notes",
       }));
     return [...nav, ...s, ...b, ...n];
   }, [query, strategies.data, backtests.data, notes.data]);
@@ -125,7 +125,7 @@ export function CommandPalette({
 
   if (!open) return null;
 
-  const groups = ["导航", "策略", "回测", "笔记"].filter((g) =>
+  const groups = ["navigation", "strategies", "backtests", "notes"].filter((g) =>
     hits.some((h) => h.group === g),
   );
 
@@ -133,14 +133,14 @@ export function CommandPalette({
     <Modal
       open={open}
       onClose={onClose}
-      label="搜索工作空间"
+      label={t("common.command.searchWorkspace")}
       className="mt-[12vh] max-w-[560px]"
     >
       <div className="flex items-center gap-2 border-b border-as-border px-4">
         <Search className="h-4 w-4 text-as-muted" />
         <input
           ref={inputRef}
-          aria-label="搜索策略、回测、页面"
+          aria-label={t("common.command.searchAria")}
           role="combobox"
           aria-expanded={open}
           aria-controls="command-results"
@@ -149,7 +149,7 @@ export function CommandPalette({
           }
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索策略、回测、页面…"
+          placeholder={t("common.command.searchPlaceholder")}
           className="h-12 w-full bg-transparent text-sm text-as-text outline-none placeholder:text-as-muted"
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
@@ -168,12 +168,12 @@ export function CommandPalette({
       <div
         id="command-results"
         role="listbox"
-        aria-label="搜索结果"
+        aria-label={t("common.command.resultsAria")}
         className="max-h-[50dvh] overflow-auto py-2"
       >
         {!hits.length ? (
           <p className="px-4 py-10 text-center text-sm text-as-muted">
-            没有匹配结果
+            {t("common.command.noResults")}
           </p>
         ) : (
           groups.map((group) => {
@@ -181,7 +181,7 @@ export function CommandPalette({
             return (
               <div key={group} className="px-2 py-1">
                 <div className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-as-muted">
-                  {group}
+                  {t(`common.command.groups.${group}`)}
                 </div>
                 {items.map((hit) => {
                   const index = hits.indexOf(hit);
@@ -215,17 +215,17 @@ export function CommandPalette({
           <kbd className="rounded border border-as-border bg-as-bg px-1">
             ↑↓
           </kbd>{" "}
-          选择
+          {t("common.command.select")}
         </span>
         <span>
           <kbd className="rounded border border-as-border bg-as-bg px-1">↵</kbd>{" "}
-          打开
+          {t("common.command.open")}
         </span>
         <span>
           <kbd className="rounded border border-as-border bg-as-bg px-1">
             esc
           </kbd>{" "}
-          关闭
+          {t("common.close")}
         </span>
       </div>
     </Modal>

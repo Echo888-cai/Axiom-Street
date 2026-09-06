@@ -14,10 +14,11 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "@/components/ui/toast";
 import { formatRelative } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 function splitNames(raw: string): string[] | undefined {
   const items = raw
-    .split(/[,，;；]/)
+    .split(/[,;\uFF0C\uFF1B]/)
     .map((item) => item.trim())
     .filter(Boolean);
   return items.length ? items : undefined;
@@ -33,6 +34,7 @@ function optionalNumber(raw: string): number | undefined {
 export function UniverseList() {
   const router = useRouter();
   const qc = useQueryClient();
+  const t = useT();
   const [name, setName] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [minAdv, setMinAdv] = useState("");
@@ -68,7 +70,7 @@ export function UniverseList() {
     },
     onSuccess: (universe) => {
       qc.invalidateQueries({ queryKey: ["universes"] });
-      toast("标的池已创建", "ok");
+      toast(t("common.universeList.createdToast"), "ok");
       setName("");
       setMinPrice("");
       setMinAdv("");
@@ -83,8 +85,8 @@ export function UniverseList() {
   return (
     <div className="space-y-6 as-enter">
       <PageHeader
-        title="标的池"
-        description="时点正确的成分列表。可手写区间，或按价格、流动性、市值、行业规则从已摄取行情生成。"
+        title={t("universe.title")}
+        description={t("common.universeList.description")}
       />
 
       <Card>
@@ -97,70 +99,69 @@ export function UniverseList() {
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="space-y-1 text-[11px] text-as-muted">
-              名称
+              {t("common.universeList.name")}
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="例如：含退市的美股池"
-                aria-label="标的池名称"
+                placeholder={t("common.universeList.namePlaceholder")}
+                aria-label={t("common.universeList.nameAria")}
               />
             </label>
             <label className="space-y-1 text-[11px] text-as-muted">
-              最低收盘价（可选）
+              {t("common.universeList.minPrice")}
               <Input
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
                 placeholder="5"
                 inputMode="decimal"
-                aria-label="最低收盘价"
+                aria-label={t("common.universeList.minPriceAria")}
               />
             </label>
             <label className="space-y-1 text-[11px] text-as-muted">
-              最低 ADV$（可选）
+              {t("common.universeList.minAdv")}
               <Input
                 value={minAdv}
                 onChange={(e) => setMinAdv(e.target.value)}
                 placeholder="1000000"
                 inputMode="decimal"
-                aria-label="最低日均成交额美元"
+                aria-label={t("common.universeList.minAdvAria")}
               />
             </label>
             <label className="space-y-1 text-[11px] text-as-muted">
-              最低市值$（可选）
+              {t("common.universeList.minCap")}
               <Input
                 value={minCap}
                 onChange={(e) => setMinCap(e.target.value)}
                 placeholder="2000000000"
                 inputMode="decimal"
-                aria-label="最低市值美元"
+                aria-label={t("common.universeList.minCapAria")}
               />
             </label>
             <label className="space-y-1 text-[11px] text-as-muted">
-              板块 sectors（可选）
+              {t("common.universeList.sectors")}
               <Input
                 value={sectors}
                 onChange={(e) => setSectors(e.target.value)}
                 placeholder="Technology, Health Care"
-                aria-label="板块列表"
+                aria-label={t("common.universeList.sectorsAria")}
               />
             </label>
             <label className="space-y-1 text-[11px] text-as-muted">
-              行业 industries（可选）
+              {t("common.universeList.industries")}
               <Input
                 value={industries}
                 onChange={(e) => setIndustries(e.target.value)}
                 placeholder="Software"
-                aria-label="行业列表"
+                aria-label={t("common.universeList.industriesAria")}
               />
             </label>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-xl text-[11px] leading-relaxed text-as-muted">
-              留空规则字段则建成静态池。市值用「时点股本 × 当日收盘价」；板块/行业只从分类 as-of
-              日起生效，不会用今天的行业回填 2015 年。缺少基本面会直接失败。
+              {t("common.universeList.rulesHint")}
             </p>
             <Button type="submit" disabled={create.isPending || !name.trim()}>
-              {create.isPending ? "创建中…" : "新建标的池"}
+              {create.isPending ? t("common.creating") : t("universe.new")}
             </Button>
           </div>
         </form>
@@ -170,14 +171,17 @@ export function UniverseList() {
         <Card className="h-40 animate-pulse bg-as-secondary" />
       ) : error ? (
         <Card>
-          <EmptyState title="API 未连接" description="请先启动 FastAPI 服务（端口 8000）。" />
+          <EmptyState
+            title={t("common.universeList.apiNotConnectedTitle")}
+            description={t("common.universeList.apiNotConnectedDesc")}
+          />
         </Card>
       ) : !data?.length ? (
         <Card className="min-h-[240px]">
           <EmptyState
             icon={Layers}
-            title="还没有标的池"
-            description="没有成分的区间无法开跑回测。手写每支股票的有效区间，或填写价格/流动性/市值/行业规则。"
+            title={t("common.universeList.noUniversesTitle")}
+            description={t("common.universeList.noUniversesDesc")}
           />
         </Card>
       ) : (
@@ -191,11 +195,15 @@ export function UniverseList() {
                     <Badge tone="blue">{item.kind}</Badge>
                   </div>
                   <div className="mt-1 text-xs text-as-muted">
-                    {item.description || "暂无描述"}
+                    {item.description || t("common.universeList.noDescription")}
                   </div>
                 </div>
                 <div className="shrink-0 text-right text-xs text-as-muted">
-                  <div className="tabular-nums text-sm text-as-text">{item.member_count} 支</div>
+                  <div className="tabular-nums text-sm text-as-text">
+                    {t("common.universeList.membersCount")
+                      .split("{n}")
+                      .join(String(item.member_count))}
+                  </div>
                   <div>{formatRelative(item.updated_at)}</div>
                 </div>
               </Card>

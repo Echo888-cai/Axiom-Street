@@ -1,6 +1,9 @@
+"use client";
+
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Hourglass } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export function PhasePlaceholder({
   title,
@@ -13,6 +16,7 @@ export function PhasePlaceholder({
   description: string;
   items?: string[];
 }) {
+  const t = useT();
   return (
     <div className="space-y-6 as-enter">
       <PageHeader title={title} description={description} />
@@ -23,9 +27,9 @@ export function PhasePlaceholder({
           </span>
           <div>
             <div className="text-[11px] font-medium tracking-wider text-as-primary">{phase}</div>
-            <h2 className="mt-1 text-base font-medium text-as-text">当前版本尚未开放</h2>
+            <h2 className="mt-1 text-base font-medium text-as-text">{t("common.phase.notAvailable")}</h2>
             <p className="mt-1.5 max-w-md text-sm leading-relaxed text-as-muted">
-              现在把回测链路做可信。这个入口会保留，后续阶段直接接入。
+              {t("common.phase.notice")}
             </p>
           </div>
         </div>

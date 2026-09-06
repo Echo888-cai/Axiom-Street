@@ -22,16 +22,12 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BACKTEST_TONE, labelStatus } from "@/lib/labels";
 import { formatNumber, formatPct, cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
-const FILTERS = [
-  { id: "ALL", label: "全部记录" },
-  { id: "COMPLETED", label: "已完成" },
-  { id: "RUNNING", label: "进行中" },
-  { id: "FAILED", label: "失败" },
-];
 const ACTIVE = ["QUEUED", "STARTING", "RUNNING"];
 
 export default function BacktestCollection() {
+  const t = useT();
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const { data, isLoading, error, refetch } = useQuery({
@@ -53,30 +49,45 @@ export default function BacktestCollection() {
       ),
     [data, filter, search],
   );
+  const filterItems = [
+    { id: "ALL", label: t("backtest.collection.filterAll") },
+    { id: "COMPLETED", label: t("backtest.status.completed") },
+    { id: "RUNNING", label: t("backtest.collection.filterRunning") },
+    { id: "FAILED", label: t("backtest.status.failed") },
+  ];
   const stats = [
-    { label: "研究记录", count: data?.length, icon: Archive },
+    { label: t("backtest.collection.statRecords"), count: data?.length, icon: Archive },
     {
-      label: "已完成回测",
+      label: t("backtest.collection.statCompleted"),
       count: data?.filter((b) => b.status === "COMPLETED").length,
       icon: CheckCheck,
     },
     {
-      label: "正在进行",
+      label: t("backtest.collection.statRunning"),
       count: data?.filter((b) => ACTIVE.includes(b.status)).length,
       icon: Timer,
     },
   ];
+  const headers = [
+    t("backtest.collection.colResearch"),
+    t("backtest.collection.colRange"),
+    t("backtest.collection.colCumReturn"),
+    t("backtest.metrics.sharpe"),
+    t("backtest.metrics.maxDrawdown"),
+    t("backtest.collection.colStatus"),
+    "",
+  ];
   return (
     <div className="space-y-7 as-enter">
       <PageHeader
-        title="回测工作室"
-        description="回到历史之中，检验每一个关于未来的假设。"
+        title={t("backtest.collection.title")}
+        description={t("backtest.collection.subtitle")}
         action={
           <Link
             href="/strategies"
             className="as-button-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-xs text-white"
           >
-            <Plus className="h-4 w-4" /> 运行新回测
+            <Plus className="h-4 w-4" /> {t("backtest.collection.runNew")}
           </Link>
         }
       />
@@ -99,12 +110,12 @@ export default function BacktestCollection() {
         ))}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Tabs value={filter} onChange={setFilter} items={FILTERS} />
+        <Tabs value={filter} onChange={setFilter} items={filterItems} />
         <div className="relative w-full sm:w-60">
           <Search className="pointer-events-none absolute left-3 top-3.5 h-3.5 w-3.5 text-as-muted" />
           <Input
-            aria-label="搜索回测"
-            placeholder="搜索策略或基准…"
+            aria-label={t("backtest.collection.searchLabel")}
+            placeholder={t("backtest.collection.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9"
@@ -121,11 +132,11 @@ export default function BacktestCollection() {
         ) : error ? (
           <EmptyState
             icon={LineChart}
-            title="暂时无法读取回测记录"
-            description="请检查研究服务的连接状态。"
+            title={t("backtest.collection.errorTitle")}
+            description={t("backtest.collection.errorDesc")}
             action={
               <Button variant="secondary" onClick={() => refetch()}>
-                重新连接
+                {t("backtest.collection.reconnect")}
               </Button>
             }
           />
@@ -133,14 +144,14 @@ export default function BacktestCollection() {
           <div className="py-10">
             <EmptyState
               icon={LineChart}
-              title="每一次验证，都让你更接近答案"
-              description="从策略实验室发起第一次回测。冻结数据、执行参数与完整结果，会在这里汇集。"
+              title={t("backtest.collection.emptyTitle")}
+              description={t("backtest.collection.emptyDesc")}
               action={
                 <Link
                   href="/strategies"
                   className="as-button-secondary inline-flex min-h-10 items-center gap-2 rounded-xl border border-as-border px-4 text-xs"
                 >
-                  打开策略实验室 <ArrowUpRight className="h-3.5 w-3.5" />
+                  {t("backtest.collection.openLab")} <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               }
             />
@@ -148,7 +159,7 @@ export default function BacktestCollection() {
         ) : !rows.length ? (
           <EmptyState
             icon={Search}
-            title="当前条件下没有回测"
+            title={t("backtest.collection.noMatch")}
             action={
               <Button
                 variant="ghost"
@@ -157,7 +168,7 @@ export default function BacktestCollection() {
                   setSearch("");
                 }}
               >
-                重置筛选
+                {t("backtest.collection.resetFilters")}
               </Button>
             }
           />
@@ -166,15 +177,7 @@ export default function BacktestCollection() {
             <table className="w-full min-w-[660px] text-left">
               <thead className="border-b border-as-border bg-as-secondary/45 text-[10px] font-normal text-as-muted">
                 <tr>
-                  {[
-                    "研究 / 策略",
-                    "回测区间",
-                    "累计收益",
-                    "夏普比率",
-                    "最大回撤",
-                    "状态",
-                    "",
-                  ].map((label, i) => (
+                  {headers.map((label, i) => (
                     <th
                       key={i}
                       scope="col"
@@ -196,7 +199,7 @@ export default function BacktestCollection() {
                         href={`/backtests/${bt.id}`}
                         className="block font-medium hover:text-as-primary"
                       >
-                        {bt.strategy_name || "未命名策略"}
+                        {bt.strategy_name || t("backtest.collection.unnamed")}
                       </Link>
                       <span className="mt-1.5 block text-[10px] text-as-muted">
                         {bt.benchmark}{" "}
@@ -240,7 +243,10 @@ export default function BacktestCollection() {
                     <td className="pr-5">
                       <Link
                         href={`/backtests/${bt.id}`}
-                        aria-label={`查看 ${bt.strategy_name || "回测"} 详情`}
+                        aria-label={t("backtest.collection.viewAria").replace(
+                          "{name}",
+                          bt.strategy_name || t("backtest.title"),
+                        )}
                         className="flex h-9 w-9 items-center justify-center rounded-xl text-as-muted hover:bg-white"
                       >
                         <ArrowUpRight className="h-4 w-4" />
@@ -254,7 +260,7 @@ export default function BacktestCollection() {
         )}
       </Card>
       <p className="text-[11px] leading-5 text-as-muted">
-        每次回测绑定固定的数据快照和引擎版本，让结论能够被重现。
+        {t("backtest.collection.footnote")}
       </p>
     </div>
   );

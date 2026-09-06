@@ -1,6 +1,7 @@
 "use client";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useT } from "@/lib/i18n";
 
 export type RestoreKind = "spy" | "equal" | null;
 
@@ -19,15 +20,18 @@ export function StrategyDialogs({
   onCloseDelete: () => void;
   onConfirmDelete: () => void;
 }) {
+  const t = useT();
   return (
     <>
       <ConfirmDialog
         open={restore != null}
         title={
-          restore === "equal" ? "加载等权横截面模板？" : "恢复 SPY 200DMA 模板？"
+          restore === "equal"
+            ? t("strategy.restoreEqualTitle")
+            : t("strategy.restoreSpyTitle")
         }
-        description="会覆盖编辑器中的当前代码。未保存的修改将丢失，除非你先保存版本。"
-        confirmLabel="载入模板"
+        description={t("strategy.restoreDescription")}
+        confirmLabel={t("strategy.loadTemplateConfirm")}
         onConfirm={() => {
           if (restore) onConfirmRestore(restore);
         }}
@@ -35,9 +39,9 @@ export function StrategyDialogs({
       />
       <ConfirmDialog
         open={deleteOpen}
-        title="删除这条策略？"
-        description="删除后无法从界面恢复。相关回测记录仍会保留。"
-        confirmLabel="删除策略"
+        title={t("strategy.deleteStrategyTitle")}
+        description={t("strategy.deleteStrategyDescription")}
+        confirmLabel={t("strategy.deleteStrategyConfirm")}
         danger
         onConfirm={onConfirmDelete}
         onClose={onCloseDelete}

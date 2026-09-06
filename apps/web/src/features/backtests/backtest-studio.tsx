@@ -15,6 +15,7 @@ import { ProgressSteps } from "@/components/ui/progress-steps";
 import { MonthlyHeatmap } from "@/components/charts/monthly-heatmap";
 import { toast } from "@/components/ui/toast";
 import { labelStatus, labelStep, labelDirection } from "@/lib/labels";
+import { useT } from "@/lib/i18n";
 import { TruthStrip } from "@/features/tearsheet/truth-strip";
 import { DistributionPanel } from "@/features/tearsheet/distribution-panel";
 import { RollingPanel } from "@/features/tearsheet/rolling-panel";
@@ -26,9 +27,8 @@ import { TradesTable } from "./trades-table";
 import { ComparePanel } from "./compare-panel";
 import { MaeMfePanel } from "./mae-mfe-panel";
 
-const RUN_STEPS = ["排队中", "准备环境", "加载数据", "运行策略", "计算指标"];
-
 export function BacktestStudio({ backtestId }: { backtestId: string }) {
+  const t = useT();
   const qc = useQueryClient();
   const [liveStep, setLiveStep] = useState<string | null>(null);
   const [tab, setTab] = useState<StudioTab>("curve");
@@ -53,7 +53,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["backtest", backtestId] });
       qc.invalidateQueries({ queryKey: ["backtests"] });
-      toast("已取消回测", "info");
+      toast(t("backtest.toast.cancelled"), "info");
     },
   });
 
@@ -101,11 +101,11 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
     return (
       <Card>
         <EmptyState
-          title="无法读取这次回测"
+          title={t("backtest.states.readError")}
           description={backtest.error.message}
           action={
             <Button variant="secondary" onClick={() => backtest.refetch()}>
-              重新读取
+              {t("backtest.action.reload")}
             </Button>
           }
         />
@@ -121,25 +121,40 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
   const m = metrics.data;
   const running = ["QUEUED", "STARTING", "RUNNING"].includes(bt.status);
   const currentStep = labelStep(liveStep || bt.progress_step);
+  const runSteps = [
+    t("backtest.steps.queued"),
+    t("backtest.steps.preparing"),
+    t("backtest.steps.loading"),
+    t("backtest.steps.running"),
+    t("backtest.steps.computing"),
+  ];
 
   function exportTrades() {
     const rows = trades.data || [];
     const header = [
-      "日期", "标的", "方向", "数量", "入场价", "出场价", "盈亏", "持有期", "佣金",
+      t("backtest.tradeColumns.date"),
+      t("backtest.tradeColumns.ticker"),
+      t("backtest.tradeColumns.direction"),
+      t("backtest.tradeColumns.quantity"),
+      t("backtest.tradeColumns.entry"),
+      t("backtest.tradeColumns.exit"),
+      t("backtest.tradeColumns.pnl"),
+      t("backtest.tradeColumns.holdingPeriod"),
+      t("backtest.tradeColumns.commission"),
     ];
     const csv = [
       header.join(","),
-      ...rows.map((t) =>
+      ...rows.map((tr) =>
         [
-          t.trade_date.slice(0, 10),
-          t.ticker,
-          labelDirection(t.direction, t.quantity),
-          t.quantity,
-          t.entry_price ?? "",
-          t.exit_price ?? "",
-          t.pnl ?? "",
-          t.holding_period ?? "",
-          t.commission ?? "",
+          tr.trade_date.slice(0, 10),
+          tr.ticker,
+          labelDirection(tr.direction, tr.quantity),
+          tr.quantity,
+          tr.entry_price ?? "",
+          tr.exit_price ?? "",
+          tr.pnl ?? "",
+          tr.holding_period ?? "",
+          tr.commission ?? "",
         ].join(","),
       ),
     ].join("\n");
@@ -150,7 +165,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
     a.download = `backtest-${backtestId.slice(0, 8)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast("已导出成交明细", "ok");
+    toast(t("backtest.toast.exported"), "ok");
   }
 
   const noteHref =
@@ -162,11 +177,11 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
     <div className="space-y-6 as-enter">
       <PageHeader
         crumbs={[
-          { href: "/", label: "首页" },
-          { href: "/backtests", label: "回测" },
+          { href: "/", label: t("backtest.crumbs.home") },
+          { href: "/backtests", label: t("backtest.title") },
         ]}
         title={bt.strategy_name || "Tearsheet"}
-        description={`${bt.start_date} — ${bt.end_date} · 日线 · 基准 ${bt.benchmark}${
+        description={`${bt.start_date} — ${bt.end_date} · ${t("backtest.meta.daily")} · ${t("backtest.meta.benchmark")} ${bt.benchmark}${
           bt.version_number ? ` · v${bt.version_number}` : ""
         }`}
         action={
@@ -185,14 +200,14 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
             {bt.strategy_id ? (
               <Link href={`/strategies/${bt.strategy_id}`}>
                 <Button variant="secondary" size="sm">
-                  打开策略
+                  {t("backtest.action.openStrategy")}
                 </Button>
               </Link>
             ) : null}
             <Link href={noteHref}>
               <Button variant="secondary" size="sm">
                 <NotebookPen className="h-3.5 w-3.5" />
-                写研究笔记
+                {t("backtest.action.writeNote")}
               </Button>
             </Link>
             {running ? (
@@ -202,7 +217,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
                 onClick={() => cancel.mutate()}
                 disabled={cancel.isPending}
               >
-                {cancel.isPending ? "取消中…" : "取消回测"}
+                {cancel.isPending ? t("backtest.action.cancelling") : t("backtest.action.cancelBacktest")}
               </Button>
             ) : null}
           </div>
@@ -213,24 +228,24 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
         <Card className="min-h-[320px]">
           {running ? (
             <div className="flex min-h-[280px] flex-col items-center justify-center gap-6 px-6">
-              <ProgressSteps steps={RUN_STEPS} current={currentStep || "排队中"} />
+              <ProgressSteps steps={runSteps} current={currentStep || t("backtest.steps.queued")} />
               <p className="text-sm text-as-muted">
-                {currentStep || "正在准备 LEAN 环境"}
+                {currentStep || t("backtest.states.preparingEnv")}
               </p>
             </div>
           ) : (
             <EmptyState
               icon={LineChart}
-              title={bt.status === "FAILED" ? "回测失败" : "回测已取消"}
+              title={bt.status === "FAILED" ? t("backtest.states.failed") : t("backtest.states.cancelled")}
               description={
                 bt.status === "FAILED"
-                  ? bt.error?.message || "请查看 Worker / API 日志。"
-                  : "可以回到策略实验室重新运行。"
+                  ? bt.error?.message || t("backtest.states.failedLogHint")
+                  : t("backtest.states.cancelledHint")
               }
               action={
                 bt.strategy_id ? (
                   <Link href={`/strategies/${bt.strategy_id}`}>
-                    <Button size="sm">返回策略</Button>
+                    <Button size="sm">{t("backtest.action.backToStrategy")}</Button>
                   </Link>
                 ) : null
               }
@@ -303,7 +318,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
 
           {tab === "monthly" ? (
             <Card>
-              <CardHeader title="月度收益" />
+              <CardHeader title={t("backtest.states.monthlyTitle")} />
               <MonthlyHeatmap data={monthly.data || []} />
             </Card>
           ) : null}

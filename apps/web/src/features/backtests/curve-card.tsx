@@ -7,6 +7,7 @@ import { EquityCurve, type EquityMarker, type EquitySeries } from "@/components/
 import { DrawdownChart } from "@/components/charts/drawdown-chart";
 import type { Backtest } from "@/lib/api";
 import { peerLabel } from "./use-backtest-analysis";
+import { useT } from "@/lib/i18n";
 
 function Toggle({
   pressed,
@@ -74,37 +75,38 @@ export function CurveCard({
   period: "1M" | "3M" | "YTD" | "1Y" | "ALL";
   onPeriod: (p: "1M" | "3M" | "YTD" | "1Y" | "ALL") => void;
 }) {
+  const t = useT();
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader
-          title="权益曲线"
+          title={t("backtest.curve.title")}
           hint={
             <span className="text-[11px] text-as-muted">
-              {normalized ? "各序列独立归一到 100，才能叠在一起看" : "绝对净值"}
+              {normalized ? t("backtest.curve.hintNormalized") : t("backtest.curve.hintAbsolute")}
             </span>
           }
           action={
             <div className="flex flex-wrap items-center justify-end gap-2">
               <div className="inline-flex rounded-xl bg-as-secondary p-1">
                 <Toggle pressed={logScale} disabled={!canLog} onPressed={() => onLogScale(!logScale)}>
-                  对数
+                  {t("backtest.curve.log")}
                 </Toggle>
                 <Toggle pressed={normalized} onPressed={() => onNormalized(!normalized)}>
-                  归一到 100
+                  {t("backtest.curve.normalize100")}
                 </Toggle>
                 <Toggle pressed={showTrades} onPressed={() => onShowTrades(!showTrades)}>
-                  成交标记
+                  {t("backtest.curve.tradeMarkers")}
                 </Toggle>
               </div>
               <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
-                对比
+                {t("backtest.curve.compare")}
                 <select
                   className="h-8 max-w-[220px] rounded-lg border border-as-border bg-as-bg px-2 text-xs text-as-text outline-none focus:border-as-primary/40"
                   value={compareId}
                   onChange={(e) => onCompareId(e.target.value)}
                 >
-                  <option value="">不叠加</option>
+                  <option value="">{t("backtest.curve.noOverlay")}</option>
                   {peers
                     .filter((row) => row.id !== backtestId)
                     .map((row) => (
@@ -118,11 +120,11 @@ export function CurveCard({
                 value={period}
                 onChange={(id) => onPeriod(id as typeof period)}
                 items={[
-                  { id: "1M", label: "1月" },
-                  { id: "3M", label: "3月" },
-                  { id: "YTD", label: "今年" },
-                  { id: "1Y", label: "1年" },
-                  { id: "ALL", label: "全部" },
+                  { id: "1M", label: t("backtest.period.m1") },
+                  { id: "3M", label: t("backtest.period.m3") },
+                  { id: "YTD", label: t("backtest.period.ytd") },
+                  { id: "1Y", label: t("backtest.period.y1") },
+                  { id: "ALL", label: t("backtest.period.all") },
                 ]}
               />
             </div>
@@ -130,7 +132,7 @@ export function CurveCard({
         />
         {!canLog && logScale ? (
           <p className="mb-3 text-xs text-as-negative">
-            权益含非正值，对数坐标不可用。
+            {t("backtest.curve.logUnavailable")}
           </p>
         ) : null}
         <EquityCurve
@@ -141,7 +143,7 @@ export function CurveCard({
         />
       </Card>
       <Card>
-        <CardHeader title="回撤" />
+        <CardHeader title={t("tearsheet.drawdown")} />
         <DrawdownChart data={drawdownPoints} />
       </Card>
     </div>

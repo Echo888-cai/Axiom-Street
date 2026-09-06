@@ -1,6 +1,9 @@
+"use client";
+
 import { type ValidationRun } from "@/lib/api";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SpaTStatBars } from "@/features/validation/surface-bars";
+import { useT } from "@/lib/i18n";
 
 export function asModels(
   result: Record<string, unknown>,
@@ -11,6 +14,7 @@ export function asModels(
 }
 
 export function SpaReport({ run }: { run: ValidationRun }) {
+  const t = useT();
   const reason =
     typeof run.result.reason === "string" ? run.result.reason : null;
   const pRc =
@@ -34,11 +38,10 @@ export function SpaReport({ run }: { run: ValidationRun }) {
   return (
     <Card>
       <CardHeader
-        title="最近一次 Reality Check"
+        title={t("validation.reports.spa.title")}
         hint={
           <p className="text-xs text-as-muted">
-            White RC 是未学生化的最大均值；Hansen SPA_c 是闸门。p ≥ α
-            表示不能声称最好的试验优于现金。
+            {t("validation.reports.spa.hint")}
           </p>
         }
       />
@@ -46,8 +49,10 @@ export function SpaReport({ run }: { run: ValidationRun }) {
         <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p>
       ) : null}
       <p className="mb-4 text-xs text-as-muted">
-        {nModels != null ? `${nModels} 条试验` : "试验数未记录"}
-        {nObs != null ? ` · ${nObs} 个共同交易日` : ""}
+        {nModels != null
+          ? `${nModels} ${t("validation.reports.spa.trialsUnit")}`
+          : t("validation.reports.spa.trialsUnrecorded")}
+        {nObs != null ? ` · ${nObs} ${t("validation.reports.commonDays")}` : ""}
         {statistic != null ? ` · T ${statistic.toFixed(2)}` : ""}
       </p>
       <dl className="mb-4 grid gap-3 text-xs text-as-muted sm:grid-cols-4">

@@ -18,11 +18,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/lib/i18n";
 import { labelStatus } from "@/lib/labels";
 import { formatRelative } from "@/lib/utils";
 import { CreateStrategyDialog } from "./create-strategy-dialog";
 
 export default function StrategyCollection() {
+  const t = useT();
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
   const { data, isLoading, error, refetch } = useQuery({
@@ -41,11 +43,11 @@ export default function StrategyCollection() {
   return (
     <div className="space-y-7 as-enter">
       <PageHeader
-        title="策略实验室"
-        description="把值得探索的想法，变成可以验证的策略。"
+        title={t("nav.strategies")}
+        description={t("strategy.collectionDescription")}
         action={
           <Button onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" /> 新建研究
+            <Plus className="h-4 w-4" /> {t("strategy.newResearch")}
           </Button>
         }
       />
@@ -53,20 +55,20 @@ export default function StrategyCollection() {
         {[
           {
             n: "01",
-            title: "写下假设",
-            text: "从清晰的逻辑出发",
+            title: t("strategy.stepWriteTitle"),
+            text: t("strategy.stepWriteText"),
             icon: FlaskConical,
           },
           {
             n: "02",
-            title: "构建策略",
-            text: "用代码定义交易规则",
+            title: t("strategy.stepBuildTitle"),
+            text: t("strategy.stepBuildText"),
             icon: Code2,
           },
           {
             n: "03",
-            title: "持续迭代",
-            text: "让每个版本都有迹可循",
+            title: t("strategy.stepIterateTitle"),
+            text: t("strategy.stepIterateText"),
             icon: Layers,
           },
         ].map((step) => (
@@ -89,14 +91,14 @@ export default function StrategyCollection() {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          全部策略{" "}
+          {t("strategy.allStrategies")}{" "}
           <Badge>{isLoading || error ? "—" : String(data?.length || 0)}</Badge>
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="pointer-events-none absolute left-3 top-3.5 h-3.5 w-3.5 text-as-muted" />
           <Input
-            aria-label="搜索策略"
-            placeholder="搜索策略名称、标的…"
+            aria-label={t("strategy.searchAria")}
+            placeholder={t("strategy.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9"
@@ -113,11 +115,11 @@ export default function StrategyCollection() {
         <Card>
           <EmptyState
             icon={FlaskConical}
-            title="暂时无法读取研究"
-            description="研究服务连接恢复后，你的策略会显示在这里。"
+            title={t("strategy.collectionLoadErrorTitle")}
+            description={t("strategy.collectionLoadErrorDesc")}
             action={
               <Button variant="secondary" onClick={() => refetch()}>
-                重新连接
+                {t("strategy.reconnect")}
               </Button>
             }
           />
@@ -126,11 +128,11 @@ export default function StrategyCollection() {
         <Card className="flex min-h-[360px] items-center justify-center">
           <EmptyState
             icon={FlaskConical}
-            title="下一项发现，正在等你"
-            description="趋势跟踪，或是等权配置。选择一个模板，为你的第一个想法落笔。"
+            title={t("strategy.collectionEmptyTitle")}
+            description={t("strategy.collectionEmptyDesc")}
             action={
               <Button onClick={() => setCreating(true)}>
-                <Plus className="h-3.5 w-3.5" /> 创建第一项研究
+                <Plus className="h-3.5 w-3.5" /> {t("strategy.createFirstResearch")}
               </Button>
             }
           />
@@ -139,11 +141,11 @@ export default function StrategyCollection() {
         <Card>
           <EmptyState
             icon={Search}
-            title="没有找到匹配的策略"
-            description="试试其他名称或标的代码。"
+            title={t("strategy.noMatchTitle")}
+            description={t("strategy.noMatchDesc")}
             action={
               <Button variant="ghost" onClick={() => setSearch("")}>
-                清空搜索
+                {t("strategy.clearSearch")}
               </Button>
             }
           />
@@ -166,7 +168,7 @@ export default function StrategyCollection() {
                   {s.name}
                 </h2>
                 <p className="mb-6 mt-2 line-clamp-2 text-xs leading-6 text-as-muted">
-                  {s.description || "为这个想法补充一段研究假设。"}
+                  {s.description || t("strategy.cardMissingDescription")}
                 </p>
                 <div className="mt-auto flex items-center gap-2 border-t border-as-border pt-4 text-[10px] text-as-muted">
                   <Badge tone="blue">{s.benchmark}</Badge>

@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight, Plus, ArrowRight } from "lucide-react";
 import { AxiomMark } from "@/components/brand/axiom-mark";
+import { useT } from "@/lib/i18n";
 
 export function ResearchHero() {
+  const t = useT();
   return (
     <section className="relative isolate overflow-hidden rounded-[24px] border border-white bg-gradient-to-br from-white via-white to-[var(--as-surface-sunken)] px-6 py-8 shadow-as sm:px-8 lg:py-9">
       <div className="relative z-10 max-w-full sm:max-w-[65%]">
@@ -11,25 +15,25 @@ export function ResearchHero() {
           EVIDENCE
         </div>
         <h2 className="mt-5 text-[26px] font-medium leading-[1.45] tracking-[-.045em] sm:text-[32px]">
-          让每一份直觉，
+          {t("common.hero.line1")}
           <br />
-          <span className="text-as-muted">都有据可循。</span>
+          <span className="text-as-muted">{t("common.hero.line2")}</span>
         </h2>
         <p className="mt-3 max-w-sm text-xs leading-6 text-as-muted">
-          一个安静的空间，连接假设、数据与发现。
+          {t("common.hero.tagline")}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/strategies"
             className="as-button-primary inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-xs font-medium text-white"
           >
-            <Plus className="h-3.5 w-3.5" /> 开始一项研究
+            <Plus className="h-3.5 w-3.5" /> {t("common.hero.startResearch")}
           </Link>
           <Link
             href="/reports"
             className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-xs text-as-muted hover:text-as-text"
           >
-            研究笔记 <ArrowUpRight className="h-3.5 w-3.5" />
+            {t("common.researchNote")} <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>

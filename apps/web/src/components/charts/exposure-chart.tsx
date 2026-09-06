@@ -10,6 +10,7 @@ import {
   type ISeriesApi,
   type LineData,
 } from "lightweight-charts";
+import { useT } from "@/lib/i18n";
 
 export type ExposurePoint = {
   time: string;
@@ -26,6 +27,10 @@ export function ExposureChart({
   data: ExposurePoint[];
   height?: number;
 }) {
+  const t = useT();
+  const longLabel = t("tearsheet.chartExposure.long");
+  const shortLabel = t("tearsheet.chartExposure.short");
+  const netLabel = t("tearsheet.chartExposure.net");
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const longRef = useRef<ISeriesApi<"Line"> | null>(null);
@@ -52,20 +57,20 @@ export function ExposureChart({
       color: chartColors.primary,
       lineWidth: 2,
       priceLineVisible: false,
-      title: "多头",
+      title: longLabel,
     });
     shortRef.current = chart.addSeries(LineSeries, {
       color: chartColors.negative,
       lineWidth: 2,
       priceLineVisible: false,
-      title: "空头",
+      title: shortLabel,
     });
     netRef.current = chart.addSeries(LineSeries, {
       color: chartColors.muted,
       lineWidth: 1,
       lineStyle: 2,
       priceLineVisible: false,
-      title: "净暴露",
+      title: netLabel,
     });
     chartRef.current = chart;
     const ro = new ResizeObserver(() => {
@@ -76,7 +81,7 @@ export function ExposureChart({
       ro.disconnect();
       chart.remove();
     };
-  }, [height]);
+  }, [height, longLabel, netLabel, shortLabel]);
 
   useEffect(() => {
     const toLine = (key: "long" | "short" | "net"): LineData[] =>
@@ -97,13 +102,13 @@ export function ExposureChart({
       <div ref={ref} className="w-full" />
       <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-as-muted">
         <span className="inline-flex items-center gap-1">
-          <span className="h-0.5 w-3 bg-as-primary" /> 多头
+          <span className="h-0.5 w-3 bg-as-primary" /> {longLabel}
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-0.5 w-3 bg-as-negative" /> 空头
+          <span className="h-0.5 w-3 bg-as-negative" /> {shortLabel}
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-0.5 w-3 bg-as-muted" /> 净暴露
+          <span className="h-0.5 w-3 bg-as-muted" /> {netLabel}
         </span>
       </div>
     </div>

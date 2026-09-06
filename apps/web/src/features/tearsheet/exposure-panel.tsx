@@ -6,6 +6,7 @@ import { ExposureChart, type ExposurePoint } from "@/components/charts/exposure-
 import { RollingChart } from "@/components/charts/rolling-chart";
 import { formatNumber } from "@/lib/utils";
 import { chartColors } from "@/lib/chart-tokens";
+import { useT } from "@/lib/i18n";
 
 export function ExposurePanel({
   points,
@@ -18,12 +19,13 @@ export function ExposurePanel({
   gross: number | null | undefined;
   net: number | null | undefined;
 }) {
+  const t = useT();
   if (!points.length) {
     return (
       <Card>
         <EmptyState
-          title="没有暴露序列"
-          description="这次回测没有解析到 LEAN 的 Exposure 图。这里不填 0。"
+          title={t("tearsheet.expPanel.noDataTitle")}
+          description={t("tearsheet.expPanel.noDataDesc")}
         />
       </Card>
     );
@@ -32,21 +34,23 @@ export function ExposurePanel({
     <div className="space-y-4">
       <Card>
         <CardHeader
-          title="持仓暴露"
+          title={t("tearsheet.expPanel.title")}
           hint={
             <span className="text-[11px] text-as-muted">
-              多头 / 空头来自 LEAN Exposure 图 · 均值 毛 {formatNumber(gross)} / 净 {formatNumber(net)}
+              {t("tearsheet.expPanel.hint")
+                .replace("{gross}", formatNumber(gross))
+                .replace("{net}", formatNumber(net))}
             </span>
           }
         />
         <ExposureChart data={points} />
       </Card>
       <Card>
-        <CardHeader title="换手" hint={<span className="text-[11px] text-as-muted">Portfolio Turnover 图</span>} />
+        <CardHeader title={t("tearsheet.expPanel.turnoverTitle")} hint={<span className="text-[11px] text-as-muted">{t("tearsheet.expPanel.turnoverHint")}</span>} />
         {turnover.length ? (
-          <RollingChart data={turnover} color={chartColors.muted} caption="LEAN Portfolio Turnover 序列" />
+          <RollingChart data={turnover} color={chartColors.muted} caption={t("tearsheet.expPanel.turnoverCaption")} />
         ) : (
-          <EmptyState title="没有换手序列" description="LEAN 没有写出 Portfolio Turnover 图。" />
+          <EmptyState title={t("tearsheet.expPanel.noTurnoverTitle")} description={t("tearsheet.expPanel.noTurnoverDesc")} />
         )}
       </Card>
     </div>

@@ -9,6 +9,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatPct } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { ValidationLaunch } from "./validation-launch";
 import { isInflight, conclusion } from "./validation-status";
 import { WalkForwardReport } from "./reports/walk-forward-report";
@@ -19,6 +20,7 @@ import { SpaReport } from "./reports/spa-report";
 import { CostReport } from "./reports/cost-report";
 
 export function ValidationDesk() {
+  const t = useT();
   const { data, isLoading, error } = useQuery({
     queryKey: ["validation-runs"],
     queryFn: () => api.listValidation(),
@@ -40,18 +42,22 @@ export function ValidationDesk() {
   return (
     <div className="space-y-6 as-enter">
       <PageHeader
-        title="稳健性验证"
-        description="一个漂亮的结果，还需要经得住样本外、成本与市场变化的检验。"
+        title={t("validation.desk.title")}
+        description={t("validation.desk.description")}
       />
 
       <Card>
         <p className="text-sm text-as-text">
           {gates?.note ||
-            (error ? "连接研究服务后查看验证要求。" : "正在读取验证闸门…")}
+            (error
+              ? t("validation.desk.gatesError")
+              : t("validation.desk.gatesLoading"))}
         </p>
         <dl className="mt-4 grid gap-3 text-xs text-as-muted sm:grid-cols-3">
           <div>
-            <dt className="text-[11px] uppercase tracking-wide">已实现</dt>
+            <dt className="text-[11px] uppercase tracking-wide">
+              {t("validation.desk.implemented")}
+            </dt>
             <dd className="mt-1 text-as-text">
               {(
                 gates?.available || [
@@ -69,7 +75,7 @@ export function ValidationDesk() {
           </div>
           <div>
             <dt className="text-[11px] uppercase tracking-wide">
-              VALIDATED 需要
+              {t("validation.desk.validatedRequires")}
             </dt>
             <dd className="mt-1 text-as-text">
               {(
@@ -87,7 +93,9 @@ export function ValidationDesk() {
             </dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-wide">尚未接入</dt>
+            <dt className="text-[11px] uppercase tracking-wide">
+              {t("validation.desk.notYetConnected")}
+            </dt>
             <dd className="mt-1">
               {(gates?.missing || []).join(" · ") || "—"}
             </dd>
@@ -97,14 +105,14 @@ export function ValidationDesk() {
 
       <Card>
         <CardHeader
-          title="发起验证"
+          title={t("validation.form.submit")}
           hint={
             <p className="text-xs text-as-muted">
-              选一条策略和它的已完成回测，再选验证类型。PBO 与成本/敏感性扫描也可从{" "}
+              {t("validation.desk.launchHintBefore")}{" "}
               <Link href="/experiments" className="text-as-primary hover:underline">
-                实验
+                {t("validation.experiments.title")}
               </Link>
-              发起；DSR 由回测完成时自动写入。
+              {t("validation.desk.launchHintAfter")}
             </p>
           }
         />
@@ -136,31 +144,41 @@ export function ValidationDesk() {
       ) : error ? (
         <Card>
           <EmptyState
-            title="API 未连接"
-            description="请先启动 FastAPI 服务（端口 8000）。"
+            title={t("validation.errors.apiOffline")}
+            description={t("validation.errors.apiOfflineHint")}
           />
         </Card>
       ) : !items.length ? (
         <Card className="min-h-[240px]">
           <EmptyState
             icon={BadgeCheck}
-            title="还没有验证记录"
-            description="跑完一次回测后会写下 Deflated Sharpe、Bootstrap 与制度切片。Walk-forward、DSR、PBO、敏感性高原、成本、Sharpe 区间、制度稳定性与 Hansen SPA_c 都通过后，系统才会把策略标成已验证。"
+            title={t("validation.desk.noRunsTitle")}
+            description={t("validation.desk.noRunsDescription")}
           />
         </Card>
       ) : (
         <Card className="p-0">
           <div className="border-b border-as-border px-5 py-3 text-sm font-medium">
-            验证运行
+            {t("validation.desk.runsHeading")}
           </div>
           <table className="w-full text-sm">
             <thead className="text-left text-[11px] uppercase tracking-wide text-as-muted">
               <tr className="border-b border-as-border">
-                <th className="px-5 py-2 font-medium">类型</th>
-                <th className="px-5 py-2 font-medium">状态</th>
-                <th className="px-5 py-2 font-medium">结论</th>
-                <th className="px-5 py-2 font-medium">摘要</th>
-                <th className="px-5 py-2 font-medium">回测</th>
+                <th className="px-5 py-2 font-medium">
+                  {t("validation.table.type")}
+                </th>
+                <th className="px-5 py-2 font-medium">
+                  {t("validation.table.status")}
+                </th>
+                <th className="px-5 py-2 font-medium">
+                  {t("validation.table.conclusion")}
+                </th>
+                <th className="px-5 py-2 font-medium">
+                  {t("validation.table.summary")}
+                </th>
+                <th className="px-5 py-2 font-medium">
+                  {t("validation.table.backtest")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -202,11 +220,11 @@ export function ValidationDesk() {
                         ? shape == null
                           ? "—"
                           : shape === "plateau"
-                            ? "高原"
-                            : "孤峰"
+                            ? t("validation.shapes.plateau")
+                            : t("validation.shapes.knifeEdge")
                         : row.kind === "COST"
                           ? breakeven == null && row.passed
-                            ? "> 网格上限"
+                            ? t("validation.reports.cost.aboveGrid")
                             : breakeven == null
                               ? "—"
                               : `${breakeven.toFixed(1)} bps`
@@ -216,10 +234,10 @@ export function ValidationDesk() {
                               : "—"
                             : row.kind === "REGIME"
                               ? concentrated
-                                ? `集中 ${concentrated}`
+                                ? `${t("validation.desk.concentrated")} ${concentrated}`
                                 : row.passed
-                                  ? "跨制度"
-                                  : "未通过"
+                                  ? t("validation.desk.acrossRegimes")
+                                  : t("validation.results.failed")
                               : row.kind === "SPA"
                                 ? typeof row.result.p_spa_consistent ===
                                   "number"

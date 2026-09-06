@@ -3,6 +3,7 @@
 import Editor from "@monaco-editor/react";
 import { Card } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
+import { useT } from "@/lib/i18n";
 import type { StrategyVersion } from "@/lib/api";
 import { VersionDiff } from "./version-diff";
 
@@ -26,6 +27,7 @@ export function EditorPane({
   onPaneChange: (pane: "code" | "diff") => void;
   onMountEditor: NonNullable<Parameters<typeof Editor>[0]["onMount"]>;
 }) {
+  const t = useT();
   return (
     <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-6">
       <div className="flex items-center justify-between border-b border-as-border px-4 py-3">
@@ -36,14 +38,14 @@ export function EditorPane({
               value={pane}
               onChange={(id) => onPaneChange(id as "code" | "diff")}
               items={[
-                { id: "code", label: "编辑" },
-                { id: "diff", label: "对比" },
+                { id: "code", label: t("strategy.editorTabCode") },
+                { id: "diff", label: t("strategy.editorTabDiff") },
               ]}
             />
           ) : null}
         </div>
         <span className="hidden text-[11px] text-as-muted xl:block">
-          Python · ⌘S 保存 · ⌘↵ 回测
+          {t("strategy.editorShortcuts")}
         </span>
       </div>
       {pane === "diff" && comparePair ? (

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
+import { useT } from "@/lib/i18n";
 
 export function CreateStrategyDialog({
   open,
@@ -22,29 +23,32 @@ export function CreateStrategyDialog({
   const [name, setName] = useState("");
   const router = useRouter();
   const qc = useQueryClient();
+  const t = useT();
   const create = useMutation({
     mutationFn: () =>
       api.createStrategy({
         name:
           name.trim() ||
-          (template === "trend" ? "SPY 200日均线" : "等权横截面策略"),
+          (template === "trend"
+            ? t("strategy.defaultTrendName")
+            : t("strategy.defaultEqualName")),
         description:
           template === "trend"
-            ? "价格站上 200 日均线持有 SPY，跌破则空仓。"
-            : "在标的池内按等权配置，定期再平衡。",
+            ? t("strategy.trendTemplateDescription")
+            : t("strategy.equalTemplateDescription"),
         ...(template === "equal"
           ? { code: EQUAL_WEIGHT_TEMPLATE, config: EQUAL_WEIGHT_CONFIG }
           : {}),
       }),
     onSuccess: (strategy) => {
       qc.invalidateQueries({ queryKey: ["strategies"] });
-      toast("研究已创建", "ok");
+      toast(t("strategy.researchCreatedToast"), "ok");
       onClose();
       router.push(`/strategies/${strategy.id}`);
     },
   });
   return (
-    <Modal open={open} onClose={onClose} label="新建研究">
+    <Modal open={open} onClose={onClose} label={t("strategy.newResearch")}>
       <form
         className="p-6 sm:p-8"
         onSubmit={(event) => {
@@ -61,22 +65,22 @@ export function CreateStrategyDialog({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            aria-label="关闭新建研究"
+            aria-label={t("strategy.closeCreateAria")}
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
         <h2 className="mt-6 text-2xl font-semibold tracking-tight">
-          开始一项新研究
+          {t("strategy.createTitle")}
         </h2>
         <p className="mt-2 text-xs leading-6 text-as-muted">
-          选择一个起点，然后写下属于你的假设。
+          {t("strategy.createSubtitle")}
         </p>
         <label
           htmlFor="research-name"
           className="mb-2 mt-6 block text-xs font-medium"
         >
-          研究名称
+          {t("strategy.researchNameLabel")}
         </label>
         <Input
           id="research-name"
@@ -86,23 +90,27 @@ export function CreateStrategyDialog({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={
-            template === "trend" ? "SPY 200日均线" : "等权横截面策略"
+            template === "trend"
+              ? t("strategy.defaultTrendName")
+              : t("strategy.defaultEqualName")
           }
         />
         <fieldset className="mt-6">
-          <legend className="mb-3 text-xs font-medium">选择策略模板</legend>
+          <legend className="mb-3 text-xs font-medium">
+            {t("strategy.templateLegend")}
+          </legend>
           <div className="space-y-2">
             {[
               {
                 id: "trend",
-                title: "趋势跟踪",
-                description: "SPY · 200 日均线 · 单标的",
+                title: t("strategy.trendTemplateTitle"),
+                description: t("strategy.trendTemplateSubtitle"),
                 icon: FlaskConical,
               },
               {
                 id: "equal",
-                title: "等权配置",
-                description: "多标的 · 1/N 权重 · 定期再平衡",
+                title: t("strategy.equalTemplateTitle"),
+                description: t("strategy.equalTemplateSubtitle"),
                 icon: Layers,
               },
             ].map((item) => (
@@ -152,10 +160,12 @@ export function CreateStrategyDialog({
         )}
         <div className="mt-7 flex justify-end gap-2 border-t border-as-border pt-5">
           <Button type="button" variant="ghost" onClick={onClose}>
-            取消
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={create.isPending}>
-            {create.isPending ? "正在创建…" : "创建并开始研究"}
+            {create.isPending
+              ? t("strategy.creatingLabel")
+              : t("strategy.createAndStartButton")}
             <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </div>

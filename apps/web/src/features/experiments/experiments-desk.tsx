@@ -8,17 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { useT } from "@/lib/i18n";
 import { ValidationLaunch } from "@/features/validation/validation-launch";
 
 function isInflight(row: ValidationRun): boolean {
   return row.status === "QUEUED" || row.status === "RUNNING";
 }
 
-function conclusion(row: ValidationRun) {
+function conclusion(row: ValidationRun, t: (key: string) => string) {
   if (row.status === "QUEUED" || row.status === "RUNNING") {
     return { tone: "blue" as const, label: row.progress_step || row.status };
   }
-  if (row.error) return { tone: "red" as const, label: "失败" };
+  if (row.error) return { tone: "red" as const, label: t("validation.status.failed") };
   return row.passed
     ? { tone: "green" as const, label: "PBO ≤ 0.5" }
     : { tone: "amber" as const, label: "PBO > 0.5" };
@@ -35,6 +36,7 @@ function asConfigs(result: Record<string, unknown>): ConfigRow[] {
 }
 
 function PboReport({ run }: { run: ValidationRun }) {
+  const t = useT();
   const pbo = typeof run.result.pbo === "number" ? run.result.pbo : null;
   const nSlices = typeof run.result.n_slices === "number" ? run.result.n_slices : null;
   const nCombos =
@@ -46,10 +48,10 @@ function PboReport({ run }: { run: ValidationRun }) {
   return (
     <Card>
       <CardHeader
-        title="最近一次 CSCV"
+        title={t("validation.reports.pbo.title")}
         hint={
           <p className="text-xs text-as-muted">
-            样本内最优配置在样本外落入中位数以下的比例。PBO &gt; 0.5 不能进入 VALIDATED。
+            {t("validation.reports.pbo.hint")}
           </p>
         }
       />
@@ -65,9 +67,13 @@ function PboReport({ run }: { run: ValidationRun }) {
           </div>
         </div>
         <p className="max-w-xl text-sm leading-relaxed text-as-muted">
-          {nSlices != null ? `${nSlices} 个切片` : "切片未记录"}
-          {nCombos != null ? ` · ${nCombos} 种划分` : ""}
-          {nObs != null ? ` · ${nObs} 个共同交易日` : ""}
+          {nSlices != null
+            ? `${nSlices} ${t("validation.reports.pbo.slicesUnit")}`
+            : t("validation.reports.pbo.slicesUnrecorded")}
+          {nCombos != null
+            ? ` · ${nCombos} ${t("validation.reports.pbo.combosUnit")}`
+            : ""}
+          {nObs != null ? ` · ${nObs} ${t("validation.reports.commonDays")}` : ""}
         </p>
       </div>
       {configs.length ? (
@@ -114,6 +120,7 @@ function PboReport({ run }: { run: ValidationRun }) {
 }
 
 export function ExperimentsDesk() {
+  const t = useT();
   const { data, isLoading, error } = useQuery({
     queryKey: ["pbo-runs"],
     queryFn: () => api.listValidation({ kind: "PBO" }),
@@ -129,20 +136,20 @@ export function ExperimentsDesk() {
   return (
     <div className="space-y-6 as-enter">
       <PageHeader
-        title="实验"
-        description="参数扫描写入试验台账，并计算 PBO。敏感性与成本闸门在验证页。这不是找赢家的快捷方式：PBO > 0.5 的版本不能标成已验证。"
+        title={t("validation.experiments.title")}
+        description={t("validation.experiments.description")}
       />
 
       <Card>
         <CardHeader
-          title="lookback 扫描"
+          title={t("validation.experiments.scanTitle")}
           hint={
             <p className="text-xs text-as-muted">
-              目前只扫 LEAN 参数 lookback。每个格子一次真实回测。完整闸门在{" "}
+              {t("validation.experiments.scanHintBefore")}{" "}
               <Link href="/validation" className="text-as-primary hover:underline">
-                验证
+                {t("validation.experiments.validationLink")}
               </Link>
-              。
+              {t("validation.experiments.scanHintAfter")}
             </p>
           }
         />
@@ -155,31 +162,42 @@ export function ExperimentsDesk() {
         <Card className="h-40 animate-pulse bg-as-secondary" />
       ) : error ? (
         <Card>
-          <EmptyState title="API 未连接" description="请先启动 FastAPI 服务（端口 8000）。" />
+          <EmptyState
+            title={t("validation.errors.apiOffline")}
+            description={t("validation.errors.apiOfflineHint")}
+          />
         </Card>
       ) : !items.length ? (
         <Card className="min-h-[240px]">
           <EmptyState
             icon={Beaker}
-            title="还没有参数扫描"
-            description="对读取 lookback 的策略提交网格。系统不会用一次回测假装算出 PBO。"
+            title={t("validation.experiments.noScansTitle")}
+            description={t("validation.experiments.noScansDescription")}
           />
         </Card>
       ) : (
         <Card className="p-0">
-          <div className="border-b border-as-border px-5 py-3 text-sm font-medium">扫描记录</div>
+          <div className="border-b border-as-border px-5 py-3 text-sm font-medium">
+            {t("validation.experiments.scansHeading")}
+          </div>
           <table className="w-full text-sm">
             <thead className="text-left text-[11px] uppercase tracking-wide text-as-muted">
               <tr className="border-b border-as-border">
-                <th className="px-5 py-2 font-medium">状态</th>
-                <th className="px-5 py-2 font-medium">结论</th>
+                <th className="px-5 py-2 font-medium">
+                  {t("validation.table.status")}
+                </th>
+                <th className="px-5 py-2 font-medium">
+                  {t("validation.table.conclusion")}
+                </th>
                 <th className="px-5 py-2 font-medium">PBO</th>
-                <th className="px-5 py-2 font-medium">网格</th>
+                <th className="px-5 py-2 font-medium">
+                  {t("validation.table.grid")}
+                </th>
               </tr>
             </thead>
             <tbody>
               {items.map((row) => {
-                const badge = conclusion(row);
+                const badge = conclusion(row, t);
                 const pbo = typeof row.result.pbo === "number" ? row.result.pbo : null;
                 const values = Array.isArray(row.params.values)
                   ? (row.params.values as number[]).join(", ")

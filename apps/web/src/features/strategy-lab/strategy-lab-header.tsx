@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { useT } from "@/lib/i18n";
 import type { Strategy } from "@/lib/api";
 import { labelStatus } from "@/lib/labels";
 
@@ -31,11 +32,12 @@ export function StrategyLabHeader({
   onBlurName: () => void;
   onDelete: () => void;
 }) {
+  const t = useT();
   return (
     <PageHeader
       crumbs={[
-        { href: "/", label: "首页" },
-        { href: "/strategies", label: "策略实验室" },
+        { href: "/", label: t("navigation.home") },
+        { href: "/strategies", label: t("nav.strategies") },
       ]}
       title={
         editingName ? (
@@ -56,27 +58,27 @@ export function StrategyLabHeader({
             type="button"
             className="cursor-text rounded-lg text-left hover:bg-as-secondary"
             onClick={onStartEdit}
-            title="点击重命名"
+            title={t("strategy.renameTitle")}
           >
             {strategy.name}
           </button>
         )
       }
       description={
-        strategy.description || "结构化策略工作区。代码是信号的唯一来源。"
+        strategy.description || t("strategy.headerFallbackDescription")
       }
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Badge tone="neutral">{labelStatus(strategy.status)}</Badge>
           <Badge tone="blue">v{strategy.latest_version?.version ?? 1}</Badge>
-          {dirty ? <Badge tone="amber">未保存</Badge> : null}
+          {dirty ? <Badge tone="amber">{t("strategy.unsavedBadge")}</Badge> : null}
           <Link href={`/reports?strategy_id=${strategyId}`}>
             <Button variant="ghost" size="sm">
-              研究笔记
+              {t("nav.reports")}
             </Button>
           </Link>
           <Button variant="ghost" size="sm" onClick={onDelete}>
-            删除
+            {t("common.delete")}
           </Button>
         </div>
       }

@@ -1,9 +1,13 @@
+"use client";
+
 import { type ValidationRun } from "@/lib/api";
 import { Card, CardHeader } from "@/components/ui/card";
 import { CostAlphaBars } from "@/features/validation/surface-bars";
 import { asPoints } from "./sensitivity-report";
+import { useT } from "@/lib/i18n";
 
 export function CostReport({ run }: { run: ValidationRun }) {
+  const t = useT();
   const conclusionText =
     typeof run.result.conclusion === "string" ? run.result.conclusion : null;
   const reason =
@@ -20,10 +24,10 @@ export function CostReport({ run }: { run: ValidationRun }) {
   return (
     <Card>
       <CardHeader
-        title="最近一次成本敏感性"
+        title={t("validation.reports.cost.title")}
         hint={
           <p className="text-xs text-as-muted">
-            alpha_capm 归零的单边成本。不高于真实成本则策略判死。
+            {t("validation.reports.cost.hint")}
           </p>
         }
       />
@@ -36,11 +40,15 @@ export function CostReport({ run }: { run: ValidationRun }) {
         <p className="mb-4 text-xs leading-relaxed text-as-muted">{reason}</p>
       ) : null}
       <p className="mb-4 text-xs text-as-muted">
-        临界{" "}
+        {t("validation.reports.cost.breakevenLabel")}{" "}
         <span className="tabular-nums text-as-text">
-          {breakeven == null ? "> 网格上限" : `${breakeven.toFixed(2)} bps`}
+          {breakeven == null
+            ? t("validation.reports.cost.aboveGrid")
+            : `${breakeven.toFixed(2)} bps`}
         </span>
-        {realistic != null ? ` · 真实 ${realistic} bps` : ""}
+        {realistic != null
+          ? ` · ${t("validation.reports.cost.realistic")} ${realistic} bps`
+          : ""}
       </p>
       {points.length ? (
         <CostAlphaBars

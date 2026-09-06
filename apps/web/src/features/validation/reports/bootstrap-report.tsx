@@ -1,6 +1,9 @@
+"use client";
+
 import { type ValidationRun } from "@/lib/api";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatPct } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export function asInterval(
   raw: unknown,
@@ -26,6 +29,7 @@ export function IntervalRow({
   interval: { observed: number; low: number; high: number };
   format: (n: number) => string;
 }) {
+  const t = useT();
   const span = interval.high - interval.low;
   const absBound = Math.max(
     Math.abs(interval.low),
@@ -48,7 +52,7 @@ export function IntervalRow({
         <div
           className="absolute top-[-2px] h-3 w-0.5 bg-as-text"
           style={{ left: `${obsLeft}%` }}
-          title={`观测 ${format(interval.observed)}`}
+          title={`${t("validation.reports.bootstrap.observed")} ${format(interval.observed)}`}
         />
       </div>
       <div className="tabular-nums text-[11px] text-as-muted">
@@ -60,6 +64,7 @@ export function IntervalRow({
 }
 
 export function BootstrapReport({ run }: { run: ValidationRun }) {
+  const t = useT();
   const reason =
     typeof run.result.reason === "string" ? run.result.reason : null;
   const sharpe = asInterval(run.result.sharpe);
@@ -78,13 +83,12 @@ export function BootstrapReport({ run }: { run: ValidationRun }) {
   return (
     <Card>
       <CardHeader
-        title="最近一次 Bootstrap"
+        title={t("validation.reports.bootstrap.title")}
         hint={
           <p className="text-xs text-as-muted">
-            Stationary bootstrap {level * 100}% 分位区间。Sharpe 下界 ≤ 0
-            不能进入 VALIDATED。
-            {nBoot != null ? ` · ${nBoot} 次重抽样` : ""}
-            {meanBlock != null ? ` · 平均块长 ${meanBlock.toFixed(1)}` : ""}
+            {`Stationary bootstrap ${level * 100}% ${t("validation.reports.bootstrap.percentile")} Sharpe ${t("validation.reports.bootstrap.lowerBound")} ≤ 0 ${t("validation.reports.bootstrap.noEnter")}`}
+            {nBoot != null ? ` · ${nBoot} ${t("validation.reports.bootstrap.resampleSuffix")}` : ""}
+            {meanBlock != null ? ` · ${t("validation.reports.bootstrap.meanBlockPrefix")} ${meanBlock.toFixed(1)}` : ""}
           </p>
         }
       />

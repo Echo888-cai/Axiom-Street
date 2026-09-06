@@ -30,4 +30,6 @@ export const layout = {
     quietNote: "少一点噪音，多一点确信。",
     evidenceNote: "从假设出发，让证据说话。",
     openNotes: "打开研究笔记",
-  } as const;
+    skipToMain: "跳到主要内容",
+    tagline: "让每一个结论，都经得起验证。",
+} as const;
