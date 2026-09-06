@@ -43,6 +43,8 @@ class ValidationSpec(ABC, Generic[T]):
     display_name: str
     description: str
     auto_on_backtest: bool  # whether to run automatically after a backtest completes
+    # Fixed Celery time limit in seconds for non-engine kinds; None = scale with steps.
+    fixed_enqueue_timeout: int | None = None
 
     @abstractmethod
     def params_schema(self) -> type[T]:
@@ -64,6 +66,35 @@ class ValidationSpec(ABC, Generic[T]):
     def gate_check(self, run_result: dict[str, Any]) -> bool:
         """Check if the validation passed (used by VALIDATED gate)."""
 
+    def step_count_from_params(self, params: dict[str, Any]) -> int:
+        """Step count from the persisted params dict (folds/values/costs)."""
+        for key in ("folds", "values", "costs_bps"):
+            items = params.get(key) or []
+            if isinstance(items, list) and items:
+                return max(len(items), 1)
+        return 1
+
+    def enqueue(self, run_id: str, *, params: dict[str, Any]) -> None:
+        """Dispatch the run to the worker (or run it inline in sync mode)."""
+        from services.api.settings import get_settings
+
+        settings = get_settings()
+        if settings.sync_backtests:
+            self.sync_runner()(run_id)
+            return
+        if self.fixed_enqueue_timeout is not None:
+            timeout = self.fixed_enqueue_timeout
+        else:
+            timeout = (settings.lean_timeout_seconds + 60) * self.step_count_from_params(
+                params
+            ) + 120
+        task: Any = self.runner()
+        task.apply_async(
+            args=[run_id],
+            time_limit=timeout,
+            soft_time_limit=max(timeout - 60, 60),
+        )
+
     def prepare_params(
         self, db: Session, version: StrategyVersion, template: Backtest, validated_params: T
     ) -> dict[str, Any]:
@@ -72,11 +103,47 @@ class ValidationSpec(ABC, Generic[T]):
         """
         return validated_params.model_dump(mode="json")
 
+    def _template_context(self, template: Backtest, params: dict[str, Any]) -> dict[str, Any]:
+        """Borrow the template backtest's scope: dates, snapshot, universe, params."""
+        if not params.get("start_date"):
+            params["start_date"] = template.start_date.isoformat()
+        if not params.get("end_date"):
+            params["end_date"] = template.end_date.isoformat()
+        params.update(
+            {
+                "benchmark": template.benchmark,
+                "initial_capital": template.initial_capital,
+                "data_snapshot_id": str(template.data_snapshot_id)
+                if template.data_snapshot_id
+                else None,
+                "universe_snapshot": template.universe_snapshot or [],
+                "base_parameters": template.parameters or {},
+            }
+        )
+        return params
+
     def validate_strategy(self, db: Session, version: StrategyVersion, validated_params: T) -> None:
         """Optional pre-backtest validation of the strategy code.
         Called before _template_backtest. Raise HTTPException to fail early.
         """
         pass
+
+
+def _normalize_int_grid(values: list[int]) -> list[int]:
+    return sorted({int(v) for v in values})
+
+
+def _normalize_costs(raw: list[float]) -> list[float]:
+    costs: list[float] = []
+    seen: set[float] = set()
+    for item in raw:
+        value = float(item)
+        if value in seen:
+            continue
+        seen.add(value)
+        costs.append(value)
+    costs.sort()
+    return costs
 
 
 # --- Walk-Forward ---

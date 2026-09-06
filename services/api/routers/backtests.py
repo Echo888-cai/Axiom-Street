@@ -241,10 +241,12 @@ def compare_equity(
             ]
         else:
             points = [{"time": p.ts, "value": p.strategy_value} for p in rows]
+        version = bt.strategy_version
+        label = f"{version.strategy.name} v{version.version}"
         series.append(
             {
                 "id": str(bid),
-                "label": f"{bt.strategy_name or 'Strategy'} v{bt.version_number or '?'}",
+                "label": label,
                 "data": points,
             }
         )
@@ -254,4 +256,4 @@ def compare_equity(
 @router.get("/{backtest_id}/mae-mfe", response_model=list[MaeMfePoint])
 def get_mae_mfe(backtest_id: UUID, db: Session = Depends(get_db)) -> list[MaeMfePoint]:
     """MAE/MFE per trade with holding period distribution."""
-    return backtest_service.get_mae_mfe(db, backtest_id)
+    return [MaeMfePoint.model_validate(r) for r in backtest_service.get_mae_mfe(db, backtest_id)]
