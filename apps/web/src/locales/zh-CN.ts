@@ -154,6 +154,26 @@ export const zhCN = {
       deflatedSharpe: "去偿夏普",
       probabilisticSharpe: "概率夏普",
     },
+    compare: {
+      title: "多回测对比",
+      selectLabel: "选择回测",
+      normalized: "归一化到 100",
+      period: "周期",
+      table: {
+        strategy: "策略",
+        finalEquity: "期末权益",
+        totalReturn: "总收益",
+        cagr: "年化收益",
+        sharpe: "夏普",
+        maxDD: "最大回撤",
+        volatility: "波动率",
+        trades: "成交数",
+      },
+    },
+    maeMfe: {
+      noData: "暂无 MAE/MFE 数据",
+      description: "需要已完成且有成交记录的回测",
+    },
   },
   tearsheet: {
     title: "拆解报告",

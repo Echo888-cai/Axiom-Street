@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EquityCurve } from "@/components/charts/equity-curve";
 import { api, type MaeMfePoint } from "@/lib/api";
 import { formatNumber, formatPct } from "@/lib/utils";
-import { useT, useI18n } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 
 interface MaeMfePanelProps {
   backtestId: string;
@@ -14,11 +14,10 @@ interface MaeMfePanelProps {
 
 export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
   const t = useT();
-  const i18n = useI18n();
 
   const { data: maeMfeData } = useQuery<MaeMfePoint[]>({
     queryKey: ["mae-mfe", backtestId],
-    queryFn: () => api.get(`/api/v1/backtests/${backtestId}/mae-mfe`),
+    queryFn: () => api.getMaeMfe(backtestId),
   });
 
   if (!maeMfeData?.length) {
@@ -89,11 +88,9 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
                       .sort((a, b) => a - b)
                       .map((v, i) => ({ time: String(i), value: v })),
                     color: "var(--as-negative)",
-                    area: true,
                   },
                 ]}
                 height={200}
-                showMarkers={false}
               />
             </div>
 
@@ -108,11 +105,9 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
                       .sort((a, b) => a - b)
                       .map((v, i) => ({ time: String(i), value: v })),
                     color: "var(--as-positive)",
-                    area: true,
                   },
                 ]}
                 height={200}
-                showMarkers={false}
               />
             </div>
           </div>
@@ -129,11 +124,9 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
                       .sort((a, b) => a - b)
                       .map((v, i) => ({ time: String(i), value: v })),
                     color: "var(--as-primary)",
-                    area: true,
                   },
                 ]}
                 height={200}
-                showMarkers={false}
               />
             </div>
 
@@ -146,9 +139,8 @@ export function MaeMfePanel({ backtestId }: MaeMfePanelProps) {
                     label: "MFE vs MAE",
                     data: maeMfeData
                       .filter((d) => d.mae != null && d.mfe != null)
-                      .map((d) => ({ time: d.mae!, value: d.mfe! })),
+                      .map((d) => ({ time: String(d.mae!), value: d.mfe! })),
                     color: "var(--as-primary)",
-                    showMarkers: true,
                   },
                 ]}
                 height={200}

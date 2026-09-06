@@ -8,6 +8,7 @@ import type {
   MonthlyReturn,
   Page,
   MaeMfePoint,
+  CompareEquityResponse,
 } from "./types";
 
 export const backtestsApi = {
@@ -62,7 +63,7 @@ export const backtestsApi = {
     `${API_URL}/api/v1/backtests/${id}/tearsheet.html`,
   eventsUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/events`,
   compareEquity: (ids: string[], normalized: boolean = false, period: string = "ALL") =>
-    request<{ series: any[] }>("/api/v1/backtests/compare/equity", {
+    request<CompareEquityResponse>("/api/v1/backtests/compare/equity", {
       method: "POST",
       body: JSON.stringify({ ids, normalized, period }),
     }),

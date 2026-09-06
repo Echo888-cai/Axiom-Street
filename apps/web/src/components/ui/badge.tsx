@@ -3,9 +3,11 @@ import { cn } from "@/lib/utils";
 export function Badge({
   children,
   tone = "neutral",
+  className,
 }: {
   children: React.ReactNode;
   tone?: "neutral" | "blue" | "green" | "red" | "amber";
+  className?: string;
 }) {
   return (
     <span
@@ -16,6 +18,7 @@ export function Badge({
         tone === "green" && "bg-as-positive/10 text-as-positive",
         tone === "red" && "bg-as-negative/10 text-as-negative",
         tone === "amber" && "bg-[var(--as-warning)/10] text-[var(--as-warning)]",
+        className,
       )}
     >
       {children}
