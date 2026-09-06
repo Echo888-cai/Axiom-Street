@@ -9,12 +9,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatPct } from "@/lib/utils";
-import { WalkForwardForm } from "@/features/validation/walk-forward-form";
-import { SensitivityForm } from "@/features/validation/sensitivity-form";
-import { CostScanForm } from "@/features/validation/cost-form";
-import { BootstrapForm } from "@/features/validation/bootstrap-form";
-import { RegimeForm } from "@/features/validation/regime-form";
-import { SpaForm } from "@/features/validation/spa-form";
+import { ValidationLaunch } from "./validation-launch";
 import { isInflight, conclusion } from "./validation-status";
 import { WalkForwardReport } from "./reports/walk-forward-report";
 import { SensitivityReport } from "./reports/sensitivity-report";
@@ -102,116 +97,36 @@ export function ValidationDesk() {
 
       <Card>
         <CardHeader
-          title="Walk-forward"
+          title="发起验证"
           hint={
             <p className="text-xs text-as-muted">
-              每折一次完整 LEAN 运行，样本外拼接后评分。过拟合塌缩不能进入
-              VALIDATED。参数扫描在{" "}
-              <Link
-                href="/experiments"
-                className="text-as-primary hover:underline"
-              >
+              选一条策略和它的已完成回测，再选验证类型。PBO 与成本/敏感性扫描也可从{" "}
+              <Link href="/experiments" className="text-as-primary hover:underline">
                 实验
               </Link>
-              。
+              发起；DSR 由回测完成时自动写入。
             </p>
           }
         />
-        <WalkForwardForm />
+        <ValidationLaunch />
       </Card>
 
       {latestWalk && (latestWalk.status === "COMPLETED" || latestWalk.error) ? (
         <WalkForwardReport run={latestWalk} />
       ) : null}
-
-      <Card>
-        <CardHeader
-          title="参数敏感性"
-          hint={
-            <p className="text-xs text-as-muted">
-              扰动 lookback，判断 Sharpe 响应是高原还是孤峰。PBO 参数扫描仍在{" "}
-              <Link
-                href="/experiments"
-                className="text-as-primary hover:underline"
-              >
-                实验
-              </Link>
-              。
-            </p>
-          }
-        />
-        <SensitivityForm />
-      </Card>
-
       {latestSens && (latestSens.status === "COMPLETED" || latestSens.error) ? (
         <SensitivityReport run={latestSens} />
       ) : null}
-
-      <Card>
-        <CardHeader
-          title="成本敏感性"
-          hint={
-            <p className="text-xs text-as-muted">
-              逐步提高单边滑点，求 alpha_capm 归零的临界成本。
-            </p>
-          }
-        />
-        <CostScanForm />
-      </Card>
-
       {latestCost && (latestCost.status === "COMPLETED" || latestCost.error) ? (
         <CostReport run={latestCost} />
       ) : null}
-
-      <Card>
-        <CardHeader
-          title="Bootstrap 置信区间"
-          hint={
-            <p className="text-xs text-as-muted">
-              对已完成回测的日收益做 stationary
-              bootstrap。区间跨零则无统计显著性。
-            </p>
-          }
-        />
-        <BootstrapForm />
-      </Card>
-
       {latestBoot && (latestBoot.status === "COMPLETED" || latestBoot.error) ? (
         <BootstrapReport run={latestBoot} />
       ) : null}
-
-      <Card>
-        <CardHeader
-          title="制度稳定性"
-          hint={
-            <p className="text-xs text-as-muted">
-              按市场状态分段看 Sharpe
-              与胜率。只在单一制度有效的策略会被标注；互补制度为负则不能进入
-              VALIDATED。
-            </p>
-          }
-        />
-        <RegimeForm />
-      </Card>
-
       {latestRegime &&
       (latestRegime.status === "COMPLETED" || latestRegime.error) ? (
         <RegimeReport run={latestRegime} />
       ) : null}
-
-      <Card>
-        <CardHeader
-          title="Reality Check / SPA"
-          hint={
-            <p className="text-xs text-as-muted">
-              对同一家族试验台账做 White Reality Check 与 Hansen SPA。闸门是
-              SPA_c，不是最好那条试验的原始 Sharpe。
-            </p>
-          }
-        />
-        <SpaForm />
-      </Card>
-
       {latestSpa && (latestSpa.status === "COMPLETED" || latestSpa.error) ? (
         <SpaReport run={latestSpa} />
       ) : null}

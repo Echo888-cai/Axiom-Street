@@ -1,7 +1,9 @@
 import { request } from "./http";
-import type { TrialStats, ValidationRun } from "./types";
+import type { TrialStats, ValidationRun, ValidationSpec } from "./types";
 
 export const validationApi = {
+  listValidationSpecs: () =>
+    request<ValidationSpec[]>("/api/v1/validation/specs"),
   getTrialStats: (id: string) =>
     request<TrialStats>(`/api/v1/strategies/${id}/trial-stats`),
   listValidation: (params?: { strategy_id?: string; kind?: string }) => {

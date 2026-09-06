@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { PboScanForm } from "@/features/experiments/pbo-scan-form";
+import { ValidationLaunch } from "@/features/validation/validation-launch";
 
 function isInflight(row: ValidationRun): boolean {
   return row.status === "QUEUED" || row.status === "RUNNING";
@@ -146,7 +146,7 @@ export function ExperimentsDesk() {
             </p>
           }
         />
-        <PboScanForm />
+        <ValidationLaunch kinds={["pbo"]} />
       </Card>
 
       {latest && (latest.status === "COMPLETED" || latest.error) ? <PboReport run={latest} /> : null}
