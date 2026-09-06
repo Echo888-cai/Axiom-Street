@@ -1,3 +1,5 @@
+import { tr } from "@/lib/translate";
+
 /** Runtime gateway for JSON, downloads and server-sent events. Never buffers responses. */
 export async function proxyBackend(
   request: Request,
@@ -12,7 +14,7 @@ export async function proxyBackend(
         !/^[a-zA-Z0-9_.-]+$/.test(part) || part === "." || part === "..",
     )
   ) {
-    return Response.json({ detail: "无效的服务路径" }, { status: 400 });
+    return Response.json({ detail: tr("common.errors.invalidServicePath") }, { status: 400 });
   }
   const origin = process.env.API_BASE_URL || "http://127.0.0.1:8000";
   const target = new URL(`/${path.join("/")}`, origin);
@@ -60,7 +62,7 @@ export async function proxyBackend(
       {
         detail: {
           code: "backend_unavailable",
-          message: "无法连接研究服务，请检查服务状态后重试。",
+          message: tr("common.errors.backendUnavailable"),
         },
       },
       { status: 502 },

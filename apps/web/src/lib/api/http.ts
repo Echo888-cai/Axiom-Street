@@ -1,4 +1,5 @@
 import type { Page } from "./types";
+import { tr } from "@/lib/translate";
 
 export const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "/api/backend"
@@ -23,12 +24,14 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (error) {
     if (init?.signal?.aborted) throw error;
     if (error instanceof Error && error.name === "TimeoutError")
-      throw new Error("研究服务响应超时，请稍后重试。");
-    throw new Error("无法连接研究服务，请检查连接后重试。");
+      throw new Error(tr("common.errors.timeout"));
+    throw new Error(tr("common.errors.cannotConnect"));
   }
   if (!res.ok) {
     const text = await res.text();
-    let message = `请求失败（${res.status}），请稍后重试。`;
+    let message = `${tr("common.errors.requestFailedPrefix")}${res.status}${tr(
+      "common.errors.requestFailedSuffix",
+    )}`;
     try {
       const { detail } = JSON.parse(text) as { detail?: unknown };
       if (typeof detail === "string") message = detail;

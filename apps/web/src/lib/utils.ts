@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { tr } from "@/lib/translate";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -54,13 +55,13 @@ export function formatRelative(value: string | null | undefined): string {
   if (Number.isNaN(then)) return "—";
   const delta = Date.now() - then;
   const minutes = Math.floor(delta / 60000);
-  if (minutes < 1) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
+  if (minutes < 1) return tr("common.time.justNow");
+  if (minutes < 60) return `${minutes} ${tr("common.time.minutesAgo")}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
+  if (hours < 24) return `${hours} ${tr("common.time.hoursAgo")}`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return "昨天";
-  if (days < 7) return `${days} 天前`;
+  if (days === 1) return tr("common.time.yesterday");
+  if (days < 7) return `${days} ${tr("common.time.daysAgo")}`;
   return formatDate(value);
 }
 

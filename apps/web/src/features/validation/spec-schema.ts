@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ValidationKind } from "@/lib/api";
+import { tr } from "@/lib/translate";
 
 export const KIND_OPTIONS: {
   value: ValidationKind;
@@ -8,43 +9,43 @@ export const KIND_OPTIONS: {
 }[] = [
   {
     value: "walk_forward",
-    label: "Walk-Forward",
-    description: "滚动训练/测试折叠，评分用拼接样本外 Sharpe",
+    label: tr("validation.kindOptions.walk_forward.label"),
+    description: tr("validation.kindOptions.walk_forward.description"),
   },
   {
     value: "dsr",
-    label: "Deflated Sharpe Ratio",
-    description: "基于试验台账的多重检验与非正态修正",
+    label: tr("validation.kindOptions.dsr.label"),
+    description: tr("validation.kindOptions.dsr.description"),
   },
   {
     value: "pbo",
-    label: "PBO (过拟合概率)",
-    description: "组合对称交叉验证 (CSCV)",
+    label: tr("validation.kindOptions.pbo.label"),
+    description: tr("validation.kindOptions.pbo.description"),
   },
   {
     value: "sensitivity",
-    label: "参数敏感性",
-    description: "参数网格扰动，判定高原 vs 孤峰",
+    label: tr("validation.kindOptions.sensitivity.label"),
+    description: tr("validation.kindOptions.sensitivity.description"),
   },
   {
     value: "cost",
-    label: "成本敏感性",
-    description: "单边成本全计入滑点，求盈亏平衡点",
+    label: tr("validation.kindOptions.cost.label"),
+    description: tr("validation.kindOptions.cost.description"),
   },
   {
     value: "bootstrap",
-    label: "Stationary Bootstrap CI",
-    description: "保留自相关结构的置信区间",
+    label: tr("validation.kindOptions.bootstrap.label"),
+    description: tr("validation.kindOptions.bootstrap.description"),
   },
   {
     value: "regime",
-    label: "制度稳定性",
-    description: "牛/熊、波动、利率周期切分",
+    label: tr("validation.kindOptions.regime.label"),
+    description: tr("validation.kindOptions.regime.description"),
   },
   {
     value: "spa",
-    label: "Hansen SPA",
-    description: "试验台账上的多重检验校正",
+    label: tr("validation.kindOptions.spa.label"),
+    description: tr("validation.kindOptions.spa.description"),
   },
 ];
 

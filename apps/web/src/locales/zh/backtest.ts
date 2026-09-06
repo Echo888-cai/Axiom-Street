@@ -141,6 +141,13 @@ export const backtest = {
       compare: "对比",
       noOverlay: "不叠加",
       logUnavailable: "权益含非正值，对数坐标不可用。",
+      legend: {
+        thisRun: "本回测",
+        thisRunNorm: "本回测（=100）",
+        benchmarkNorm: "基准（=100）",
+        compareNorm: "对比（=100）",
+        normSuffix: "（=100）",
+      },
     },
     tradeColumns: {
       date: "日期",

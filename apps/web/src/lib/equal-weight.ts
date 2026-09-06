@@ -1,3 +1,5 @@
+import { tr } from "@/lib/translate";
+
 /** Keep in sync with quant/strategy_sdk/equal_weight.py */
 export const EQUAL_WEIGHT_TEMPLATE = `from AlgorithmImports import *
 
@@ -75,7 +77,7 @@ class EqualWeightUniverseAlgorithm(QCAlgorithm):
 
 export const EQUAL_WEIGHT_CONFIG = {
   class_name: "EqualWeightUniverseAlgorithm",
-  hypothesis: "等权 1/N 是任何主动叠加必须在成本后击败的横截面基线。",
+  hypothesis: tr("common.equalWeight.hypothesis"),
   universe: {
     asset_class: "equity",
     market: "US",

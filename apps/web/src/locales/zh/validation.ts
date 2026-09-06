@@ -25,6 +25,40 @@ export const validation = {
         "牛/熊=基准 20% 峰谷，高/低波=21 日实现波动 vs 中位数，利率=FOMC 生效日；各轴 ≥ 60 交易日；互补制度 Sharpe ≥ 0 通过",
       spa: "Hansen SPA_c 闸门：p < 0.05 且 T > 0；同时报 White RC / SPA_l / SPA_u；≥2 条可区分试验 + 252 共同日；>64 条截断",
     },
+    kindOptions: {
+      walk_forward: {
+        label: "Walk-Forward",
+        description: "滚动训练/测试折叠，评分用拼接样本外 Sharpe",
+      },
+      dsr: {
+        label: "Deflated Sharpe Ratio",
+        description: "基于试验台账的多重检验与非正态修正",
+      },
+      pbo: {
+        label: "PBO (过拟合概率)",
+        description: "组合对称交叉验证 (CSCV)",
+      },
+      sensitivity: {
+        label: "参数敏感性",
+        description: "参数网格扰动，判定高原 vs 孤峰",
+      },
+      cost: {
+        label: "成本敏感性",
+        description: "单边成本全计入滑点，求盈亏平衡点",
+      },
+      bootstrap: {
+        label: "Stationary Bootstrap CI",
+        description: "保留自相关结构的置信区间",
+      },
+      regime: {
+        label: "制度稳定性",
+        description: "牛/熊、波动、利率周期切分",
+      },
+      spa: {
+        label: "Hansen SPA",
+        description: "试验台账上的多重检验校正",
+      },
+    },
     form: {
       kindLabel: "验证类型",
       strategyVersionIdLabel: "策略版本",
@@ -72,6 +106,20 @@ export const validation = {
       failed: "失败",
       passed: "通过",
       notPassed: "未通过",
+    },
+    conclusion: {
+      dsrPassed: "通过 95%",
+      dsrFailed: "未过线",
+      pboPassed: "PBO ≤ 0.5",
+      pboFailed: "PBO > 0.5",
+      costPassed: "成本可承受",
+      costFailed: "临界成本过低",
+      bootstrapPassed: "Sharpe CI > 0",
+      bootstrapFailed: "区间跨零",
+      edgeConcentrated: "edge 集中",
+      robustAcrossRegimes: "跨制度稳健",
+      spaRejectsNoEdge: "SPA_c 拒绝无 edge",
+      spaCannotClaim: "不能声称有 edge",
     },
     gates: {
       title: "VALIDATED 闸门要求",

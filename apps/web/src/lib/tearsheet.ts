@@ -1,3 +1,5 @@
+import { tr } from "@/lib/translate";
+
 export type HistogramBin = {
   x0: number;
   x1: number;
@@ -24,14 +26,14 @@ export type QqPoint = {
 
 export function dailyReturnsFromEquity(values: number[]): { returns: number[]; error?: string } {
   if (values.length < 2) {
-    return { returns: [], error: "权益序列不足 2 点，无法计算日收益" };
+    return { returns: [], error: tr("common.errors.analysis.tooShortDaily") };
   }
   const returns: number[] = [];
   for (let i = 1; i < values.length; i += 1) {
     const prev = values[i - 1];
     const cur = values[i];
     if (!(prev > 0) || !(cur > 0)) {
-      return { returns: [], error: "权益序列含非正值，无法计算收益" };
+      return { returns: [], error: tr("common.errors.analysis.nonPositiveEquity") };
     }
     returns.push(cur / prev - 1);
   }
@@ -39,9 +41,9 @@ export function dailyReturnsFromEquity(values: number[]): { returns: number[]; e
 }
 
 export function normalizeSeries(values: number[], base = 100): { values: number[]; error?: string } {
-  if (!values.length) return { values: [], error: "序列为空，无法归一化" };
+  if (!values.length) return { values: [], error: tr("common.errors.analysis.emptySeries") };
   const first = values[0];
-  if (!(first > 0)) return { values: [], error: "序列起点非正，无法归一化" };
+  if (!(first > 0)) return { values: [], error: tr("common.errors.analysis.nonPositiveStart") };
   return { values: values.map((v) => (v / first) * base) };
 }
 
@@ -51,12 +53,12 @@ export function rollingSharpe(
   window = 63,
   periodsPerYear = 252,
 ): { points: RollingPoint[]; error?: string } {
-  if (window < 2) return { points: [], error: "滚动窗口过短" };
+  if (window < 2) return { points: [], error: tr("common.errors.analysis.windowTooShort") };
   if (returns.length !== times.length) {
-    return { points: [], error: "收益与时间戳长度不一致" };
+    return { points: [], error: tr("common.errors.analysis.returnsTimesMismatch") };
   }
   if (returns.length < window) {
-    return { points: [], error: `权益序列不足 ${window} 根，无法计算滚动夏普` };
+    return { points: [], error: `${tr("common.errors.analysis.rollingSeriesShortPrefix")} ${window} ${tr("common.errors.analysis.rollingSeriesShortSuffix")}` };
   }
   const points: RollingPoint[] = [];
   for (let end = window; end <= returns.length; end += 1) {
@@ -76,7 +78,7 @@ export function rollingSharpe(
     });
   }
   if (!points.length) {
-    return { points: [], error: "滚动窗口内收益没有波动，无法计算夏普" };
+    return { points: [], error: tr("common.errors.analysis.rollingFlat") };
   }
   return { points };
 }
@@ -87,13 +89,13 @@ export function pairedDailyReturns(
   times: string[],
 ): { strategy: number[]; benchmark: number[]; times: string[]; error?: string } {
   if (strategy.length !== benchmark.length) {
-    return { strategy: [], benchmark: [], times: [], error: "策略与基准净值长度不一致" };
+    return { strategy: [], benchmark: [], times: [], error: tr("common.errors.analysis.strategyBenchmarkMismatch") };
   }
   if (times.length && times.length !== strategy.length - 1 && times.length !== strategy.length) {
-    return { strategy: [], benchmark: [], times: [], error: "时间戳与净值长度不一致" };
+    return { strategy: [], benchmark: [], times: [], error: tr("common.errors.analysis.timesNetValueMismatch") };
   }
   if (strategy.length < 2) {
-    return { strategy: [], benchmark: [], times: [], error: "权益序列不足 2 点，无法计算配对收益" };
+    return { strategy: [], benchmark: [], times: [], error: tr("common.errors.analysis.tooShortPaired") };
   }
   const sR: number[] = [];
   const bR: number[] = [];
@@ -104,7 +106,7 @@ export function pairedDailyReturns(
     const b0 = benchmark[i - 1];
     const b1 = benchmark[i];
     if (!(s0 > 0) || !(s1 > 0)) {
-      return { strategy: [], benchmark: [], times: [], error: "权益序列含非正值，无法计算收益" };
+      return { strategy: [], benchmark: [], times: [], error: tr("common.errors.analysis.nonPositiveEquity") };
     }
     if (b0 == null || b1 == null || !(b0 > 0) || !(b1 > 0)) continue;
     sR.push(s1 / s0 - 1);
@@ -112,7 +114,7 @@ export function pairedDailyReturns(
     tS.push(times[i - 1] ?? times[i] ?? "");
   }
   if (!sR.length) {
-    return { strategy: [], benchmark: [], times: [], error: "没有可用的基准净值，无法计算滚动 β" };
+    return { strategy: [], benchmark: [], times: [], error: tr("common.errors.analysis.noBenchmarkBeta") };
   }
   return { strategy: sR, benchmark: bR, times: tS };
 }
@@ -123,12 +125,12 @@ export function rollingBeta(
   times: string[],
   window = 63,
 ): { points: RollingPoint[]; error?: string } {
-  if (window < 2) return { points: [], error: "滚动窗口过短" };
+  if (window < 2) return { points: [], error: tr("common.errors.analysis.windowTooShort") };
   if (strategyReturns.length !== benchmarkReturns.length || strategyReturns.length !== times.length) {
-    return { points: [], error: "收益、基准与时间戳长度不一致" };
+    return { points: [], error: tr("common.errors.analysis.returnsBenchmarkTimesMismatch") };
   }
   if (strategyReturns.length < window) {
-    return { points: [], error: `配对收益不足 ${window} 根，无法计算滚动 β` };
+    return { points: [], error: `${tr("common.errors.analysis.pairedShortPrefix")} ${window} ${tr("common.errors.analysis.pairedShortSuffix")}` };
   }
   const points: RollingPoint[] = [];
   for (let end = window; end <= strategyReturns.length; end += 1) {
@@ -161,16 +163,16 @@ export function rollingBeta(
     });
   }
   if (!points.length) {
-    return { points: [], error: "滚动窗口内基准没有波动，无法计算 β" };
+    return { points: [], error: tr("common.errors.analysis.rollingBenchmarkFlat") };
   }
   return { points };
 }
 
 export function histogram(returns: number[], binCount = 21): { bins: HistogramBin[]; error?: string } {
   if (returns.length < 5) {
-    return { bins: [], error: "日收益不足 5 个，无法画分布" };
+    return { bins: [], error: tr("common.errors.analysis.histogramTooFew") };
   }
-  if (binCount < 2) return { bins: [], error: "分箱数过少" };
+  if (binCount < 2) return { bins: [], error: tr("common.errors.analysis.tooFewBins") };
   let min = returns[0];
   let max = returns[0];
   for (const r of returns) {
@@ -178,7 +180,7 @@ export function histogram(returns: number[], binCount = 21): { bins: HistogramBi
     if (r > max) max = r;
   }
   if (min === max) {
-    return { bins: [], error: "日收益无变化，无法画分布" };
+    return { bins: [], error: tr("common.errors.analysis.histogramFlat") };
   }
   const width = (max - min) / binCount;
   const bins: HistogramBin[] = Array.from({ length: binCount }, (_, i) => ({
@@ -197,7 +199,7 @@ export function histogram(returns: number[], binCount = 21): { bins: HistogramBi
 /** Acklam rational approximation of the standard normal quantile. */
 export function inverseNormalCdf(p: number): number {
   if (!(p > 0) || !(p < 1)) {
-    throw new Error("inverseNormalCdf 只接受 (0, 1) 开区间");
+    throw new Error(tr("common.errors.analysis.inverseNormalDomain"));
   }
   const a = [
     -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.383577509590705e2,
@@ -238,7 +240,7 @@ export function inverseNormalCdf(p: number): number {
 
 export function qqNormal(returns: number[]): { points: QqPoint[]; error?: string } {
   if (returns.length < 5) {
-    return { points: [], error: "日收益不足 5 个，无法画 QQ 图" };
+    return { points: [], error: tr("common.errors.analysis.qqTooFew") };
   }
   const sorted = [...returns].sort((a, b) => a - b);
   const n = sorted.length;

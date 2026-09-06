@@ -26,6 +26,40 @@ export const validation = {
         "Bull/bear = benchmark 20% peak-valley; high/low vol = 21-day realized vol vs median; rates = FOMC effective dates; each axis ≥ 60 days; complementary regime Sharpe ≥ 0 passes",
       spa: "Hansen SPA_c gate: p < 0.05 and T > 0; also reports White RC / SPA_l / SPA_u; ≥2 distinguishable trials + 252 common days; >64 trials truncated",
     },
+    kindOptions: {
+      walk_forward: {
+        label: "Walk-Forward",
+        description: "Rolling train/test folds; scored on concatenated OOS Sharpe",
+      },
+      dsr: {
+        label: "Deflated Sharpe Ratio",
+        description: "Multiple-testing and non-normality correction over the trial ledger",
+      },
+      pbo: {
+        label: "PBO (Overfitting Probability)",
+        description: "Combinatorially Symmetric Cross-Validation (CSCV)",
+      },
+      sensitivity: {
+        label: "Parameter Sensitivity",
+        description: "Parameter-grid perturbation; plateau vs knife-edge",
+      },
+      cost: {
+        label: "Cost Sensitivity",
+        description: "All one-way cost into slippage; solves for breakeven",
+      },
+      bootstrap: {
+        label: "Stationary Bootstrap CI",
+        description: "Confidence interval that preserves autocorrelation structure",
+      },
+      regime: {
+        label: "Regime Stability",
+        description: "Slices bull/bear, volatility, and rate cycles",
+      },
+      spa: {
+        label: "Hansen SPA",
+        description: "Multiple-testing correction over the trial ledger",
+      },
+    },
     form: {
       kindLabel: "Validation Type",
       strategyVersionIdLabel: "Strategy Version",
@@ -75,6 +109,20 @@ export const validation = {
       failed: "Failed",
       passed: "Passed",
       notPassed: "Not Passed",
+    },
+    conclusion: {
+      dsrPassed: "Passed 95%",
+      dsrFailed: "Below 95% line",
+      pboPassed: "PBO ≤ 0.5",
+      pboFailed: "PBO > 0.5",
+      costPassed: "Survives cost",
+      costFailed: "Breakeven too low",
+      bootstrapPassed: "Sharpe CI > 0",
+      bootstrapFailed: "CI crosses zero",
+      edgeConcentrated: "edge concentrated",
+      robustAcrossRegimes: "Robust across regimes",
+      spaRejectsNoEdge: "SPA_c rejects no edge",
+      spaCannotClaim: "Cannot claim edge",
     },
     gates: {
       title: "VALIDATED Gate Requirements",

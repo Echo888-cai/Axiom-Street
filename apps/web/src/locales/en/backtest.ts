@@ -141,6 +141,13 @@ export const backtest = {
       compare: "Compare",
       noOverlay: "No overlay",
       logUnavailable: "Equity contains non-positive values, so log scale is unavailable.",
+      legend: {
+        thisRun: "This backtest",
+        thisRunNorm: "This backtest (=100)",
+        benchmarkNorm: "Benchmark (=100)",
+        compareNorm: "Compare (=100)",
+        normSuffix: " (=100)",
+      },
     },
     tradeColumns: {
       date: "Date",

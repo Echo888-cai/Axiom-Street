@@ -1,5 +1,6 @@
 import type { editor, languages } from "monaco-editor";
 import { api, type LspCompletion } from "@/lib/api";
+import { tr } from "@/lib/translate";
 
 function completionKind(
   monacoApi: typeof import("monaco-editor"),
@@ -82,7 +83,7 @@ export function applyEngineError(
             startColumn: 1,
             endLineNumber: error.line,
             endColumn: 120,
-            message: error.message || "回测失败",
+            message: error.message || tr("strategy.dockFailed"),
             severity: monacoApi.MarkerSeverity.Error,
           },
         ]

@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type Backtest } from "@/lib/api";
 import { chartColors } from "@/lib/chart-tokens";
 import { filterEquityByPeriod } from "@/lib/utils";
-import { labelDirection } from "@/lib/labels";
+import { isSellTrade } from "@/lib/labels";
+import { tr } from "@/lib/translate";
 import type {
   EquityMarker,
   EquitySeries,
@@ -170,7 +171,9 @@ export function useBacktestAnalysis({
     const out: EquitySeries[] = [
       {
         id: "strategy",
-        label: normalized ? "本回测（=100）" : "本回测",
+        label: normalized
+          ? tr("backtest.curve.legend.thisRunNorm")
+          : tr("backtest.curve.legend.thisRun"),
         color: chartColors.primary,
         data: filteredEquity.map((p, i) => ({
           time: p.time,
@@ -187,7 +190,7 @@ export function useBacktestAnalysis({
       if (benchPoints.length) {
         out.push({
           id: "benchmark",
-          label: "基准",
+          label: tr("backtest.meta.benchmark"),
           color: chartColors.benchmark,
           dashed: true,
           data: benchPoints,
@@ -206,7 +209,7 @@ export function useBacktestAnalysis({
         if (!norm.error) {
           out.push({
             id: "benchmark",
-            label: "基准（=100）",
+            label: tr("backtest.curve.legend.benchmarkNorm"),
             color: chartColors.benchmark,
             dashed: true,
             data: aligned.map((p, i) => ({
@@ -254,7 +257,7 @@ export function useBacktestAnalysis({
   const markers: EquityMarker[] = useMemo(() => {
     if (!showTrades) return [];
     return (trades.data || []).map((t) => {
-      const buy = labelDirection(t.direction, t.quantity) !== "卖出";
+      const buy = !isSellTrade(t.direction, t.quantity);
       return {
         time: t.trade_date,
         label: t.ticker,
@@ -287,10 +290,15 @@ export function useBacktestAnalysis({
 }
 
 export function peerLabel(row: Backtest | undefined, normalized: boolean): string {
-  if (!row) return normalized ? "对比（=100）" : "对比";
+  if (!row)
+    return normalized
+      ? tr("backtest.curve.legend.compareNorm")
+      : tr("backtest.curve.compare");
   const range = `${row.start_date.slice(0, 10)} → ${row.end_date.slice(0, 10)}`;
   const version = row.version_number
     ? `v${row.version_number}`
     : row.id.slice(0, 8);
-  return normalized ? `${version} ${range}（=100）` : `${version} ${range}`;
+  return normalized
+    ? `${version} ${range}${tr("backtest.curve.legend.normSuffix")}`
+    : `${version} ${range}`;
 }
