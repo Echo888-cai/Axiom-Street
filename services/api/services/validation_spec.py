@@ -676,8 +676,3 @@ def step_count_for(kind: ValidationKind, params: BaseModel) -> int:
 def runner_for(kind: ValidationKind) -> Callable:
     """Get the runner function for a kind."""
     return get_spec(kind).runner()
-
-
-def gate_check_for(kind: ValidationKind, run_result: dict[str, Any]) -> bool:
-    """Check if a validation run result passes the gate."""
-    return get_spec(kind).gate_check(run_result)

@@ -136,7 +136,7 @@ VALIDATED 要求（全部必须通过）：
 |------|----------|----------|-------------|------|
 | Walk-Forward | `quant/validation/walk_forward.py` | `POST /api/v1/validation/walk-forward` | `validation.walk_forward` | `/validation` |
 | DSR | `quant/metrics/deflated_sharpe.py` | 隐式（回测完成自算） | — | tearsheet 顶部 |
-| PBO | `quant/validation/pbo.py` | `POST /api/v1/validation/pbo` | `validation.pbo` | `/experiments` |
+| PBO | `quant/metrics/pbo.py` | `POST /api/v1/validation/pbo` | `validation.pbo` | `/experiments` |
 | 敏感性 | `quant/validation/sensitivity.py` | `POST /api/v1/validation/sensitivity` | `validation.sensitivity` | `/validation` |
 | 成本 | `quant/validation/cost.py` | `POST /api/v1/validation/cost` | `validation.cost` | `/validation` |
 | Bootstrap | `quant/validation/bootstrap.py` | `POST /api/v1/validation/bootstrap` | `validation.bootstrap` | tearsheet（自动） |
