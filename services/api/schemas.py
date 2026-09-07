@@ -298,6 +298,27 @@ class CopilotContextOut(BaseModel):
     provider: CopilotProviderFacts
 
 
+class CopilotSynthesizeIn(BaseModel):
+    resource: Literal["strategy", "backtest"]
+    id: UUID
+
+
+class CopilotSynthesizeAccepted(BaseModel):
+    status: Literal["queued"]
+
+
+class CopilotInsightOut(BaseModel):
+    id: UUID
+    strategy_id: UUID
+    status: str
+    model: Optional[str] = None
+    narrative: str = ""
+    error: Optional[str] = None
+    duration_ms: Optional[int] = None
+    created_at: datetime
+    finished_at: Optional[datetime] = None
+
+
 class AuditLogOut(ORMModel):
     id: int
     actor: str

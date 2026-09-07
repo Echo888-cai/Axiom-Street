@@ -16,6 +16,8 @@ os.environ.pop("STREET_SENTRY_DSN", None)
 # Unit tests must not pick Polygon just because the developer has a key locally.
 os.environ.pop("POLYGON_API_KEY", None)
 os.environ.pop("STREET_RECONCILE_WITH", None)
+# Copilot outbound (P5-2) must stay off under unit tests even with a local key.
+os.environ.pop("STREET_DEEPSEEK_API_KEY", None)
 
 import pytest
 from fastapi.testclient import TestClient

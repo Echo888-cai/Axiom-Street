@@ -919,6 +919,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/copilot/synthesize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize
+         * @description Enqueue one model synthesize pass for the scope's strategy (P5-2).
+         *
+         *     The API only enqueues: the worker task performs the outbound DeepSeek call
+         *     and records the ledger row. Provider disabled (no key / noop) fails loud
+         *     with 503 before anything is queued.
+         */
+        post: operations["synthesize_api_v1_copilot_synthesize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/copilot/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Insights
+         * @description Synthesize ledger for a strategy, newest first (P5-2).
+         */
+        get: operations["insights_api_v1_copilot_insights_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1304,6 +1348,39 @@ export interface components {
             /** Finished At */
             finished_at?: string | null;
         };
+        /** CopilotInsightOut */
+        CopilotInsightOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Status */
+            status: string;
+            /** Model */
+            model?: string | null;
+            /**
+             * Narrative
+             * @default
+             */
+            narrative: string;
+            /** Error */
+            error?: string | null;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+        };
         /** CopilotProviderFacts */
         CopilotProviderFacts: {
             /** Name */
@@ -1326,6 +1403,27 @@ export interface components {
              * @default 0
              */
             duplicate_parameter_hashes: number;
+        };
+        /** CopilotSynthesizeAccepted */
+        CopilotSynthesizeAccepted: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "queued";
+        };
+        /** CopilotSynthesizeIn */
+        CopilotSynthesizeIn: {
+            /**
+             * Resource
+             * @enum {string}
+             */
+            resource: "strategy" | "backtest";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
         };
         /** EquityPage */
         EquityPage: {
@@ -4132,6 +4230,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CopilotContextOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthesize_api_v1_copilot_synthesize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CopilotSynthesizeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotSynthesizeAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    insights_api_v1_copilot_insights_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotInsightOut"][];
                 };
             };
             /** @description Validation Error */

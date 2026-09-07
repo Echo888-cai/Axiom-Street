@@ -43,6 +43,9 @@ dependencies = [
   "opentelemetry-instrumentation-celery>=0.49b0,<1",
   "opentelemetry-instrumentation-httpx>=0.49b0,<1",
   "sentry-sdk[fastapi]>=2.0,<3",
+  # AI copilot outbound (P5-2, 09-07 用户拍板 DeepSeek): official-docs-recommended
+  # OpenAI-compatible client against https://api.deepseek.com (OpenAI SDK).
+  "openai>=2.0,<3",
 ]
 
 [project.optional-dependencies]

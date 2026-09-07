@@ -22,7 +22,7 @@ from __future__ import annotations
 from quant.engine.lean import LeanQuantEngine
 from services.api.db import SessionLocal
 
-from . import backtests, data, validation, validation_post
+from . import backtests, copilot, data, validation, validation_post
 from ._common import cancel_key, flag_cancel, is_cancel_flagged, log
 
 # Backtest domain
@@ -53,6 +53,10 @@ run_spa_task = validation_post.run_spa_task  # type: ignore[has-type]
 run_ingest_task = data.run_ingest_task
 reconcile_market_data_task = data.reconcile_market_data_task
 
+# Copilot domain (P5-2)
+execute_synthesize = copilot.execute_synthesize
+run_synthesize_task = copilot.run_synthesize_task  # type: ignore[has-type]
+
 __all__ = [
     "SessionLocal",
     "LeanQuantEngine",
@@ -80,4 +84,6 @@ __all__ = [
     "run_spa_task",
     "run_ingest_task",
     "reconcile_market_data_task",
+    "execute_synthesize",
+    "run_synthesize_task",
 ]
