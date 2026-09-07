@@ -22,6 +22,7 @@ class BacktestRequest:
     initial_capital: float
     parameters: dict[str, Any] = field(default_factory=dict)
     universe: list[str] = field(default_factory=lambda: ["SPY"])
+    risk_config_json: str | None = None
     memberships: list[Membership] = field(default_factory=list)
     data_root: Path | None = None
     jobs_root: Path | None = None

@@ -29,6 +29,7 @@ from services.worker import tasks as _tasks
 from services.worker.celery_app import celery_app
 
 from ._common import log, resolve_execution_universe
+from .risk_config import resolve_risk_config_json
 from .scans import (
     _fail_walk_forward,
     _finish_validation,
@@ -109,6 +110,11 @@ def execute_walk_forward(run_id: str) -> dict:
         if isinstance(version.config, dict):
             class_name = version.config.get("class_name", DEFAULT_STRATEGY_CLASS)
 
+        try:
+            risk_config_json = resolve_risk_config_json(version.config)
+        except ValueError as exc:
+            return _fail_walk_forward(db, run, "risk_limits_invalid", str(exc))
+
         observations: list[FoldObservation] = []
         for fold in folds:
             run.progress_step = (
@@ -133,6 +139,7 @@ def execute_walk_forward(run_id: str) -> dict:
                 universe=universe,
                 memberships=memberships,
                 data_root=data_root,
+                risk_config_json=risk_config_json,
                 timeout_seconds=settings.lean_timeout_seconds,
             )
             try:

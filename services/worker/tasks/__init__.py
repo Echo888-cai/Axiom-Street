@@ -27,9 +27,9 @@ from ._common import cancel_key, flag_cancel, is_cancel_flagged, log
 
 # Backtest domain
 reconcile_orphan_backtests = backtests.reconcile_orphan_backtests
-reconcile_orphan_backtests_task = backtests.reconcile_orphan_backtests_task
+reconcile_orphan_backtests_task = backtests.reconcile_orphan_backtests_task  # type: ignore[has-type]
 execute_backtest = backtests.execute_backtest
-run_backtest_task = backtests.run_backtest_task
+run_backtest_task = backtests.run_backtest_task  # type: ignore[has-type]
 
 # Validation kinds (LEAN-scanning)
 execute_walk_forward = validation.execute_walk_forward

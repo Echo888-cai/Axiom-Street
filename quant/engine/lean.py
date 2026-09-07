@@ -15,6 +15,7 @@ from quant.engine.base import BacktestEngineResult, BacktestRequest, ProgressCal
 from quant.engine.errors import BacktestCancelled, EngineTimeout
 from quant.engine.pool import build_lean_view, get_pool
 from quant.engine.result_parser import find_result_json, parse_lean_result
+from quant.risk.gate import compose_strategy_code, runtime_files
 
 LEAN_CONFIG_TEMPLATE = {
     "environment": "backtesting",
@@ -193,11 +194,24 @@ class LeanQuantEngine(QuantEngine):
             map_overlay = job_dir / "map_files"
             write_lean_map_files(map_overlay, request.memberships)
 
+        strategy_code = request.strategy_code
+        algo_class = request.strategy_class_name
+        if request.risk_config_json:
+            # Phase 6 WP-1: bundle the pure risk engine + adapter beside the
+            # algorithm and compose a <Class>RiskGated wrapper subclass.
+            for filename, source in runtime_files().items():
+                (algo_dir / filename).write_text(source, encoding="utf-8")
+            strategy_code = compose_strategy_code(
+                request.strategy_code,
+                request.strategy_class_name,
+                request.risk_config_json,
+            )
+            algo_class = f"{request.strategy_class_name}RiskGated"
         strategy_path = algo_dir / "strategy.py"
-        strategy_path.write_text(request.strategy_code, encoding="utf-8")
+        strategy_path.write_text(strategy_code, encoding="utf-8")
 
         config = dict(LEAN_CONFIG_TEMPLATE)
-        config["algorithm-type-name"] = request.strategy_class_name
+        config["algorithm-type-name"] = algo_class
         config["parameters"] = lean_runtime_parameters(request)
         config_path = job_dir / "config.json"
 
@@ -305,7 +319,7 @@ class LeanQuantEngine(QuantEngine):
 
         progress("Calculating metrics")
         time.sleep(0.2)
-        result_json = find_result_json(results_dir, algorithm_class=request.strategy_class_name)
+        result_json = find_result_json(results_dir, algorithm_class=algo_class)
         if not result_json:
             raise RuntimeError("LEAN completed but no result JSON was found")
 
