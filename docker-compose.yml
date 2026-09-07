@@ -4,15 +4,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-street}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-street}
-      POSTGRES_DB: ${POSTGRES_DB:-street}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-street} -d ${POSTGRES_DB:-street}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -32,14 +32,17 @@ services:
       context: .
       dockerfile: infra/docker/Dockerfile.api
     environment:
-      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-street}:${POSTGRES_PASSWORD:-street}@postgres:5432/${POSTGRES_DB:-street}
+      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       STREET_REDIS_URL: redis://redis:6379/0
       STREET_CELERY_BROKER_URL: redis://redis:6379/0
       STREET_CELERY_RESULT_BACKEND: redis://redis:6379/1
       STREET_DATA_ROOT: /data
       STREET_JOBS_ROOT: /jobs
       STREET_LEAN_IMAGE: quantconnect/lean:16355
-      STREET_CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+      STREET_CORS_ORIGINS: http://localhost:3000
+      STREET_OTEL_ENABLED: "true"
+      STREET_OTEL_ENDPOINT: http://jaeger:4317
+      STREET_SENTRY_DSN: ${SENTRY_DSN:-}
       STREET_SYNC_BACKTESTS: "false"
       STREET_SYNC_INGESTS: "false"
       STREET_MARKET_RECONCILE_ENABLED: "true"
@@ -73,13 +76,16 @@ services:
       dockerfile: infra/docker/Dockerfile.api
     command: celery -A services.worker.celery_app worker --beat --loglevel=INFO --concurrency=2
     environment:
-      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-street}:${POSTGRES_PASSWORD:-street}@postgres:5432/${POSTGRES_DB:-street}
+      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       STREET_REDIS_URL: redis://redis:6379/0
       STREET_CELERY_BROKER_URL: redis://redis:6379/0
       STREET_CELERY_RESULT_BACKEND: redis://redis:6379/1
       STREET_DATA_ROOT: "${PWD}/data"
       STREET_JOBS_ROOT: "${PWD}/jobs"
       STREET_LEAN_IMAGE: quantconnect/lean:16355
+      STREET_OTEL_ENABLED: "true"
+      STREET_OTEL_ENDPOINT: http://jaeger:4317
+      STREET_SENTRY_DSN: ${SENTRY_DSN:-}
       STREET_WORKER_CONCURRENCY: "2"
       STREET_LEAN_POOL_SIZE: "2"
       STREET_LEAN_POOL_WARM: "false"
@@ -119,6 +125,26 @@ services:
       API_BASE_URL: http://api:8000
     ports:
       - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # --- Observability backends (EB-P5) ---
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP/gRPC
+      - "4318:4318"    # OTLP/HTTP
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
     depends_on:
       api:
         condition: service_healthy
