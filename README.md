@@ -88,7 +88,7 @@ Details: [`docs/architecture.md`](docs/architecture.md)
 | API | FastAPI · SQLAlchemy · Alembic · PostgreSQL |
 | Jobs | Celery · Redis · SSE |
 | Quant | LEAN (Docker, pinned) · pandas · DuckDB · Parquet |
-| Infra | Docker Compose |
+| Infra | Docker Compose · Prometheus (/metrics) · Jaeger (OTel traces) |
 
 Mature components over vanity engineering. We do not rewrite a backtester for sport.
 
@@ -98,7 +98,7 @@ Mature components over vanity engineering. We do not rewrite a backtester for sp
 
 | Phase | Status |
 |-------|--------|
-| **当前阶段:Phase 4 已关闭(2026-09-07);下一包:Phase 5 前置工程债清理,其后 Phase 5** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
+| **当前阶段:Phase 4 与 EB-P5(Phase 5 前置工程债)已关闭(2026-09-07);下一里程碑:Phase 5** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
 
 Backtest numbers are research output, not investment advice.
 
@@ -126,6 +126,11 @@ docker compose up --build
 | Web | http://localhost:3000 |
 | API health | http://localhost:8000/health |
 | OpenAPI | http://localhost:8000/docs |
+| Prometheus metrics | http://localhost:8000/metrics |
+| Prometheus UI | http://localhost:9090 |
+| Jaeger (OTel traces) | http://localhost:16686 |
+
+> Compose no longer ships default credentials (`street:street`). Copy `.env.example` → `.env`, generate a password (`openssl rand -hex 16`), and keep `POSTGRES_*` / `STREET_DATABASE_URL` in sync. `docker compose up` fails fast if they are missing.
 
 ### API only
 

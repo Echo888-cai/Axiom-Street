@@ -94,20 +94,22 @@
 | **W2** 架构整理 | ✅ 后端主体(09-06)+ 残余 W2-1…4 已收口;W2-5 codegen 转 RC-W3 | `ValidationSpec` 注册表 + `GET /specs`;`validation.py` 1161→629;worker 拆包完成,单文件 ≤500;quant 边界锁测试在;测试 346 全绿 |
 | **W3** 前端 UI v2 | ✅ 已关闭主体(09-07);方向已锁 White Studio | **W3-1…W3-5 ✅、W2-5 基建 ✅、W3-2 组件迁移 ✅**(产品 tsx 零 CJK,zh/en +600 键);**W3-6 codegen 换用 ✅**(09-07 混合别名方案,§7.2);tsc 0 · vitest 63 · build ✓ |
 | **W4** Phase 4 收尾 | ✅ 已关闭(09-07) | compare/equity 契约修复(GET-only + series 内嵌 7-key metrics)、对比表全列真值、面板死控件删除;golden re-freeze 到 20260831 快照;CI 修复并入;pytest 349 · vitest 65/12(记录 §8.1) |
+| **EB-P5** Phase 5 前置工程债 | ✅ 已关闭(09-07) | 可观测性接入(OTel→Jaeger 单 tracer + API /metrics 聚合队列/心跳 + Sentry 错误门控)、默认口令 env 注入、CORS 收紧同源(不加认证);docker-logs/prune 核对为已落地;pytest 354 · golden 2 · vitest 65(记录 §8.5) |
 
 ---
 
-## 3. 残余执行总览(三项全部已关闭,2026-09-07)
+## 3. 执行总览(RC-W2/3/4 与 EB-P5 已关闭;下一里程碑 N5 = Phase 5)
 
-顺序即依赖:**先关后端残余 → 再接前端接缝 → 再 W4 收尾验收 → Phase 4 关闭**。任何一步都不得越过验证闸门测试与 Phase 5 边界。
+顺序即依赖:**先关后端残余 → 再接前端接缝 → 再 W4 收尾验收 → Phase 4 关闭 → EB-P5 工程债 → Phase 5**。任何一步都不得越过验证闸门测试与对应 Phase 边界。EB-P5 于 09-07 关闭,Phase 5 前置门槛已清。
 
 | 包 | 内容 | 依赖 | 为什么在这个位置 |
 |----|------|------|----------------|
 | **RC-W2** | 后端残余收口:worker 拆包、quant 边界锁、清 ingest shim、SPY untrack | ✅ 已关闭(2026-09-06) | W2-1…4 完成;W2-5 OpenAPI codegen 转 RC-W3 前端接线前 |
 | **RC-W3** | 前端接缝:ValidationRunForm 接线、i18n 迁移、E2E 进 CI、测试 43→60、压超线组件、White Studio 收口、OpenAPI codegen 换用 | ✅ 已关闭(2026-09-07) | W3 六项全部收口;对比表字段与 compare/equity 契约漂移交 RC-W4(§8.1) |
 | **RC-W4** | Phase 4 收尾验收:对比表补字段、compare/equity 契约漂移修复、golden、README/状态同步、关闭 Phase 4(§8.1) | ✅ 已关闭(2026-09-07) | 收尾项少但必须在 Phase 5 之前关闭;golden re-freeze 与 CI 修复经拍板并入(§8.1) |
+| **EB-P5** | Phase 5 前置工程债(§8.5,开 Phase 5 的门槛):可观测性 **OTel→Jaeger**(单 tracer)+ **/metrics 聚合** + **Sentry 错误门控**、默认口令 env 注入、CORS 收紧同源 | ✅ 已关闭(2026-09-07)。深度/出口产品拍板:全栈 + 本地自托管 Jaeger;CORS 按长期最优收紧、**不加认证**(D2 维持) | Phase 5 门槛已清,无前置依赖;下一包 N5 Phase 5(§8.2) |
 
-**Phase 4 已关闭。** 开 Phase 5 前剩 §8.5 前置工程债清理(可观测性/默认口令等,含 nightly golden 的 CI skip-pass 缺口);该包未排期——开工前先回本表登记并更新 §2.3。
+**Phase 4 与 EB-P5 均已关闭。** EB-P5 = §8.5 前置工程债清理,2026-09-07 开工当日关闭。开工审计把桶内两项从待办改判为**已落地**(`GET /backtests/{id}/logs` 读 docker stdout/stderr、`prune_jobs.py`);本轮交付三项:① 可观测性——`services/telemetry.py` 集中门控 SDK,OTel 为唯一 tracer(OTLP→本地 Jaeger,compose 新增 jaeger+prometheus 服务),API `/metrics` 聚合 HTTP 计数/延迟 + Celery 队列深度 + worker 心跳年龄,Prometheus 抓单 target,worker 不另起导出端口(Celery prefork 会抢端口);Sentry 仅错误、无 DSN 即 no-op,500 handler 接 capture;② 默认口令——compose/alembic/settings 三层去除 `street:street` 明文默认,`STREET_DATABASE_URL` 必填、`.env.example` 给 `openssl rand` 指引、e2e 显式传凭据;③ CORS 收紧——origins 仅 `http://localhost:3000`(删死 3001)、`allow_credentials=False`、方法最小化,浏览器同源代理零感知。nightly golden 的 CI skip-pass 缺口维持为已知缺口,自托管 runner 不排(§8.6)。验证:ruff/mypy 全绿;pytest tests/unit **354**(+5 观测测试);golden 2 passed(1 skip:缺 Polygon key);前端 tsc 0 · vitest 65;真实 Jaeger OTLP 收 span 冒烟通过。
 
 ---
 
@@ -218,7 +220,7 @@ Phase 4 特性已提前落地(09-05):跨策略 2–6 条回测曲线叠加、MAE
 |----|------|
 | compare/equity 契约漂移 + 对比表字段 | ✅ 已完成(09-07)。审计:前端 POST body {ids,normalized,period} vs 后端 GET-only(query ids/normalized)→ 405 级漂移、零测试、面板不可用;响应无 metrics → 表列恒"—"。处置:① 前端改 GET,ids/normalized 从 gen operations 接线(spec-wired query 类型;请求层批仅此漂移闭环,其余 23 个 requestBody ops 有意不做,不再安排);② 后端 `compare_equity` 移到 router 顶部静态段(GET-only),每条 series 内嵌 7-key metrics(final_equity/total_return/cagr/sharpe/max_drawdown/volatility/trade_count),表列全走后端真值;③ 删死控件 period 选择器与重复的 normalized 复选框(保留单一 normalized 开关,GET 支持)。验证:后端 compare 3 单测、前端 2 vitest(真值格式、metrics=null 兜底"—"、两选才发查询)、真实 chromium 核查通过 |
 | golden 复跑(Phase 4 关闭验收) | ✅ 已完成(09-07):复跑失败根因 = 数据快照轮转(09-01 例行刷新后 20260827 快照消失,provider 追溯调整 2018–2020 历史:24→28 笔、净收益 +3.98%→+0.09%;SPY 现货抽查为真,非回归)→ **拍板重新冻结** `expectations.json` 到 20260831-1209a3(snapshot sha 锁定;golden 2 passed),同步 `test_validation_pipeline` 属性锁。golden 绑定 snapshot sha 的设计即预期快照轮转时 re-freeze |
-| CI 修复包(拍板并入本轮) | ✅ 已完成(09-07):CI 自 09-04 起 12 次 push 全红 → ① research-notes 测试改 ORM direct-seed(CI runner 无市场数据,`data/` 被 gitignore),空 `STREET_DATA_ROOT` 下验证通过;② ci.yml web job node 20→22(jsdom/undici webidl error)。**残余缺口**:nightly golden 在 GitHub runner 上无 Docker → skip-pass 无真锁;自托管 runner 未排期(§8.5) |
+| CI 修复包(拍板并入本轮) | ✅ 已完成(09-07):CI 自 09-04 起 12 次 push 全红 → ① research-notes 测试改 ORM direct-seed(CI runner 无市场数据,`data/` 被 gitignore),空 `STREET_DATA_ROOT` 下验证通过;② ci.yml web job node 20→22(jsdom/undici webidl error)。**残余缺口**:nightly golden 在 GitHub runner 上无 Docker → skip-pass 无真锁;自托管 runner 不排(转 §8.6 后续) |
 | README/状态同步 + MASTER/.cursor 复核 | ✅ 已完成(09-07):README 阶段行与免责条款更新;.cursor 的 Phase 5 gate 规则无冲突(§10 条目未变);MASTER 令牌预算无变化 |
 
 ### 8.2 Phase 5 — AI Copilot(4–5 周)
@@ -237,9 +239,21 @@ Phase 4 特性已提前落地(09-05):跨策略 2–6 条回测曲线叠加、MAE
 
 多策略相关性与组合构建(等权/风险平价/均值方差/HRP)、组合层回撤归因、**Fama-French 三/五因子 + 动量回归**、Brinson 归因。若确需列式扫描,重新引入 DuckDB(W1 删除理由为"未接线",非"不该用")。
 
-### 8.5 贯穿性工程债
+### 8.5 贯穿性工程债(EB-P5,2026-09-07 已关闭)
 
-Prometheus/Sentry/OTel 可观测性(Phase 5 前,AI 批量试验让队列深度首次成问题)、Docker stdout/stderr 经 API 可读、默认口令 `street:street` 改环境变量注入(10 分钟)、CORS 与认证同清、`jobs/` 保留策略(已排 W1 §5.7 完成)。
+> **2026-09-07 开工并当日关闭**(记录见 §3)。可观测性出口产品拍板**本地自托管 Jaeger**(OTel 单 tracer、不开 sentry tracing 免双埋点);CORS 按长期最优收紧、**不加认证**(D2 维持——认证随 Phase 6/7 容器加固整体做)。
+
+| 项 | 状态 |
+|----|------|
+| Docker stdout/stderr 经 API 可读 | ✅ 已落地:`quant/engine/lean.py` Popen 抓 stdout/stderr 写 `jobs/<id>/docker_stdout.log`/`docker_stderr.log`,`GET /backtests/{id}/logs` 回读(services/api/services/backtests.py `get_logs`) |
+| `jobs/` 保留策略 | ✅ 已落地:`services/api/prune_jobs.py` + Makefile `prune-jobs` |
+| 可观测性(Phase 5 前,AI 批量试验让队列深度首次成问题) | ✅ 已落地:新增 `services/telemetry.py`(settings 门控、幂等);OTel SDK + fastapi/sqlalchemy/celery/httpx 埋点,OTLP→Jaeger;API `/metrics` 聚合 HTTP 计数/延迟 + `axiom_celery_queue_depth` + `axiom_worker_heartbeat_age_seconds`(scrape 时读 Redis broker/worker 心跳,worker 不另起端口);compose 新增 jaeger(`all-in-one:1.57`,OTLP 4317/4318,UI 16686)+ prometheus(抓 api:8000/metrics,UI 9090);Sentry 错误-only(`STREET_SENTRY_DSN` 空即 no-op),500 handler + celery 接错误。测试 `tests/unit/test_observability.py` 5 条(/metrics 200 空、enabled 含 axiom_ 系列、OTel/Sentry no-op、空 URL 拒绝、CORS 单 origin)。真实 Jaeger OTLP 收 span 冒烟通过 |
+| 默认口令 `street:street` 改环境变量注入 | ✅ 已落地:compose 三层 `:?` 必填(`POSTGRES_*`/DB URL)、`alembic.ini`/`settings.database_url` 去明文默认(`STREET_DATABASE_URL` 必填,空值拒绝)、`.env.example` 给 `openssl rand -hex 16` 指引;e2e 显式传凭据;`git grep street:street` 仅剩说明性注释 |
+| CORS 与认证同清 | ✅ 已落地:CORS origins 仅 `http://localhost:3000`(删死 3001)、`allow_credentials=False`、方法最小化;浏览器同源代理(3000→/api/backend)零感知;不加认证 |
+
+### 8.6 贯穿性工程债(后续,非 EB-P5 范围)
+
+nightly golden 的 CI skip-pass 缺口(§8.1):GitHub runner 无 Docker → 维持已知缺口,自托管 runner 不排。Phase 5 前置门槛以 §8.5 EB-P5 为界,不含此项。
 
 ---
 
@@ -249,14 +263,15 @@ Prometheus/Sentry/OTel 可观测性(Phase 5 前,AI 批量试验让队列深度�
 |--------|------|------|-------------|
 | N0 | W0 文档融合 | 已关(09-04) | 单一计划来源,零矛盾声明 |
 | N1 | W1 垃圾清除 | 已关主体(09-05) | 仓库无合成回测数据 |
-| **N2** | **RC-W2 后端残余收口(当前)** | ✅ 完成(09-06) | worker 拆包 + 边界锁 + 无 shim/漂移类型;`pytest tests/unit` 346 passed;mypy/ruff 全绿 |
+| **N2** | **RC-W2 后端残余收口** | ✅ 完成(09-06) | worker 拆包 + 边界锁 + 无 shim/漂移类型;`pytest tests/unit` 346 passed;mypy/ruff 全绿 |
 | **N3** | RC-W3 前端接缝 | ✅ 已关闭(09-07) | 表单接线、codegen 混合别名、i18n 零 CJK、测试 63、E2E 按需、组件 ≤400 |
-| **N4** | RC-W4 Phase 4 关闭 | ✅ 已关闭(2026-09-07) | compare/equity 契约修复 + 对比表真值 + golden re-freeze + CI 修复;Phase 4 关闭,下一包为 §8.5 工程债清理 |
+| **N4** | RC-W4 Phase 4 关闭 | ✅ 已关闭(2026-09-07) | compare/equity 契约修复 + 对比表真值 + golden re-freeze + CI 修复;Phase 4 关闭 |
+| **EB-P5** | Phase 5 前置工程债 | ✅ 已关闭(2026-09-07) | §8.5 全栈可观测性(OTel→Jaeger + /metrics + Sentry 错误门控)+ 默认口令注入 + CORS 收紧;Phase 5 门槛已清,下一里程碑 N5 |
 | N5 | Phase 5 AI Copilot | +~8 周 | AI 加速研究(受闸门约束) |
 | N6 | Phase 6/7 Paper+Live | +~16 周 | 研究到执行闭环 + 回测实盘对账(北极星可测) |
 | N7 | Phase 8 组合归因 | +~20 周 | 多策略组合与真 alpha 判定 |
 
-**如果只能做三件事**(09-07 再修订,随 RC-W4 关闭更新):① **Phase 5 前置工程债清理**(§8.5 可观测性/默认口令,含 nightly golden 的 CI 缺口)——RC-W2/3/4 已全部关闭,此是开 Phase 5 的剩余门槛;② N5 Phase 5 AI Copilot(受 §8.2 约束);③ N6 的回测–实盘对账(唯一能验证北极星的功能)。
+**如果只能做三件事**(09-07 随 EB-P5 关闭修订):① ~~Phase 5 前置工程债~~ —— **EB-P5 已关闭(09-07)**,Phase 5 门槛已清(nightly golden 的 CI 缺口为 §8.6 已知项);② **N5 Phase 5 AI Copilot**(受 §8.2 约束)——下一里程碑;③ N6 的回测–实盘对账(唯一能验证北极星的功能)。
 
 ---
 
@@ -280,7 +295,7 @@ Prometheus/Sentry/OTel 可观测性(Phase 5 前,AI 批量试验让队列深度�
 | Python 行数(quant+services) | 14,797 | 实测为主 | RC-W2 后 ≤ 现值,worker 拆包不增行 |
 | 前端行数(web/src) | 9,133 | 实测为主 | ≤400 行/组件;总行数收敛与新增测试抵消 |
 | 第二前端(terminal) | 4,403 | **0** | 0 |
-| Python 测试 | 349 | **349(09-07 收尾实测;较 09-06 净增 3 条 compare 单测)** | ≥ 现测,不允许减少 |
+| Python 测试 | 349 | **354(09-07 EB-P5 收尾实测;较 09-06 净增 5 条观测测试)** | ≥ 现测,不允许减少 |
 | 前端测试 | 18 | **65 / 12 文件(09-07 收尾实测)** | ≥ 60 + 3 E2E(按需 workflow,不阻塞普通 CI) |
 | 最大单文件(Python) | `worker/tasks.py` 1,336 | **拆包完成,无单文件 ≥500(最大 `validation.py` 493)** | ≤ 500(✅) |
 | 次大单文件(Python) | `api/services/validation.py` 1,161 | **629** | ≤ 400 |
@@ -294,6 +309,8 @@ Prometheus/Sentry/OTel 可观测性(Phase 5 前,AI 批量试验让队列深度�
 | Alembic migration | 9 | 9 | 随 schema 变更 |
 
 **09-07 RC-W4 收尾实测**:后端 `pytest tests/unit` 349 全绿(ruff/mypy 同绿);前端 tsc 0 · vitest 65/12 · lint 0 · `next build` ✓;golden 2 passed(1 skipped:CI runner 无 Docker,见 §8.1);`codegen:types` 幂等;真实栈 chromium 核查对比面板通过。净值/属性锁数字冻结在 20260831 数据快照(re-freeze 记录见 §8.1)。
+
+**09-07 EB-P5 收尾实测(同日开工关闭)**:后端 `pytest tests/unit` **354** 全绿(349 + 5 条 `tests/unit/test_observability.py`;ruff/mypy 全绿 86 源文件);golden 2 passed(1 skip:缺 Polygon key,非本包);前端 tsc 0 · vitest 65/12(无回归);真实 Jaeger(`all-in-one:1.57`)OTLP 收 `axiom-api` span 冒烟通过、compose 解析 7 服务、缺 POSTGRES_* 时 fail-fast;`git grep "street:street"` 仅剩说明性注释(无凭据字面量)。API 端点 +1(`GET /metrics`);新增依赖 9(prometheus-client/opentelemetry-* /sentry-sdk,见 pyproject)。
 
 ## 附录 B:关键文献
 
