@@ -34,6 +34,11 @@ export type CopilotContext = S["CopilotContextOut"];
 export type CopilotSnapshotFacts = S["CopilotSnapshotFacts"];
 export type CopilotGateFacts = S["CopilotGateFacts"];
 
+// Copilot synthesize ledger (P5-2): the spec models rows and the accepted
+// response fully, so both alias the generated contract.
+export type CopilotInsight = S["CopilotInsightOut"];
+export type CopilotSynthesizeAccepted = S["CopilotSynthesizeAccepted"];
+
 // spec kinds are plain strings; the UI narrows to the eight known kinds.
 export type ValidationKind =
   | "walk_forward"

@@ -17,6 +17,22 @@ export const copilot = {
     running: "Running",
     none: "No validation runs yet",
   },
+  insight: {
+    title: "Copilot assessment",
+    boundary:
+      "Aggregate statistics only — strategy source, parameters and market data never leave this platform",
+    disabled:
+      "Model assessment is disabled: once an API key is configured server-side, Copilot honestly judges from the trial ledger and gate results whether to stop",
+    idle:
+      "No assessment yet. Copilot judges from the trial ledger and gate results: should you stop?",
+    evaluate: "Ask Copilot to assess",
+    reevaluate: "Assess again",
+    evaluating: "Assessing — usually a few seconds…",
+    retry: "Retry",
+    failed: "This assessment failed",
+    retryHint: "Retry once; repeated failures usually mean a model-service or account problem",
+    model: "Model",
+  },
   empty: {
     title: "No research context on this page",
     description:

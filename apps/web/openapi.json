@@ -3149,6 +3149,108 @@
         }
       }
     },
+    "/api/v1/copilot/synthesize": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Synthesize",
+        "description": "Enqueue one model synthesize pass for the scope's strategy (P5-2).\n\nThe API only enqueues: the worker task performs the outbound DeepSeek call\nand records the ledger row. Provider disabled (no key / noop) fails loud\nwith 503 before anything is queued.",
+        "operationId": "synthesize_api_v1_copilot_synthesize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopilotSynthesizeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotSynthesizeAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/copilot/insights": {
+      "get": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Insights",
+        "description": "Synthesize ledger for a strategy, newest first (P5-2).",
+        "operationId": "insights_api_v1_copilot_insights_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CopilotInsightOut"
+                  },
+                  "title": "Response Insights Api V1 Copilot Insights Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -4343,6 +4445,87 @@
         ],
         "title": "CopilotGateFacts"
       },
+      "CopilotInsightOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "narrative": {
+            "type": "string",
+            "title": "Narrative",
+            "default": ""
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "strategy_id",
+          "status",
+          "created_at"
+        ],
+        "title": "CopilotInsightOut"
+      },
       "CopilotProviderFacts": {
         "properties": {
           "name": {
@@ -4412,6 +4595,43 @@
           "count"
         ],
         "title": "CopilotSnapshotFacts"
+      },
+      "CopilotSynthesizeAccepted": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "CopilotSynthesizeAccepted"
+      },
+      "CopilotSynthesizeIn": {
+        "properties": {
+          "resource": {
+            "type": "string",
+            "enum": [
+              "strategy",
+              "backtest"
+            ],
+            "title": "Resource"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "id"
+        ],
+        "title": "CopilotSynthesizeIn"
       },
       "EquityPage": {
         "properties": {
