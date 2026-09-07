@@ -1,16 +1,16 @@
 {
   "start_date": "2018-01-01",
   "end_date": "2020-12-31",
-  "trade_count": 24,
-  "final_equity": 103979.2029,
+  "trade_count": 28,
+  "final_equity": 100089.2679,
   "max_drawdown": -0.221,
-  "sharpe": 0.136,
-  "cagr": 0.01308,
+  "sharpe": 0.061,
+  "cagr": 0.0002974,
   "equity_tol": 1.0,
   "dd_tol": 0.002,
   "sharpe_tol": 0.02,
   "engine_version": "quantconnect/lean:16355",
-  "data_snapshot_sha256": "688782bea82662b5429da2118cbd19098635eb111dc340367b322819aaabd7d7",
-  "data_snapshot_key": "spy-daily-20260827-688782",
-  "notes": "Frozen from Colima + quantconnect/lean:16355. Axiom-computed Sharpe at Rf=0; trade_count is ClosedTrades round-trips. Signal at close, fill next bar, 5 bps slippage."
+  "data_snapshot_sha256": "1209a349aefe2687dd1217025e7d72d7fc1549742bae267b8e9b4034ecc835b6",
+  "data_snapshot_key": "spy-daily-20260831-1209a3",
+  "notes": "Re-frozen 2026-09-07 on the 20260831 snapshot: the 0901 routine data refresh replaced the 20260827 snapshot (provider retro-adjusted 2018-2020 history: 24->28 round-trips, net +3.98%->+0.09%, same 22.1% max DD). Frozen from Colima + quantconnect/lean:16355. Axiom-computed Sharpe at Rf=0; trade_count is ClosedTrades round-trips. Signal at close, fill next bar, 5 bps slippage."
 }

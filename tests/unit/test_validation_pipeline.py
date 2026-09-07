@@ -326,7 +326,10 @@ def test_spy_200dma_like_pipeline_is_weak_edge_not_overfit(monkeypatch):
 
 def test_golden_spy_200dma_baseline_is_weak_not_spectacular():
     expectations = json.loads(_GOLDEN_EXPECTATIONS.read_text(encoding="utf-8"))
-    assert expectations["cagr"] == pytest.approx(0.01308, abs=1e-5)
-    assert expectations["sharpe"] == pytest.approx(0.136, abs=0.02)
+    # Property lock over the frozen baseline: weak, not spectacular. Values
+    # track the re-freeze on the 20260831 data snapshot (09-07); when the
+    # snapshot rotates again, re-freeze expectations.json first, then these.
+    assert expectations["cagr"] == pytest.approx(0.0002974, abs=1e-5)
+    assert expectations["sharpe"] == pytest.approx(0.061, abs=0.02)
     assert expectations["final_equity"] > 100_000
     assert expectations["final_equity"] < 110_000
