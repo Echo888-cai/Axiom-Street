@@ -10,6 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from services.agent.copilot.context import build_context
 from services.api import db as db_module
 from services.api.db import Base
 from services.api.models import (
@@ -20,7 +21,6 @@ from services.api.models import (
     StrategyVersion,
     ValidationRun,
 )
-from services.agent.copilot.context import build_context
 
 
 def _ts(year: int, month: int, day: int) -> datetime:

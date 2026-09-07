@@ -18,15 +18,15 @@ import time
 from datetime import datetime, timezone
 from uuid import UUID
 
+from services.agent.copilot.context import build_context
+from services.agent.copilot.providers import CopilotProviderError, get_provider
+from services.agent.suggestions import derive_suggestions
 from services.api.models import (
     CopilotInsight,
     CopilotInsightStatus,
     CopilotSuggestion,
     CopilotSuggestionStatus,
 )
-from services.agent.copilot.context import build_context
-from services.agent.copilot.providers import CopilotProviderError, get_provider
-from services.agent.suggestions import derive_suggestions
 from services.api.settings import get_settings
 from services.worker import tasks as _tasks
 from services.worker.celery_app import celery_app

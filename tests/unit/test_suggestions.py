@@ -10,6 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from services.agent.suggestions import CARD_KEYS, derive_suggestions
 from services.api.db import Base
 from services.api.models import (
     Backtest,
@@ -19,7 +20,6 @@ from services.api.models import (
     StrategyVersion,
     ValidationRun,
 )
-from services.agent.suggestions import CARD_KEYS, derive_suggestions
 
 
 def _ts(year: int, month: int, day: int) -> datetime:

@@ -6,6 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from services.agent import copilot as copilot_service
+from services.agent import suggestions as suggestions_service
 from services.api.db import get_db
 from services.api.models import Strategy
 from services.api.schemas import (
@@ -19,8 +21,6 @@ from services.api.schemas import (
     CopilotSynthesizeAccepted,
     CopilotSynthesizeIn,
 )
-from services.agent import copilot as copilot_service
-from services.agent import suggestions as suggestions_service
 
 router = APIRouter(prefix="/copilot", tags=["copilot"])
 
