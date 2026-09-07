@@ -2556,6 +2556,31 @@
         }
       }
     },
+    "/api/v1/validation/specs": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Get Validation Specs",
+        "operationId": "get_validation_specs_api_v1_validation_specs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationSpecOut"
+                  },
+                  "type": "array",
+                  "title": "Response Get Validation Specs Api V1 Validation Specs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/validation/{run_id}": {
       "get": {
         "tags": [
@@ -2592,31 +2617,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/validation/specs": {
-      "get": {
-        "tags": [
-          "validation"
-        ],
-        "summary": "Get Validation Specs",
-        "operationId": "get_validation_specs_api_v1_validation_specs_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ValidationSpecOut"
-                  },
-                  "type": "array",
-                  "title": "Response Get Validation Specs Api V1 Validation Specs Get"
                 }
               }
             }

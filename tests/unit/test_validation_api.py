@@ -355,3 +355,22 @@ def test_sensitivity_and_cost_schema_defaults():
     cost = CostScanCreate(strategy_version_id=sid)
     assert cost.costs_bps[0] == 0
     assert cost.realistic_one_way_bps == 5.0
+
+
+def test_validation_specs_static_route_not_swallowed_by_run_id(client):
+    """Route-order regression (P5-1 smoke): /specs must not hit /{run_id}."""
+    res = client.get("/api/v1/validation/specs")
+    assert res.status_code == 200, res.text
+    body = res.json()
+    kinds = {spec["kind"] for spec in body}
+    assert kinds == {
+        "WALK_FORWARD",
+        "DSR",
+        "PBO",
+        "SENSITIVITY",
+        "COST",
+        "BOOTSTRAP",
+        "REGIME",
+        "SPA",
+    }
+    assert all("params_schema" in spec for spec in body)
