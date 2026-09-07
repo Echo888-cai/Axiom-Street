@@ -499,3 +499,32 @@ class ResearchNote(Base):
     )
 
     strategy: Mapped[Strategy] = relationship(back_populates="notes")
+
+
+class CopilotInsightStatus(str, enum.Enum):
+    DONE = "DONE"
+    FAILED = "FAILED"
+
+
+class CopilotInsight(Base):
+    """Copilot synthesize ledger (P5-2): one row per model call for a strategy.
+
+    This is the copilot's own append-only ledger — the only table copilot-side
+    code may write (isolation lock, see tests/unit/test_copilot_isolation.py).
+    """
+
+    __tablename__ = "copilot_insights"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    status: Mapped[CopilotInsightStatus] = mapped_column(
+        _enum(CopilotInsightStatus, "copilot_insight_status"), nullable=False
+    )
+    model: Mapped[Optional[str]] = mapped_column(String(64))
+    narrative: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    error: Mapped[Optional[str]] = mapped_column(Text)
+    duration_ms: Mapped[Optional[int]] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

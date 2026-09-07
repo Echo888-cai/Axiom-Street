@@ -259,7 +259,7 @@ def test_context_endpoint_returns_full_shape(client) -> None:
     assert payload["strategy_id"] == str(strategy_id)
     assert payload["strategy_status"] == "BACKTESTED"
     assert payload["total_trials"] == 4
-    assert payload["provider"] == {"name": "noop", "enabled": False}
+    assert payload["provider"] == {"name": "deepseek", "enabled": False}
     assert payload["resource"] == "strategy"
     assert payload["backtest"] is None
     assert any(row["superseded_by_key"] is not None for row in payload["by_snapshot"])

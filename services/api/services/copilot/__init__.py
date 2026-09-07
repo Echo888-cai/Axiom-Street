@@ -1,11 +1,14 @@
-"""AI copilot services (P5-1: read-only context + provider seam).
+"""AI copilot services (P5-1 read-only context + provider seam; P5-2 synthesize).
 
 Structural rule: nothing in this package may import write-path services
 (validation / backtests / strategies / validation_spec / status_machine) or
 call ORM write APIs — enforced by ``tests/unit/test_copilot_isolation.py``.
+Synthesize rows are written only by the worker task
+(``services/worker/tasks/copilot.py``); this package stays read-only.
 """
 
 from services.api.services.copilot.context import build_context
+from services.api.services.copilot.insights import list_insights
 from services.api.services.copilot.providers import get_provider
 
-__all__ = ["build_context", "get_provider"]
+__all__ = ["build_context", "get_provider", "list_insights"]
