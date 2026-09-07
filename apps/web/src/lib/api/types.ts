@@ -28,6 +28,12 @@ export type ResearchNote = S["ResearchNoteOut"];
 export type UniverseMember = S["UniverseMemberOut"];
 export type ValidationSpec = S["ValidationSpecOut"];
 
+// Copilot context (P5-1): the spec models every nested fact shape, so the
+// whole payload aliases the contract directly.
+export type CopilotContext = S["CopilotContextOut"];
+export type CopilotSnapshotFacts = S["CopilotSnapshotFacts"];
+export type CopilotGateFacts = S["CopilotGateFacts"];
+
 // spec kinds are plain strings; the UI narrows to the eight known kinds.
 export type ValidationKind =
   | "walk_forward"

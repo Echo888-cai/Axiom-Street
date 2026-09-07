@@ -3091,6 +3091,64 @@
         }
       }
     },
+    "/api/v1/copilot/context": {
+      "get": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Get Context",
+        "operationId": "get_context_api_v1_copilot_context_get",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "strategy",
+                "backtest"
+              ],
+              "type": "string",
+              "title": "Resource"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "策略或回测 UUID",
+              "title": "Id"
+            },
+            "description": "策略或回测 UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotContextOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -4135,6 +4193,225 @@
           "CANCELLED"
         ],
         "title": "BacktestStatus"
+      },
+      "CopilotBacktestFacts": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "created_at"
+        ],
+        "title": "CopilotBacktestFacts"
+      },
+      "CopilotContextOut": {
+        "properties": {
+          "resource": {
+            "type": "string",
+            "enum": [
+              "strategy",
+              "backtest"
+            ],
+            "title": "Resource"
+          },
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "strategy_name": {
+            "type": "string",
+            "title": "Strategy Name"
+          },
+          "strategy_status": {
+            "type": "string",
+            "title": "Strategy Status"
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Id"
+          },
+          "latest_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Version"
+          },
+          "total_trials": {
+            "type": "integer",
+            "title": "Total Trials",
+            "default": 0
+          },
+          "by_snapshot": {
+            "items": {
+              "$ref": "#/components/schemas/CopilotSnapshotFacts"
+            },
+            "type": "array",
+            "title": "By Snapshot"
+          },
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/CopilotGateFacts"
+            },
+            "type": "array",
+            "title": "Gates"
+          },
+          "backtest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CopilotBacktestFacts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CopilotProviderFacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "strategy_id",
+          "strategy_name",
+          "strategy_status",
+          "provider"
+        ],
+        "title": "CopilotContextOut"
+      },
+      "CopilotGateFacts": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "status",
+          "passed"
+        ],
+        "title": "CopilotGateFacts"
+      },
+      "CopilotProviderFacts": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "enabled"
+        ],
+        "title": "CopilotProviderFacts"
+      },
+      "CopilotSnapshotFacts": {
+        "properties": {
+          "data_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Snapshot Id"
+          },
+          "snapshot_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Key"
+          },
+          "superseded_by_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By Key"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "duplicate_parameter_hashes": {
+            "type": "integer",
+            "title": "Duplicate Parameter Hashes",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "count"
+        ],
+        "title": "CopilotSnapshotFacts"
       },
       "EquityPage": {
         "properties": {
