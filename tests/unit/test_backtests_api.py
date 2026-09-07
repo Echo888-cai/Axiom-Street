@@ -235,3 +235,115 @@ def test_identical_backtest_hits_cache_without_new_trial(client, monkeypatch):
     stats = client.get(f"/api/v1/strategies/{strategy['id']}/trial-stats").json()
     assert stats["total_trials"] == 2
     get_settings.cache_clear()
+
+
+def _seed_completed_backtest(client, *, name: str, metrics: dict | None = None) -> str:
+    """Insert a COMPLETED backtest with three equity points and optional metrics rows.
+
+    Runs on the same in-memory database the `client` fixture patches into
+    services.api.db.SessionLocal.
+    """
+    from datetime import date, datetime, timezone
+    from uuid import uuid4
+
+    from services.api import db as db_module
+    from services.api.models import (
+        Backtest,
+        BacktestEquity,
+        BacktestMetrics,
+        BacktestStatus,
+        Strategy,
+        StrategyStatus,
+        StrategyVersion,
+    )
+
+    db = db_module.SessionLocal()
+    try:
+        strategy = Strategy(name=name, status=StrategyStatus.BACKTESTED)
+        db.add(strategy)
+        db.flush()
+        strategy.family_id = strategy.id
+        version = StrategyVersion(strategy_id=strategy.id, version=1, code="print(1)", config={})
+        db.add(version)
+        db.flush()
+        backtest = Backtest(
+            id=uuid4(),
+            strategy_version_id=version.id,
+            start_date=date(2020, 1, 1),
+            end_date=date(2020, 1, 31),
+            status=BacktestStatus.COMPLETED,
+            universe_snapshot=[],
+        )
+        db.add(backtest)
+        db.flush()
+        for i, value in enumerate((100_000.0, 101_000.0, 102_000.0)):
+            day = (date(2020, 1, 2), date(2020, 1, 3), date(2020, 1, 6))[i]
+            db.add(
+                BacktestEquity(
+                    backtest_id=backtest.id,
+                    ts=datetime(day.year, day.month, day.day, tzinfo=timezone.utc),
+                    strategy_value=value,
+                )
+            )
+        if metrics is not None:
+            db.add(BacktestMetrics(backtest_id=backtest.id, **metrics))
+        return str(backtest.id)
+    finally:
+        db.commit()
+        db.close()
+
+
+def test_compare_equity_is_get_only(client, monkeypatch):
+    """RC-W4 drift fix: the shipped frontend called POST; the contract is GET-only."""
+    _ready(monkeypatch)
+    a = _seed_completed_backtest(client, name="alpha")
+    b = _seed_completed_backtest(client, name="beta")
+    res = client.post(f"/api/v1/backtests/compare/equity?ids={a}&ids={b}")
+    assert res.status_code == 405
+
+
+def test_compare_equity_returns_series_with_metrics(client, monkeypatch):
+    _ready(monkeypatch)
+    a = _seed_completed_backtest(
+        client,
+        name="alpha",
+        metrics={
+            "final_equity": 102_000.0,
+            "total_return": 0.02,
+            "cagr": 0.12,
+            "sharpe": 1.5,
+            "max_drawdown": -0.2,
+            "volatility": 0.15,
+            "trade_count": 42,
+        },
+    )
+    b = _seed_completed_backtest(client, name="beta")
+    res = client.get(f"/api/v1/backtests/compare/equity?ids={a}&ids={b}")
+    assert res.status_code == 200, res.text
+    series = res.json()["series"]
+    assert [s["label"] for s in series] == ["alpha v1", "beta v1"]
+    assert series[0]["metrics"] == {
+        "final_equity": 102_000.0,
+        "total_return": 0.02,
+        "cagr": 0.12,
+        "sharpe": 1.5,
+        "max_drawdown": -0.2,
+        "volatility": 0.15,
+        "trade_count": 42,
+    }
+    assert series[1]["metrics"] is None
+    assert series[0]["data"][0]["value"] == 100_000.0
+    assert series[0]["data"][-1]["value"] == 102_000.0
+
+
+def test_compare_equity_normalized_and_arity_guard(client, monkeypatch):
+    _ready(monkeypatch)
+    a = _seed_completed_backtest(client, name="alpha")
+    b = _seed_completed_backtest(client, name="beta")
+    res = client.get(f"/api/v1/backtests/compare/equity?ids={a}&ids={b}&normalized=true")
+    assert res.status_code == 200
+    data = res.json()["series"][0]["data"]
+    assert data[0]["value"] == 100
+    assert abs(data[-1]["value"] - 102) < 1e-9
+    single = client.get(f"/api/v1/backtests/compare/equity?ids={a}")
+    assert single.status_code == 422

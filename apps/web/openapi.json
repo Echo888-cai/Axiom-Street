@@ -369,6 +369,67 @@
         }
       }
     },
+    "/api/v1/backtests/compare/equity": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Compare Equity",
+        "description": "Multi-backtest equity comparison across strategies.",
+        "operationId": "compare_equity_api_v1_backtests_compare_equity_get",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 2,
+              "maxItems": 6,
+              "title": "Ids"
+            }
+          },
+          {
+            "name": "normalized",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Normalized"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Compare Equity Api V1 Backtests Compare Equity Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/backtests": {
       "get": {
         "tags": [
@@ -1147,67 +1208,6 @@
             "content": {
               "application/json": {
                 "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/backtests/compare/equity": {
-      "get": {
-        "tags": [
-          "backtests"
-        ],
-        "summary": "Compare Equity",
-        "description": "Multi-backtest equity comparison across strategies.",
-        "operationId": "compare_equity_api_v1_backtests_compare_equity_get",
-        "parameters": [
-          {
-            "name": "ids",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "minItems": 2,
-              "maxItems": 6,
-              "title": "Ids"
-            }
-          },
-          {
-            "name": "normalized",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Normalized"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Compare Equity Api V1 Backtests Compare Equity Get"
-                }
               }
             }
           },

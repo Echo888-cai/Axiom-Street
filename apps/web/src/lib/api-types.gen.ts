@@ -76,6 +76,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/backtests/compare/equity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Equity
+         * @description Multi-backtest equity comparison across strategies.
+         */
+        get: operations["compare_equity_api_v1_backtests_compare_equity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/backtests": {
         parameters: {
             query?: never;
@@ -307,26 +327,6 @@ export interface paths {
         };
         /** Backtest Events */
         get: operations["backtest_events_api_v1_backtests__backtest_id__events_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/compare/equity": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Compare Equity
-         * @description Multi-backtest equity comparison across strategies.
-         */
-        get: operations["compare_equity_api_v1_backtests_compare_equity_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2216,6 +2216,40 @@ export interface operations {
             };
         };
     };
+    compare_equity_api_v1_backtests_compare_equity_get: {
+        parameters: {
+            query: {
+                ids: string[];
+                normalized?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_backtests_api_v1_backtests_get: {
         parameters: {
             query?: {
@@ -2685,40 +2719,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    compare_equity_api_v1_backtests_compare_equity_get: {
-        parameters: {
-            query: {
-                ids: string[];
-                normalized?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
                 };
             };
             /** @description Validation Error */

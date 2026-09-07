@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from services.api.db import SessionLocal, get_db
-from services.api.models import BacktestStatus
+from services.api.models import BacktestMetrics, BacktestStatus
 from services.api.schemas import (
     BacktestCreate,
     BacktestLogsOut,
@@ -30,6 +30,46 @@ from services.api.schemas import (
 from services.api.services import backtests as backtest_service
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
+
+
+@router.get("/compare/equity")
+def compare_equity(
+    ids: list[UUID] = Query(..., min_length=2, max_length=6),
+    normalized: bool = Query(False),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Multi-backtest equity comparison across strategies."""
+    series: list[dict] = []
+    for bid in ids:
+        bt = backtest_service.get_backtest(db, bid)
+        rows, _ = backtest_service.get_equity(db, bid, limit=50_000, offset=0)
+        if not rows:
+            continue
+        if normalized:
+            vals = [p.strategy_value for p in rows]
+            first = vals[0] if vals else 1
+            points = [
+                {"time": p.ts, "value": (p.strategy_value / first) * 100 if first else 0}
+                for p in rows
+            ]
+        else:
+            points = [{"time": p.ts, "value": p.strategy_value} for p in rows]
+        version = bt.strategy_version
+        label = f"{version.strategy.name} v{version.version}"
+        metrics_row = db.get(BacktestMetrics, bid)
+        metrics = None
+        if metrics_row:
+            metrics = {
+                "final_equity": metrics_row.final_equity,
+                "total_return": metrics_row.total_return,
+                "cagr": metrics_row.cagr,
+                "sharpe": metrics_row.sharpe,
+                "max_drawdown": metrics_row.max_drawdown,
+                "volatility": metrics_row.volatility,
+                "trade_count": metrics_row.trade_count,
+            }
+        series.append({"id": str(bid), "label": label, "data": points, "metrics": metrics})
+    return {"series": series}
 
 
 @router.get("", response_model=BacktestPage)
@@ -217,40 +257,6 @@ async def backtest_events(backtest_id: UUID) -> EventSourceResponse:
             await asyncio.sleep(1.0)
 
     return EventSourceResponse(event_generator())
-
-
-@router.get("/compare/equity")
-def compare_equity(
-    ids: list[UUID] = Query(..., min_length=2, max_length=6),
-    normalized: bool = Query(False),
-    db: Session = Depends(get_db),
-) -> dict:
-    """Multi-backtest equity comparison across strategies."""
-    series: list[dict] = []
-    for bid in ids:
-        bt = backtest_service.get_backtest(db, bid)
-        rows, _ = backtest_service.get_equity(db, bid, limit=50_000, offset=0)
-        if not rows:
-            continue
-        if normalized:
-            vals = [p.strategy_value for p in rows]
-            first = vals[0] if vals else 1
-            points = [
-                {"time": p.ts, "value": (p.strategy_value / first) * 100 if first else 0}
-                for p in rows
-            ]
-        else:
-            points = [{"time": p.ts, "value": p.strategy_value} for p in rows]
-        version = bt.strategy_version
-        label = f"{version.strategy.name} v{version.version}"
-        series.append(
-            {
-                "id": str(bid),
-                "label": label,
-                "data": points,
-            }
-        )
-    return {"series": series}
 
 
 @router.get("/{backtest_id}/mae-mfe", response_model=list[MaeMfePoint])
