@@ -24,14 +24,32 @@ def test_research_note_prefills_hypothesis_and_rejects_foreign_backtest(client):
         json={"name": "note-src", "config": {"hypothesis": "价格在均线之上应持有风险资产。"}},
     ).json()
     other = client.post("/api/v1/strategies", json={"name": "note-other"}).json()
-    foreign_bt = client.post(
-        "/api/v1/backtests",
-        json={
-            "strategy_version_id": other["latest_version"]["id"],
-            "start_date": "2018-01-01",
-            "end_date": "2020-12-31",
-        },
-    ).json()
+
+    # Seed the foreign backtest via ORM: the API create path validates market
+    # data coverage, which CI runners lack (data/ is gitignored).
+    from datetime import date
+    from uuid import uuid4
+
+    from services.api import db as db_module
+    from services.api.models import Backtest, BacktestStatus, StrategyVersion
+
+    db = db_module.SessionLocal()
+    try:
+        version = db.get(StrategyVersion, UUID(other["latest_version"]["id"]))
+        assert version is not None
+        backtest = Backtest(
+            id=uuid4(),
+            strategy_version_id=version.id,
+            start_date=date(2018, 1, 1),
+            end_date=date(2020, 12, 31),
+            status=BacktestStatus.COMPLETED,
+            universe_snapshot=[],
+        )
+        db.add(backtest)
+        foreign_bt_id = str(backtest.id)
+    finally:
+        db.commit()
+        db.close()
 
     created = client.post(
         "/api/v1/research-notes",
@@ -47,7 +65,7 @@ def test_research_note_prefills_hypothesis_and_rejects_foreign_backtest(client):
 
     conflict = client.post(
         "/api/v1/research-notes",
-        json={"strategy_id": strategy["id"], "backtest_id": foreign_bt["id"]},
+        json={"strategy_id": strategy["id"], "backtest_id": foreign_bt_id},
     )
     assert conflict.status_code == 409, conflict.text
     assert "不属于该策略" in conflict.json()["detail"]
