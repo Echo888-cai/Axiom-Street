@@ -11,8 +11,8 @@ When a rule below conflicts with a feature request, the rule wins. When the visi
 
 ## Current scope
 
-- **Active phase: Phase 4 — Research workbench closeout.** Tearsheet depth, multi-backtest compare, MAE/MFE, White Studio UI, frontend tests. Do not start Phase 5 (AI Copilot). Validation gates from Phase 3 remain in front of `VALIDATED`. See `docs/PLAN.md`.
-- Do not start Phase 5 (AI Copilot) until Phase 4 workbench quality is in place. One phase at a time.
+- **Active phase: Phase 5 — AI Copilot (work package P5-1 in progress).** P5-1 = Copilot base: code-level write-path isolation for AI, read-only context API, provider adapter skeleton (noop), global right-rail panel with deterministic facts. See `docs/PLAN.md` §8.2.
+- Do not start P5-2 (Anthropic narration) until P5-1 closes. One work package at a time.
 - Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
 - **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.
 - **Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.**
