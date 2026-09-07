@@ -61,7 +61,7 @@
 | API ↛ Docker | 只有 worker 持有 `docker.sock` | API 进程内起容器无法编排、重启即孤儿 |
 | quant/ ↛ web framework | `quant/` 包不 import FastAPI / Celery | 无法在 notebook 或 CLI 中独立使用 |
 
-**当前状态**：`API ↛ Docker` 已在 Phase 1.5 落地（Celery worker 持有 `docker.sock`）。`Risk ⊥ everything` 的风控引擎仍是未被引用的 stub，要到 Phase 6 才实体化。
+**当前状态**：`API ↛ Docker` 已在 Phase 1.5 落地（Celery worker 持有 `docker.sock`）。`Risk ⊥ everything` 已实体化第一包（Phase 6 WP-1，2026-09-07）：`quant/risk/` 纯风控引擎（单标的/杠杆/回撤停机/集中度/熔断速率/stop-loss），在 LEAN 回测里经生成 wrapper 子类接管 `OnData`/`SetHoldings` 强制生效，限额读 `StrategyVersion.config["risk_limits"]`（缺省不包装、逐位一致，golden 未动）；旧 `config["risk"]` 块保持惰性展示元数据。执行级（Broker/实盘链 `Strategy → Risk → Execution → Broker`）仍未接入——引擎当前在回测内验证。
 
 ---
 
