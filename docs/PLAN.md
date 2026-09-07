@@ -102,10 +102,11 @@
 | **EB-P5** Phase 5 前置工程债 | ✅ 已关闭(09-07) | 可观测性接入(OTel→Jaeger 单 tracer + API /metrics 聚合队列/心跳 + Sentry 错误门控)、默认口令 env 注入、CORS 收紧同源(不加认证);docker-logs/prune 核对为已落地;pytest 354 · golden 2 · vitest 65(记录 §8.5) |
 | **P5-1** Copilot 底座 | ✅ 已关闭(09-07,当日开工关闭) | Phase 5 首个工作包(§8.2):AI 写路径隔离锁 4 条 + `GET /copilot/context` 只读聚合 + provider 骨架(noop,未知名 fail loud)+ 全局右栏确定性事实面板(试验/闸门/dup/supersede,诚实空态)。产品拍板(09-07):底座先行、P5-2 接 Anthropic 直连(provider 于 P5-2 开工改 DeepSeek,§2.2)、出站仅聚合统计、面板全局窄栏。无 LLM 调用、无聊天框、无写端点、无新表。pytest **370**(354+15+1 路由回归)· golden 2 · vitest 73/14 · tsc 0 · build ✓ · 真实栈 chromium 核查。另修两处潜伏缺陷:GET /validation/specs 被 /{run_id} 吞掉 422(前移+回归测试)、EB-P5 观测依赖锁在 3.11 不可安装(pyproject 改 0.49b0 下限)——记录见 §2.2 |
 | **P5-2** 模型劝停 | ✅ 已关闭(09-07,当日开工关闭) | Phase 5 第二包(§8.2):**DeepSeek 直连**(09-07 用户拍板不用 Anthropic,§2.2)worker synthesize 任务(`copilot.synthesize`,超时 60s/重试 2,单行单提交落 `copilot_insights` 新表,alembic 9→10)+ API 只 enqueue(`POST /copilot/synthesize`,202/404/503;`GET /copilot/insights` 按策略倒序)+ **仅聚合统计**出站(`STREET_DEEPSEEK_API_KEY` 无 key 即关闭;默认模型 `deepseek-v4-flash`;官方 OpenAI 兼容接口+openai SDK 客户端,新增依赖 1)+ 面板「Copilot 评估」块(手动触发、轮询至新行、DONE/FAILED/禁用诚实态、隐私行)。隔离锁修订:copilot 禁一切写面,**仅放开 worker 任务 `_record_insight` 写自身台账**(AST 锁)。无聊天框、无自动触发。pytest **387**(+17)· vitest **78/15**(+5)· 真实栈 chromium 4/4 · console 零错误 |
+| **P5-3** 建议动作 | ✅ 已关闭(09-07,当日开工关闭) | Phase 5 第三包(§8.2,用户拍板:**纪律+补闸门动作、卡内确认即执行、确定式候选为真值 + LLM 只在候选内挑优先级**)。确定性候选推导 `suggestions.py`(专扫 copilot 源外,读版本 code 判扫描类可执行性)+ `GET /copilot/suggestions` 每次现算 + `POST /copilot/suggest` enqueue-only + worker `copilot.suggest`(模型 JSON 候选内 pick,候选外一律拒,落 `copilot_suggestions` 新表,alembic 10→11)+ `GET /copilot/suggestions/recommendation` + 面板「建议动作」块(确定式卡恒显示、guide/discipline 信息行、采纳→确认框→现有 `POST /validation`,provider 启用时「让 Copilot 排序」)。出站边界不变:模型只见候选元数据,永不见源码/参数值/行情。隔离锁扩为 `_record_insight`/`_record_suggestion` 双豁免 + suggestions 模块只读锁(卡片键白名单)。pytest **421**(387+34:推导 11 + suggest 14 + provider suggest 6 + 隔离锁 3)· vitest **85/16**(+7)· tsc 0 · lint 0(1 既有 warning)· build ✓ · codegen 幂等 |
 
 ---
 
-## 3. 执行总览(RC-W2/3/4、EB-P5、P5-1 与 P5-2 已关闭;下一包 P5-3 建议动作)
+## 3. 执行总览(RC-W2/3/4、EB-P5、P5-1、P5-2 与 P5-3 已关闭;下一包 P5-4 聊天框形态待评估)
 
 顺序即依赖:**先关后端残余 → 再接前端接缝 → 再 W4 收尾验收 → Phase 4 关闭 → EB-P5 工程债 → Phase 5**。任何一步都不得越过验证闸门测试与对应 Phase 边界。EB-P5 于 09-07 关闭,Phase 5 前置门槛已清。
 
@@ -117,6 +118,7 @@
 | **EB-P5** | Phase 5 前置工程债(§8.5,开 Phase 5 的门槛):可观测性 **OTel→Jaeger**(单 tracer)+ **/metrics 聚合** + **Sentry 错误门控**、默认口令 env 注入、CORS 收紧同源 | ✅ 已关闭(2026-09-07)。深度/出口产品拍板:全栈 + 本地自托管 Jaeger;CORS 按长期最优收紧、**不加认证**(D2 维持) | Phase 5 门槛已清,无前置依赖;下一包 N5 Phase 5(§8.2) |
 | **P5-1** | Copilot 底座(§8.2,09-07 产品拍板):AI 写路径隔离锁 + 只读上下文 API + provider 骨架(noop)+ 全局右栏确定性事实面板 | ✅ 已关闭(2026-09-07) | Phase 5 首个工作包;无 LLM、无聊天、无写端点;下一包 P5-2 模型劝停(DeepSeek,§2.2) |
 | **P5-2** | 模型劝停(§8.2,09-07 用户拍板 DeepSeek):DeepSeek synthesize 任务(超时/重试)+ API 只 enqueue + 仅聚合统计出站 + 劝停叙述块(手动触发,落 `copilot_insights` 新表) | ✅ 已关闭(2026-09-07) | Phase 5 第二包;仍无聊天框、无自动触发、无写面;出站上下文永不包含策略源码/参数 config/价格序列;下一包 P5-3 建议动作(§8.2) |
+| **P5-3** | 建议动作人审闭环(§8.2,09-07 用户拍板:纪律+补闸门动作、卡内确认即执行、确定式候选为真值 + LLM 只在候选内挑优先级写理由) | ✅ 已关闭(2026-09-07) | Phase 5 第三包;确定式候选每次现算(无候选表),模型 pick 落 `copilot_suggestions`;出站边界不变、无自动执行、无策略生成;下一包 P5-4 聊天框形态(待评估) |
 
 **Phase 4 与 EB-P5 均已关闭。** EB-P5 = §8.5 前置工程债清理,2026-09-07 开工当日关闭。开工审计把桶内两项从待办改判为**已落地**(`GET /backtests/{id}/logs` 读 docker stdout/stderr、`prune_jobs.py`);本轮交付三项:① 可观测性——`services/telemetry.py` 集中门控 SDK,OTel 为唯一 tracer(OTLP→本地 Jaeger,compose 新增 jaeger+prometheus 服务),API `/metrics` 聚合 HTTP 计数/延迟 + Celery 队列深度 + worker 心跳年龄,Prometheus 抓单 target,worker 不另起导出端口(Celery prefork 会抢端口);Sentry 仅错误、无 DSN 即 no-op,500 handler 接 capture;② 默认口令——compose/alembic/settings 三层去除 `street:street` 明文默认,`STREET_DATABASE_URL` 必填、`.env.example` 给 `openssl rand` 指引、e2e 显式传凭据;③ CORS 收紧——origins 仅 `http://localhost:3000`(删死 3001)、`allow_credentials=False`、方法最小化,浏览器同源代理零感知。nightly golden 的 CI skip-pass 缺口维持为已知缺口,自托管 runner 不排(§8.6)。验证:ruff/mypy 全绿;pytest tests/unit **354**(+5 观测测试);golden 2 passed(1 skip:缺 Polygon key);前端 tsc 0 · vitest 65;真实 Jaeger OTLP 收 span 冒烟通过。
 
@@ -244,7 +246,7 @@ Phase 4 特性已提前落地(09-05):跨策略 2–6 条回测曲线叠加、MAE
 |----|------|------|
 | **P5-1** 底座 | ✅ 已关闭(09-07) | AI 写路径代码级隔离(锁测试 4 条)+ 只读上下文 API(`GET /copilot/context`)+ provider 适配器骨架(noop,env 门控,未知名 fail loud)+ 全局右栏确定性事实面板(试验计数/闸门/重复参数/快照 supersede,诚实空态)。无 LLM 调用、无聊天框、无写端点、无新表 |
 | P5-2 模型劝停 | ✅ 已关闭(09-07,当日开工关闭) | **DeepSeek**(09-07 用户拍板,不用 Anthropic,§2.2):worker synthesize 任务(超时 60s/重试 2,API 只 enqueue)+ **仅聚合统计**出站组装(OpenAI 兼容接口 `api.deepseek.com`,官方推荐 openai SDK 客户端,新增依赖 1;`STREET_DEEPSEEK_API_KEY` 后端 env,无 key 即关闭;默认模型 `deepseek-v4-flash`,`STREET_COPILOT_MODEL` 可覆盖)+ 劝停叙述块(面板手动触发、轮询、诚实态)。叙述落新表 `copilot_insights`(alembic 9→10,worker 单行单提交);隔离锁修订:copilot 源码仍禁 import 写面/ORM 写,仅放开 worker 任务单函数 `_record_insight` 写自身台账表(锁测试细化 5 条);发给 provider 的上下文永不包含策略源码/参数 config/价格序列(列级锁扩至 worker 任务文件)。下一包 P5-3 建议动作(人审闭环,无自动执行) |
-| P5-3 建议动作人审闭环 | 面板建议(如参数组合)→ 人审 → 走现有回测/验证通道全量执行,试验自动入台账 | 无自动执行 |
+| P5-3 建议动作人审闭环 | ✅ 已关闭(09-07,当日开工关闭) | 用户拍板:**纪律+补闸门动作**(不做数值参数建议)、**卡内确认即执行**、**确定式候选为可执行真值 + LLM 只在候选内挑优先级写理由**。确定式推导 `services/api/services/suggestions.py`(放 copilot 包**外**:需读 `StrategyVersion.code` 判 PBO/SENSITIVITY/COST 可执行性——扫描目录内禁止;只读锁 + 卡片键白名单测试承重)+ `GET /copilot/suggestions`(每次现算,候选无表)+ `POST /copilot/suggest`(enqueue-only,镜像 synthesize 的 202/404/503)+ worker `copilot.suggest`(JSON 回复,fence/越界/超长一律拒,落 `copilot_suggestions` 新表,alembic 10→11)+ `GET /copilot/suggestions/recommendation` + 面板「建议动作」块(确定式卡恒显示、卡内确认即调现有 `POST /validation`,kind/version/backtest/spec 默认网格载荷;guide/discipline 信息行不可执行;provider 启用时「让 Copilot 排序」轮询回流)。出站边界**不变**:模型只见候选元数据(key/action/kind/version),永不见源码/参数值/行情;隔离锁扩为 `_record_insight`+`_record_suggestion` 双豁免(worker 写仍只在这两个 helper)+ suggestions 模块只读锁。无自动执行、无策略生成、无聊天框。下一包 P5-4 聊天框形态(待评估,约束五) |
 | P5-4 聊天框形态 | 仅在 P5-2/3 真实能力落地后才评估(约束五) | — |
 
 可抢救设计(已记录,P5-2 起逐步实现):Copilot 的**交互形态**——右侧常驻上下文面板(P5-1 先落确定性事实层),感知当前页面与策略版本。最有价值功能仍是**劝用户停下来**("你已在此数据快照上试了 47 次"),试验台账已提供数字。
@@ -285,23 +287,23 @@ nightly golden 的 CI skip-pass 缺口(§8.1):GitHub runner 无 Docker → 维�
 | **N3** | RC-W3 前端接缝 | ✅ 已关闭(09-07) | 表单接线、codegen 混合别名、i18n 零 CJK、测试 63、E2E 按需、组件 ≤400 |
 | **N4** | RC-W4 Phase 4 关闭 | ✅ 已关闭(2026-09-07) | compare/equity 契约修复 + 对比表真值 + golden re-freeze + CI 修复;Phase 4 关闭 |
 | **EB-P5** | Phase 5 前置工程债 | ✅ 已关闭(2026-09-07) | §8.5 全栈可观测性(OTel→Jaeger + /metrics + Sentry 错误门控)+ 默认口令注入 + CORS 收紧;Phase 5 门槛已清,下一里程碑 N5 |
-| N5 | Phase 5 AI Copilot(§8.2:P5-1 底座 → P5-2 模型劝停(DeepSeek)→ P5-3 建议动作 → P5-4 聊天框待议) | P5-1 ✅ 已关闭(09-07);P5-2 ✅ 已关闭(09-07);下一包 P5-3 | AI 加速研究(受闸门约束) |
+| N5 | Phase 5 AI Copilot(§8.2:P5-1 底座 → P5-2 模型劝停(DeepSeek)→ P5-3 建议动作 → P5-4 聊天框待议) | P5-1 ✅ 已关闭(09-07);P5-2 ✅ 已关闭(09-07);P5-3 ✅ 已关闭(09-07);下一包 P5-4 聊天框形态(待评估) | AI 加速研究(受闸门约束) |
 | N6 | Phase 6/7 Paper+Live | +~16 周 | 研究到执行闭环 + 回测实盘对账(北极星可测) |
 | N7 | Phase 8 组合归因 | +~20 周 | 多策略组合与真 alpha 判定 |
 
-**如果只能做三件事**(09-07 随 EB-P5 关闭修订):① ~~Phase 5 前置工程债~~ —— **EB-P5 已关闭(09-07)**,Phase 5 门槛已清(nightly golden 的 CI 缺口为 §8.6 已知项);② **N5 Phase 5 AI Copilot**(受 §8.2 约束)——**P5-1 底座与 P5-2 模型劝停(DeepSeek)均已关闭(09-07)**,下一包 P5-3 建议动作人审闭环;③ N6 的回测–实盘对账(唯一能验证北极星的功能)。
+**如果只能做三件事**(09-07 随 EB-P5 关闭修订):① ~~Phase 5 前置工程债~~ —— **EB-P5 已关闭(09-07)**,Phase 5 门槛已清(nightly golden 的 CI 缺口为 §8.6 已知项);② **N5 Phase 5 AI Copilot**(受 §8.2 约束)——**P5-1 底座、P5-2 模型劝停(DeepSeek)与 P5-3 建议动作人审闭环均已关闭(09-07)**,下一包 P5-4 聊天框形态(待评估,约束五);③ N6 的回测–实盘对账(唯一能验证北极星的功能)。
 
 ---
 
-## 10. 施工纪律(.cursor/rules 需要跟随的修订)
+## 10. 施工纪律(.cursor/rules 应长期体现,逐包同步)
 
-`.cursor/rules/axiom-street.mdc` 需同步(现 L68–69 仍写"双主题 + 禁玻璃拟态",与 §7.1 冲突):
+`.cursor/rules/axiom-street.mdc`(`alwaysApply: true`,不是文档,单独维护)必须长期体现以下条目,并在**每个工作包关闭时同步其 `Current scope` 相位指针**。2026-09-07 审计:UI(White Studio 单浅色)、禁合成数据、单一真值三条目已在文件中落地;但 **`Current scope` 未随 P5-1/P5-2 关闭翻页**(仍写 "P5-1 in progress / 未开 P5-2(Anthropic)"),与 §2.3 冲突——已同步为 **P5-3 待开工**,并于 P5-3 当日关闭时再次翻至 **P5-4 待评估**。条目与落地状态:
 
-1. **禁合成数据,改为约束"存在"**:仓库内不得存在合成回测数据的模块(合成价格序列、合成指标、合成成交)。可 `grep` 检查。
-2. **单一真值声明**:「当前阶段」「已交付能力」全仓库只允许在 `docs/PLAN.md` 声明一处,其余文档只许指向。
-3. **UI 规则同步 White Studio**:主色 `#4167ac` 等令牌以 `MASTER.md` 为准;删"双主题"措辞;玻璃质感以 MASTER 的令牌预算为限(禁大面积强调色/发光/凭空收益);财务数字用等宽/`tabular-nums`。
-4. **新增:工作包收尾同步**:每个工作包关闭时,必须把本文 §2.3 仪表盘与附录 A 更新到真实状态。开工前先读本文,不据旧记忆施工。
-5. (不变)单个组件 ≤400 行;验证状态只由验证流水线改;AI 边界见 §8.2。
+1. **禁合成数据,改为约束"存在"**:仓库内不得存在合成回测数据的模块(合成价格序列、合成指标、合成成交)。可 `grep` 检查。→ ✅ 已落地
+2. **单一真值声明**:「当前阶段」「已交付能力」全仓库只允许在 `docs/PLAN.md` 声明一处;`.cursor/rules` 的 `Current scope` 只保留最小相位指针并指向本文 §2.3/§8.2,不自行复述状态表。→ ✅ 已落地(本次同步遵循)
+3. **UI 规则同步 White Studio**:主色 `#4167ac` 等令牌以 `MASTER.md` 为准;"双主题"措辞已删(原 §10 L68–69 冲突已随 RC-W3/§7.1 拍板消解);玻璃质感以 MASTER 的令牌预算为限(禁大面积强调色/发光/凭空收益);财务数字用等宽/`tabular-nums`。→ ✅ 已落地
+4. **工作包收尾同步(新增强化)**:每个工作包关闭时,必须:① 把本文 §2.3 仪表盘与附录 A 更新到真实状态;② 同步 `.cursor/rules` 的 `Current scope` 相位指针(开工登记翻至新包、关闭翻至下一包);③ `grep` 复查本文与 .cursor 无残留指向已关闭包的旧措辞。开工前先读本文,不据旧记忆施工。
+5. (不变)单个组件 ≤400 行;验证状态只由验证流水线改;AI 边界见 §8.2。→ ✅ 已在 `.cursor/rules` Every PR / AI boundaries 节体现
 
 ---
 
@@ -313,8 +315,8 @@ nightly golden 的 CI skip-pass 缺口(§8.1):GitHub runner 无 Docker → 维�
 | Python 行数(quant+services) | 14,797 | 实测为主 | RC-W2 后 ≤ 现值,worker 拆包不增行 |
 | 前端行数(web/src) | 9,133 | 实测为主 | ≤400 行/组件;总行数收敛与新增测试抵消 |
 | 第二前端(terminal) | 4,403 | **0** | 0 |
-| Python 测试 | 349 | **387(09-07 P5-2 收尾实测;370 + 17:copilot synthesize 9 + providers 净 +7 + 隔离锁细化 +1)** | ≥ 现测,不允许减少 |
-| 前端测试 | 18 | **78 / 15 文件(09-07 P5-2 收尾实测)** | ≥ 60 + 3 E2E(按需 workflow,不阻塞普通 CI) |
+| Python 测试 | 349 | **421(09-07 P5-3 收尾实测;387 + 34:推导 11 + suggest 14 + provider suggest 6 + 隔离锁细化 3)** | ≥ 现测,不允许减少 |
+| 前端测试 | 18 | **85 / 16 文件(09-07 P5-3 收尾实测)** | ≥ 60 + 3 E2E(按需 workflow,不阻塞普通 CI) |
 | 最大单文件(Python) | `worker/tasks.py` 1,336 | **拆包完成,无单文件 ≥500(最大 `validation.py` 493)** | ≤ 500(✅) |
 | 次大单文件(Python) | `api/services/validation.py` 1,161 | **629** | ≤ 400 |
 | 最大单文件(前端) | `validation-desk.tsx` 668 | **backtest-studio 601** | ≤ 400 |
@@ -323,8 +325,8 @@ nightly golden 的 CI skip-pass 缺口(§8.1):GitHub runner 无 Docker → 维�
 | 死模块 | 3 | **0** | 0 |
 | 计划/交接文档 | 7 份/1,390 行 | **6 份核心 + README + MASTER** | 见 §0 文档表 |
 | 阶段声明来源 | 3 处矛盾 | **1 处** | 1 |
-| API 端点/路由文件 | 60/9 | **62/9(09-07 P5-2:+POST /copilot/synthesize、GET /copilot/insights)** | 不变 |
-| Alembic migration | 9 | **10(09-07 P5-2:+0010_copilot_insights)** | 随 schema 变更 |
+| API 端点/路由文件 | 60/9 | **65/9(09-07 P5-3:+GET /copilot/suggestions、GET /copilot/suggestions/recommendation、POST /copilot/suggest)** | 不变 |
+| Alembic migration | 9 | **11(09-07 P5-3:+0011_copilot_suggestions)** | 随 schema 变更 |
 
 **09-07 RC-W4 收尾实测**:后端 `pytest tests/unit` 349 全绿(ruff/mypy 同绿);前端 tsc 0 · vitest 65/12 · lint 0 · `next build` ✓;golden 2 passed(1 skipped:CI runner 无 Docker,见 §8.1);`codegen:types` 幂等;真实栈 chromium 核查对比面板通过。净值/属性锁数字冻结在 20260831 数据快照(re-freeze 记录见 §8.1)。
 
@@ -333,6 +335,8 @@ nightly golden 的 CI skip-pass 缺口(§8.1):GitHub runner 无 Docker → 维�
 **09-07 P5-1 收尾实测(同日开工关闭)**:后端 `pytest tests/unit` **370** 全绿(354 + 15 copilot + 1 specs 路由回归;ruff/mypy 全绿 90 源文件);golden 2 passed(1 skip:缺 Polygon key);前端 tsc 0 · vitest **73/14**(+8:copilot 面板 3 + scope 5)· lint 0 · `next build` ✓;codegen 幂等(`codegen:types` 后 `git diff --exit-code` 无新变化);真实栈 api/web 容器重建后 chromium 核查:右栏在策略详情页渲染试验台账(按快照计数/重复参数/已取代徽标)与闸门结果、`/validation` 列表页诚实空态、console 零错误、窄屏(<1280px)右栏隐藏;`GET /copilot/context` curl 200/404/422 各验一次。API 端点 +1(`GET /copilot/context`);新增文件 13(copilot 后端 5 + 测试 3 + 前端面板 7 + locales 2,见各提交)。
 
 **09-07 P5-2 收尾实测(同日开工关闭)**:后端 `pytest tests/unit` **387** 全绿(370 + 17:copilot synthesize 9 + providers 净 +7 + 隔离锁细化 +1;ruff/mypy 全绿 93 源文件,含 openai SDK 类型);golden 2 passed + 1 skip(缺 Polygon key,非本包);前端 tsc 0 · vitest **78/15**(+5:copilot-insight 块)· lint 0(1 条既有 warning 非本包)· `next build` ✓;codegen 幂等(`codegen:types` 重跑 `git diff` 无新变化)。真实栈容器重建后(openai 依赖在 py3.11 镜像可安装):api 启动 alembic `0009 → 0010` 落真实 PG、worker 注册 `copilot.synthesize` 任务;curl:策略存在时 `POST /copilot/synthesize` **503**(无 key 即关闭,诚实文案)、未知 id 404、`GET /copilot/insights` 200 空数组、`GET /copilot/context` provider 事实 = deepseek/disabled;chromium 4/4:右栏「Copilot 评估」禁用诚实态 + 隐私边界行 + console 零错误(启用态交互由 5 条 vitest 覆盖——无 key 不出站是设计,非可绕过路径)。API 端点 +2;新表 1(`copilot_insights`)+ migration 0010;新增依赖 1(openai);新增文件:后端 prompts/insights/tasks-copilot/0010/合成测试 等、前端 copilot-insight.tsx(+测试)、compose/.env.example key 映射(见各提交)。
+
+**09-07 P5-3 收尾实测(同日开工关闭)**:后端 `pytest tests/unit` **421** 全绿(387 + 34:推导 11 + suggest 14 + provider suggest 6 + 隔离锁细化 3;ruff/mypy 全绿);golden 2 passed + 1 skip(缺 Polygon key,非本包);前端 tsc 0 · vitest **85/16**(+7:actions-block)· lint 0(1 条既有 warning 非本包)· `next build` ✓;codegen 幂等(`codegen:types` 重跑 `git diff` 无新变化,openapi.json 基线含 3 个新 copilot 路径)。确定式候选推导 `services/api/services/suggestions.py` 单测覆盖规则全分支(缺失/已过/inflight/不可执行/无回测 guide/纪律/archived/最新版本作用域/键白名单);worker `execute_suggest` 落库 DONE/FAILED(候选外 pick 拒绝)与 API 202/404/503/guide 卡各验一次;面板 actions-block 7 条 vitest(卡渲染、采纳载荷、guide/discipline 无采纳、provider 禁用隐藏排序、模型 DONE/FAILED 回流)。真实栈容器级 chromium 未在本会话复跑(需 docker 全栈),UI 行为由 vitest 覆盖。API 端点 +3;新表 1(`copilot_suggestions`)+ migration 0011;无新依赖;新增文件:后端 suggestions/0011/suggest 任务与测试、前端 actions-block(+测试)与 locales,见各提交。
 
 ## 附录 B:关键文献
 

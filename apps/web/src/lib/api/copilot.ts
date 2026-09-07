@@ -2,6 +2,9 @@ import { request } from "./http";
 import type {
   CopilotContext,
   CopilotInsight,
+  CopilotSuggestAccepted,
+  CopilotSuggestion,
+  CopilotSuggestions,
   CopilotSynthesizeAccepted,
 } from "./types";
 
@@ -22,5 +25,20 @@ export const copilotApi = {
   listInsights: (strategyId: string) =>
     request<CopilotInsight[]>(
       `/api/v1/copilot/insights?strategy_id=${encodeURIComponent(strategyId)}`,
+    ),
+  // P5-3: deterministic actionable cards (always available) + the optional
+  // model priority pick over them (enqueue-only; poll getRecommendation).
+  listSuggestions: (strategyId: string) =>
+    request<CopilotSuggestions>(
+      `/api/v1/copilot/suggestions?strategy_id=${encodeURIComponent(strategyId)}`,
+    ),
+  suggest: (resource: CopilotResource, id: string) =>
+    request<CopilotSuggestAccepted>("/api/v1/copilot/suggest", {
+      method: "POST",
+      body: JSON.stringify({ resource, id }),
+    }),
+  getRecommendation: (strategyId: string) =>
+    request<CopilotSuggestion | null>(
+      `/api/v1/copilot/suggestions/recommendation?strategy_id=${encodeURIComponent(strategyId)}`,
     ),
 };

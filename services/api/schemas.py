@@ -303,6 +303,11 @@ class CopilotSynthesizeIn(BaseModel):
     id: UUID
 
 
+class CopilotSuggestIn(BaseModel):
+    resource: Literal["strategy", "backtest"]
+    id: UUID
+
+
 class CopilotSynthesizeAccepted(BaseModel):
     status: Literal["queued"]
 
@@ -313,6 +318,39 @@ class CopilotInsightOut(BaseModel):
     status: str
     model: Optional[str] = None
     narrative: str = ""
+    error: Optional[str] = None
+    duration_ms: Optional[int] = None
+    created_at: datetime
+    finished_at: Optional[datetime] = None
+
+
+class CopilotSuggestionCard(BaseModel):
+    key: str
+    action: Literal["run_validation", "guide", "discipline"]
+    executable: bool
+    validation_kind: Optional[str] = None
+    strategy_version_id: Optional[UUID] = None
+    target_version: Optional[int] = None
+    template_backtest_id: Optional[UUID] = None
+    params: Dict[str, Any] = Field(default_factory=dict)
+    reason_code: str
+
+
+class CopilotSuggestionsOut(BaseModel):
+    candidates: list[CopilotSuggestionCard] = Field(default_factory=list)
+
+
+class CopilotSuggestAccepted(BaseModel):
+    status: Literal["queued"]
+
+
+class CopilotSuggestionOut(BaseModel):
+    id: UUID
+    strategy_id: UUID
+    status: str
+    model: Optional[str] = None
+    picked_id: Optional[str] = None
+    reason: str = ""
     error: Optional[str] = None
     duration_ms: Optional[int] = None
     created_at: datetime

@@ -3251,6 +3251,144 @@
         }
       }
     },
+    "/api/v1/copilot/suggestions": {
+      "get": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Suggestions",
+        "description": "Deterministic actionable cards for a strategy (P5-3).\n\nStateless derivation on every call — the executable source of truth for\nwhat the copilot can recommend. The model (when enabled) only picks within\nthese cards.",
+        "operationId": "suggestions_api_v1_copilot_suggestions_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotSuggestionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/copilot/suggestions/recommendation": {
+      "get": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Suggestion Recommendation",
+        "description": "Newest model priority pick for a strategy, or null when none yet.",
+        "operationId": "suggestion_recommendation_api_v1_copilot_suggestions_recommendation_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/CopilotSuggestionOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Suggestion Recommendation Api V1 Copilot Suggestions Recommendation Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/copilot/suggest": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Suggest",
+        "description": "Enqueue one model priority pick over the deterministic candidates (P5-3).\n\nAPI only enqueues; the worker derives candidates, calls the provider\nconstrained to that set, and records one row in ``copilot_suggestions``.\nProvider disabled fails loud with 503 before anything is queued.",
+        "operationId": "suggest_api_v1_copilot_suggest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopilotSuggestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotSuggestAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -4595,6 +4733,232 @@
           "count"
         ],
         "title": "CopilotSnapshotFacts"
+      },
+      "CopilotSuggestAccepted": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "CopilotSuggestAccepted"
+      },
+      "CopilotSuggestIn": {
+        "properties": {
+          "resource": {
+            "type": "string",
+            "enum": [
+              "strategy",
+              "backtest"
+            ],
+            "title": "Resource"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "id"
+        ],
+        "title": "CopilotSuggestIn"
+      },
+      "CopilotSuggestionCard": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "run_validation",
+              "guide",
+              "discipline"
+            ],
+            "title": "Action"
+          },
+          "executable": {
+            "type": "boolean",
+            "title": "Executable"
+          },
+          "validation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Kind"
+          },
+          "strategy_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Version Id"
+          },
+          "target_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Version"
+          },
+          "template_backtest_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Backtest Id"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "action",
+          "executable",
+          "reason_code"
+        ],
+        "title": "CopilotSuggestionCard"
+      },
+      "CopilotSuggestionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "picked_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Picked Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "strategy_id",
+          "status",
+          "created_at"
+        ],
+        "title": "CopilotSuggestionOut"
+      },
+      "CopilotSuggestionsOut": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CopilotSuggestionCard"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "title": "CopilotSuggestionsOut"
       },
       "CopilotSynthesizeAccepted": {
         "properties": {

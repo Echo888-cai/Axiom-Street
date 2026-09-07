@@ -31,6 +31,38 @@ export const copilot = {
     retryHint: "可重试一次;若持续失败,多半是模型服务或账户问题",
     model: "模型",
   },
+  suggestions: {
+    title: "建议动作",
+    empty: "当前没有可建议的动作",
+    failed: "建议动作加载失败",
+    adopt: "采纳",
+    submitting: "提交中…",
+    queued: "验证已提交,跑完闸门结果会回流本栏",
+    reason: {
+      never_run: "该闸门在最新版本上还没跑过",
+      not_passed: "最近一次未通过,值得再跑一次完整验证",
+      backtest_first:
+        "该版本还没有已完成的全样本回测。先跑一条,补闸门建议才会出现。",
+      superseded_snapshot: "部分试验仍留在已被新快照取代的数据快照上",
+      duplicate_parameters: "存在参数重复的试验,继续微调会喂大多重检验惩罚",
+    },
+    model: {
+      title: "模型优先建议",
+      boundary:
+        "模型只在上面的确定性候选里挑一个并说明为什么,不会自行提出候选之外的动作",
+      pick: "模型建议:",
+      order: "让 Copilot 排序",
+      ordering: "排序中,通常几秒…",
+      idle: "还没有优先建议。模型会从确定性卡片里挑一个最该做的并说明理由。",
+      failed: "这次没有生成优先建议",
+    },
+    confirm: {
+      title: "采纳这条建议?",
+      note: "将按 spec 默认参数,在最新版本上跑一次验证",
+      version: "版本",
+      submit: "提交验证",
+    },
+  },
   empty: {
     title: "此页面没有研究上下文",
     description:

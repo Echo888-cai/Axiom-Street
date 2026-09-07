@@ -963,6 +963,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/copilot/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggestions
+         * @description Deterministic actionable cards for a strategy (P5-3).
+         *
+         *     Stateless derivation on every call — the executable source of truth for
+         *     what the copilot can recommend. The model (when enabled) only picks within
+         *     these cards.
+         */
+        get: operations["suggestions_api_v1_copilot_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/copilot/suggestions/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggestion Recommendation
+         * @description Newest model priority pick for a strategy, or null when none yet.
+         */
+        get: operations["suggestion_recommendation_api_v1_copilot_suggestions_recommendation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/copilot/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest
+         * @description Enqueue one model priority pick over the deterministic candidates (P5-3).
+         *
+         *     API only enqueues; the worker derives candidates, calls the provider
+         *     constrained to that set, and records one row in ``copilot_suggestions``.
+         *     Provider disabled fails loud with 503 before anything is queued.
+         */
+        post: operations["suggest_api_v1_copilot_suggest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1403,6 +1471,93 @@ export interface components {
              * @default 0
              */
             duplicate_parameter_hashes: number;
+        };
+        /** CopilotSuggestAccepted */
+        CopilotSuggestAccepted: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "queued";
+        };
+        /** CopilotSuggestIn */
+        CopilotSuggestIn: {
+            /**
+             * Resource
+             * @enum {string}
+             */
+            resource: "strategy" | "backtest";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** CopilotSuggestionCard */
+        CopilotSuggestionCard: {
+            /** Key */
+            key: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "run_validation" | "guide" | "discipline";
+            /** Executable */
+            executable: boolean;
+            /** Validation Kind */
+            validation_kind?: string | null;
+            /** Strategy Version Id */
+            strategy_version_id?: string | null;
+            /** Target Version */
+            target_version?: number | null;
+            /** Template Backtest Id */
+            template_backtest_id?: string | null;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            };
+            /** Reason Code */
+            reason_code: string;
+        };
+        /** CopilotSuggestionOut */
+        CopilotSuggestionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Status */
+            status: string;
+            /** Model */
+            model?: string | null;
+            /** Picked Id */
+            picked_id?: string | null;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Error */
+            error?: string | null;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /** CopilotSuggestionsOut */
+        CopilotSuggestionsOut: {
+            /** Candidates */
+            candidates?: components["schemas"]["CopilotSuggestionCard"][];
         };
         /** CopilotSynthesizeAccepted */
         CopilotSynthesizeAccepted: {
@@ -4295,6 +4450,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CopilotInsightOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggestions_api_v1_copilot_suggestions_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotSuggestionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggestion_recommendation_api_v1_copilot_suggestions_recommendation_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotSuggestionOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_api_v1_copilot_suggest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CopilotSuggestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotSuggestAccepted"];
                 };
             };
             /** @description Validation Error */
