@@ -98,7 +98,7 @@ Mature components over vanity engineering. We do not rewrite a backtester for sp
 
 | Phase | Status |
 |-------|--------|
-| **当前阶段:Phase 5 AI Copilot 进行中(P5-1 Copilot 底座,2026-09-07 开工)** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
+| **当前阶段:Phase 5 AI Copilot 进行中(P5-1 Copilot 底座已关闭 2026-09-07;下一包 P5-2 Anthropic 劝停)** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
 
 Backtest numbers are research output, not investment advice.
 
