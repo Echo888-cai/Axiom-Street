@@ -49,11 +49,11 @@
 
 ---
 
-## 2. 现状诚实评估(2026-09-06 复核)
+## 2. 现状诚实评估(2026-09-06 复核;09-07 RC-W4 收尾更新见 §2.3/§8.1/附录 A)
 
 | 维度 | 09-04 评 | **09-06 复核** | 证据 |
 |------|---------|--------------|------|
-| 架构边界 | A− | **A−** | `grep` 确认 `quant/` 零 import FastAPI/Celery/SQLAlchemy/services;Controller 不碰 LEAN 内部(注:尚无 import 扫描锁测试,见 §6.6) |
+| 架构边界 | A− | **A−** | `grep` 确认 `quant/` 零 import FastAPI/Celery/SQLAlchemy/services;Controller 不碰 LEAN 内部;import 扫描锁测试已随 RC-W2 落地(§6.6 W2-2) |
 | 结果真实性 | A− | **A−** | 真实 LEAN Docker + golden test 锁数字 |
 | 统计验证 | A− | **A−** | 8 闸门全部落地且阻塞式;`validation-gates.md` 成文 |
 | 任务编排 | B+ | **B+** | Celery + 真取消 + 超时 + 孤儿回收 + Beat |
@@ -64,7 +64,7 @@
 
 ### 2.1 前端残余短板(审计量化)
 
-> **09-07 复核**:下表问题除「对比表」一行(属 RC-W4,§8.1)外,已随 RC-W3 关闭(§7.2)全部解决——测试 63 用例、E2E 按需 workflow、单一 spec 驱动表单接线、产品源码零 CJK、组件全部 ≤400 行、codegen 混合别名换用。下表保留为 09-06 审计记录。
+> **09-07 复核**:下表问题已全部解决——「对比表」一行随 RC-W4 关闭(09-07,§8.1;测试 65 用例),其余随 RC-W3 关闭(§7.2):E2E 按需 workflow、单一 spec 驱动表单接线、产品源码零 CJK、组件全部 ≤400 行、codegen 混合别名换用。下表保留为 09-06 审计记录。
 
 | 问题 | 现状 |
 |------|------|
@@ -83,20 +83,21 @@
 | 设计方向 | 原 W3a 写"浅+深双主题收割 terminal";落地改为 **White Studio 单浅色玻璃**(产品所有者拍板),`globals.css` 残留深色 media query | 已锁定 White Studio,见 §7.1;残留深色 CSS 一并清理 |
 | 附录基线 | 以 304 文件为基准预测 316→~250;实际文件增加(测试/i18n/E2E 资产合法新增) | 附录 A 已按 09-06 实测重估 |
 | 治理残留 | `docs/superpowers/plans/2026-09-05-white-studio.md`(某模型施工计划,grep 零引用) | 随本轮删除,git 历史即归档 |
+| 范围 | RC-W4 超出 §8.1 原列的收尾:golden 数字冻结在 20260827 快照,09-01 例行刷新后该快照消失(provider 追溯调整 2018–2020 历史)→ 复跑失败需处置;CI 自 09-04 起 12 次 push 全红(测试依赖本地数据 + node 20 webidl error) | 09-07 产品拍板并入本轮(处置记录见 §8.1);nightly golden 在 CI runner 上无 Docker skip-pass 记为缺口 |
 
 ### 2.3 执行状态仪表盘(审计后)
 
 | 包 | 状态 | 一句话 |
 |----|------|--------|
 | **W0** 文档融合 | ✅ 已关闭(09-04) | ROADMAP 删除;`validation-gates.md` 落地;阶段单一声明 |
-| **W1** 垃圾清除 | ✅ 主体已关闭(09-05) | terminal/risk/packages/duckdb 删除;无合成回测模块;**残余**:ingest shim、SPY.parquet 跟踪(§6.6) |
+| **W1** 垃圾清除 | ✅ 主体已关闭(09-05) | terminal/risk/packages/duckdb 删除;无合成回测模块;两处残余(ingest shim、SPY.parquet 跟踪)已随 RC-W2 收口(§6.6) |
 | **W2** 架构整理 | ✅ 后端主体(09-06)+ 残余 W2-1…4 已收口;W2-5 codegen 转 RC-W3 | `ValidationSpec` 注册表 + `GET /specs`;`validation.py` 1161→629;worker 拆包完成,单文件 ≤500;quant 边界锁测试在;测试 346 全绿 |
 | **W3** 前端 UI v2 | ✅ 已关闭主体(09-07);方向已锁 White Studio | **W3-1…W3-5 ✅、W2-5 基建 ✅、W3-2 组件迁移 ✅**(产品 tsx 零 CJK,zh/en +600 键);**W3-6 codegen 换用 ✅**(09-07 混合别名方案,§7.2);tsc 0 · vitest 63 · build ✓ |
-| **W4** Phase 4 收尾 | 🚧 特性已提前落地(09-05) | 多回测对比 + MAE/MFE 面板已接入;对比表字段、compare/equity 契约漂移(405)、验收未完成(§8.1) |
+| **W4** Phase 4 收尾 | ✅ 已关闭(09-07) | compare/equity 契约修复(GET-only + series 内嵌 7-key metrics)、对比表全列真值、面板死控件删除;golden re-freeze 到 20260831 快照;CI 修复并入;pytest 349 · vitest 65/12(记录 §8.1) |
 
 ---
 
-## 3. 残余执行总览
+## 3. 残余执行总览(三项全部已关闭,2026-09-07)
 
 顺序即依赖:**先关后端残余 → 再接前端接缝 → 再 W4 收尾验收 → Phase 4 关闭**。任何一步都不得越过验证闸门测试与 Phase 5 边界。
 
@@ -104,9 +105,9 @@
 |----|------|------|----------------|
 | **RC-W2** | 后端残余收口:worker 拆包、quant 边界锁、清 ingest shim、SPY untrack | ✅ 已关闭(2026-09-06) | W2-1…4 完成;W2-5 OpenAPI codegen 转 RC-W3 前端接线前 |
 | **RC-W3** | 前端接缝:ValidationRunForm 接线、i18n 迁移、E2E 进 CI、测试 43→60、压超线组件、White Studio 收口、OpenAPI codegen 换用 | ✅ 已关闭(2026-09-07) | W3 六项全部收口;对比表字段与 compare/equity 契约漂移交 RC-W4(§8.1) |
-| **RC-W4** | Phase 4 收尾验收:对比表补字段、compare/equity 契约漂移修复、golden、README/状态同步、关闭 Phase 4(§8.1) | RC-W2、RC-W3 | 收尾项少但必须在 Phase 5 之前关闭 |
+| **RC-W4** | Phase 4 收尾验收:对比表补字段、compare/equity 契约漂移修复、golden、README/状态同步、关闭 Phase 4(§8.1) | ✅ 已关闭(2026-09-07) | 收尾项少但必须在 Phase 5 之前关闭;golden re-freeze 与 CI 修复经拍板并入(§8.1) |
 
-累计到"可以开 Phase 5"约 **3–5 周**(单人)。
+**Phase 4 已关闭。** 开 Phase 5 前剩 §8.5 前置工程债清理(可观测性/默认口令等,含 nightly golden 的 CI skip-pass 缺口);该包未排期——开工前先回本表登记并更新 §2.3。
 
 ---
 
@@ -215,9 +216,10 @@ Phase 4 特性已提前落地(09-05):跨策略 2–6 条回测曲线叠加、MAE
 
 | 项 | 现状 |
 |----|------|
-| 对比**表**字段 | 后端 `/compare/equity` 只回 id/label/data,前端 CAGR/Sharpe/MaxDD 等列拿不到 → 多为"—"。补后端指标字段 |
-| compare/equity 契约漂移 | 审计(09-07)确认:前端 `compareEquity` POST body {ids,normalized,period} vs 后端 GET-only(query ids/normalized,无 period),405 级真实漂移、零测试覆盖,比较面板当前不可用;与对比表字段同一次 W4 提交引入。**处置(产品拍板)**:RC-W4 内与「请求层批」(W3-6 残余:请求体/query 从 gen operations 接线)一起修成 GET |
-| Phase 4 关闭验收 | golden 复跑、README/状态同步、`MASTER.md`/`.cursor` 一致性复核 |
+| compare/equity 契约漂移 + 对比表字段 | ✅ 已完成(09-07)。审计:前端 POST body {ids,normalized,period} vs 后端 GET-only(query ids/normalized)→ 405 级漂移、零测试、面板不可用;响应无 metrics → 表列恒"—"。处置:① 前端改 GET,ids/normalized 从 gen operations 接线(spec-wired query 类型;请求层批仅此漂移闭环,其余 23 个 requestBody ops 有意不做,不再安排);② 后端 `compare_equity` 移到 router 顶部静态段(GET-only),每条 series 内嵌 7-key metrics(final_equity/total_return/cagr/sharpe/max_drawdown/volatility/trade_count),表列全走后端真值;③ 删死控件 period 选择器与重复的 normalized 复选框(保留单一 normalized 开关,GET 支持)。验证:后端 compare 3 单测、前端 2 vitest(真值格式、metrics=null 兜底"—"、两选才发查询)、真实 chromium 核查通过 |
+| golden 复跑(Phase 4 关闭验收) | ✅ 已完成(09-07):复跑失败根因 = 数据快照轮转(09-01 例行刷新后 20260827 快照消失,provider 追溯调整 2018–2020 历史:24→28 笔、净收益 +3.98%→+0.09%;SPY 现货抽查为真,非回归)→ **拍板重新冻结** `expectations.json` 到 20260831-1209a3(snapshot sha 锁定;golden 2 passed),同步 `test_validation_pipeline` 属性锁。golden 绑定 snapshot sha 的设计即预期快照轮转时 re-freeze |
+| CI 修复包(拍板并入本轮) | ✅ 已完成(09-07):CI 自 09-04 起 12 次 push 全红 → ① research-notes 测试改 ORM direct-seed(CI runner 无市场数据,`data/` 被 gitignore),空 `STREET_DATA_ROOT` 下验证通过;② ci.yml web job node 20→22(jsdom/undici webidl error)。**残余缺口**:nightly golden 在 GitHub runner 上无 Docker → skip-pass 无真锁;自托管 runner 未排期(§8.5) |
+| README/状态同步 + MASTER/.cursor 复核 | ✅ 已完成(09-07):README 阶段行与免责条款更新;.cursor 的 Phase 5 gate 规则无冲突(§10 条目未变);MASTER 令牌预算无变化 |
 
 ### 8.2 Phase 5 — AI Copilot(4–5 周)
 
@@ -249,12 +251,12 @@ Prometheus/Sentry/OTel 可观测性(Phase 5 前,AI 批量试验让队列深度�
 | N1 | W1 垃圾清除 | 已关主体(09-05) | 仓库无合成回测数据 |
 | **N2** | **RC-W2 后端残余收口(当前)** | ✅ 完成(09-06) | worker 拆包 + 边界锁 + 无 shim/漂移类型;`pytest tests/unit` 346 passed;mypy/ruff 全绿 |
 | **N3** | RC-W3 前端接缝 | ✅ 已关闭(09-07) | 表单接线、codegen 混合别名、i18n 零 CJK、测试 63、E2E 按需、组件 ≤400 |
-| **N4** | RC-W4 Phase 4 关闭 | +~3 周 | **Phase 4 关闭,可以开 Phase 5** |
+| **N4** | RC-W4 Phase 4 关闭 | ✅ 已关闭(2026-09-07) | compare/equity 契约修复 + 对比表真值 + golden re-freeze + CI 修复;Phase 4 关闭,下一包为 §8.5 工程债清理 |
 | N5 | Phase 5 AI Copilot | +~8 周 | AI 加速研究(受闸门约束) |
 | N6 | Phase 6/7 Paper+Live | +~16 周 | 研究到执行闭环 + 回测实盘对账(北极星可测) |
 | N7 | Phase 8 组合归因 | +~20 周 | 多策略组合与真 alpha 判定 |
 
-**如果只能做三件事**(09-07 修订,随 RC-W2/RC-W3 关闭更新):RC-W4(关掉 compare/equity 405 与对比表字段,开 Phase 5 的最后门槛)、Phase 5 前置的工程债清理(§8.5 可观测性/默认口令)、N6 的回测–实盘对账(唯一能验证北极星的功能)。
+**如果只能做三件事**(09-07 再修订,随 RC-W4 关闭更新):① **Phase 5 前置工程债清理**(§8.5 可观测性/默认口令,含 nightly golden 的 CI 缺口)——RC-W2/3/4 已全部关闭,此是开 Phase 5 的剩余门槛;② N5 Phase 5 AI Copilot(受 §8.2 约束);③ N6 的回测–实盘对账(唯一能验证北极星的功能)。
 
 ---
 
@@ -278,8 +280,8 @@ Prometheus/Sentry/OTel 可观测性(Phase 5 前,AI 批量试验让队列深度�
 | Python 行数(quant+services) | 14,797 | 实测为主 | RC-W2 后 ≤ 现值,worker 拆包不增行 |
 | 前端行数(web/src) | 9,133 | 实测为主 | ≤400 行/组件;总行数收敛与新增测试抵消 |
 | 第二前端(terminal) | 4,403 | **0** | 0 |
-| Python 测试 | 349 | **346(实测;含新增 2 条边界锁)** | ≥ 现测,不允许减少 |
-| 前端测试 | 18 | **63 / 11 文件** | ≥ 60 + 3 E2E(按需 workflow,不阻塞普通 CI) |
+| Python 测试 | 349 | **349(09-07 收尾实测;较 09-06 净增 3 条 compare 单测)** | ≥ 现测,不允许减少 |
+| 前端测试 | 18 | **65 / 12 文件(09-07 收尾实测)** | ≥ 60 + 3 E2E(按需 workflow,不阻塞普通 CI) |
 | 最大单文件(Python) | `worker/tasks.py` 1,336 | **拆包完成,无单文件 ≥500(最大 `validation.py` 493)** | ≤ 500(✅) |
 | 次大单文件(Python) | `api/services/validation.py` 1,161 | **629** | ≤ 400 |
 | 最大单文件(前端) | `validation-desk.tsx` 668 | **backtest-studio 601** | ≤ 400 |
@@ -290,6 +292,8 @@ Prometheus/Sentry/OTel 可观测性(Phase 5 前,AI 批量试验让队列深度�
 | 阶段声明来源 | 3 处矛盾 | **1 处** | 1 |
 | API 端点/路由文件 | 60/9 | 实测为主 | 不变 |
 | Alembic migration | 9 | 9 | 随 schema 变更 |
+
+**09-07 RC-W4 收尾实测**:后端 `pytest tests/unit` 349 全绿(ruff/mypy 同绿);前端 tsc 0 · vitest 65/12 · lint 0 · `next build` ✓;golden 2 passed(1 skipped:CI runner 无 Docker,见 §8.1);`codegen:types` 幂等;真实栈 chromium 核查对比面板通过。净值/属性锁数字冻结在 20260831 数据快照(re-freeze 记录见 §8.1)。
 
 ## 附录 B:关键文献
 

@@ -98,9 +98,9 @@ Mature components over vanity engineering. We do not rewrite a backtester for sp
 
 | Phase | Status |
 |-------|--------|
-| **当前阶段：Phase 4 研究工作台收尾** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
+| **当前阶段:Phase 4 已关闭(2026-09-07);下一包:Phase 5 前置工程债清理,其后 Phase 5** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
 
-Do not treat backtest numbers as investment advice until Phase 4 closes.
+Backtest numbers are research output, not investment advice.
 
 ### Deployment constraints (single-user, no auth)
 

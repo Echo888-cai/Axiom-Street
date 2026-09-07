@@ -54,3 +54,6 @@ Thumbs.db
 # Test artifacts
 .coverage
 .tox/
+
+# Claude Code local tooling (launch config etc.)
+.claude/
