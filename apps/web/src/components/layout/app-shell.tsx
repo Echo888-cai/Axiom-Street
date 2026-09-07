@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppSidebar, MobileNavigation } from "./app-sidebar";
 import { TopBar } from "./top-bar";
+import { CopilotPanel } from "@/components/copilot/copilot-panel";
 import { ToastViewport } from "@/components/ui/toast";
 import { useT } from "@/lib/i18n";
 
@@ -36,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span>{t("layout.tagline")}</span>
         </footer>
       </div>
+      <CopilotPanel />
       <ToastViewport />
     </div>
   );

@@ -116,11 +116,6 @@ def create_walk_forward(payload: dict, db: Session = Depends(get_db)) -> Validat
     )
 
 
-@router.get("/{run_id}", response_model=ValidationRunOut)
-def get_validation_run(run_id: UUID, db: Session = Depends(get_db)) -> ValidationRunOut:
-    return validation_service.to_out(validation_service.get_validation_run(db, run_id))
-
-
 @router.get("/specs", response_model=list[ValidationSpecOut])
 def get_validation_specs() -> list[ValidationSpecOut]:
     specs = []
@@ -136,3 +131,10 @@ def get_validation_specs() -> list[ValidationSpecOut]:
             )
         )
     return specs
+
+
+# Static paths must be declared before "/{run_id}" or "specs" is parsed as a
+# run UUID (422). Route-order regression surfaced 2026-09-07 during P5-1 smoke.
+@router.get("/{run_id}", response_model=ValidationRunOut)
+def get_validation_run(run_id: UUID, db: Session = Depends(get_db)) -> ValidationRunOut:
+    return validation_service.to_out(validation_service.get_validation_run(db, run_id))

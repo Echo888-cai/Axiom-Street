@@ -1,4 +1,5 @@
 import { common } from "./en/common";
+import { copilot } from "./en/copilot";
 import { validation } from "./en/validation";
 import { strategy } from "./en/strategy";
 import { backtest } from "./en/backtest";
@@ -12,6 +13,7 @@ import { layout } from "./en/layout";
 
 export const en = {
   common,
+  copilot,
   validation,
   strategy,
   backtest,

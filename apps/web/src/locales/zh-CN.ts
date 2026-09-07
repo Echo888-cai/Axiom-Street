@@ -1,4 +1,5 @@
 import { common } from "./zh/common";
+import { copilot } from "./zh/copilot";
 import { validation } from "./zh/validation";
 import { strategy } from "./zh/strategy";
 import { backtest } from "./zh/backtest";
@@ -12,6 +13,7 @@ import { layout } from "./zh/layout";
 
 export const zhCN = {
   common,
+  copilot,
   validation,
   strategy,
   backtest,

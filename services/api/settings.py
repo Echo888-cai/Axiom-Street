@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     otel_endpoint: str = "http://localhost:4317"  # OTLP/gRPC — Jaeger in compose
     prometheus_enabled: bool = True
     sentry_dsn: str = ""  # empty => Sentry fully no-op
+    # AI copilot provider seam (P5-1). Only "noop" is registered until P5-2
+    # wires Anthropic; an unknown name fails loud at request time.
+    copilot_provider: str = "noop"
 
     @property
     def cors_origin_list(self) -> list[str]:

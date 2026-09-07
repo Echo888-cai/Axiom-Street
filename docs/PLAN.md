@@ -84,6 +84,10 @@
 | 附录基线 | 以 304 文件为基准预测 316→~250;实际文件增加(测试/i18n/E2E 资产合法新增) | 附录 A 已按 09-06 实测重估 |
 | 治理残留 | `docs/superpowers/plans/2026-09-05-white-studio.md`(某模型施工计划,grep 零引用) | 随本轮删除,git 历史即归档 |
 | 范围 | RC-W4 超出 §8.1 原列的收尾:golden 数字冻结在 20260827 快照,09-01 例行刷新后该快照消失(provider 追溯调整 2018–2020 历史)→ 复跑失败需处置;CI 自 09-04 起 12 次 push 全红(测试依赖本地数据 + node 20 webidl error) | 09-07 产品拍板并入本轮(处置记录见 §8.1);nightly golden 在 CI runner 上无 Docker skip-pass 记为缺口 |
+| 验证判定死代码(09-07 P5-1 开工审计发现) | `services/api/services/validation_spec.py:681` `gate_check_for` 全仓无调用方(疑似死代码);实际判定来自 quant 层 `result.passed`,worker 直接写 run.passed | **只记录不修**——改判定路径属验证链高危区,不在 P5-1 代码范围;登记待后续工作包裁决 |
+| 闸门口径文档漂移(09-07 P5-1 开工审计发现) | `docs/validation-gates.md:137-143` 指向 `quant/validation/pbo.py`,实际实现是 `quant/metrics/pbo.py`(文档 PBO 小节路径不符) | **只记录不修**——文档与实现口径需对照原文复核后再改文档,不在 P5-1 代码范围 |
+| 路由顺序缺陷(09-07 P5-1 冒烟发现,已修复) | `routers/validation.py` 的 `GET /specs` 注册在 `GET /{run_id}` 之后 → "specs" 按 UUID 解析 422,spec 驱动表单从未真连通过(W3-1 只被 vitest mock 覆盖) | 已修复(09-07 P5-1):静态路由前移到 `/{run_id}` 之前 + 回归测试 `test_validation_specs_static_route_not_swallowed_by_run_id` |
+| EB-P5 观测依赖锁不可安装(09-07 P5-1 容器重建发现,已修复) | pyproject 锁 `opentelemetry-instrumentation-* >=0.49,<1`,但该系列 `<1` 全为 prerelease(最高 0.65b0)→ pip 无 stable 可解,`Dockerfile.api` 构建必败;本地 venv 因 telemetry 导入被函数内守卫而从未暴露 | 已修复(09-07 P5-1):下限改 `>=0.49b0,<1`(预发布规范符使 pip 接受 beta;未来 stable ≥0.49 出现时自动优先 stable);api 容器重建成功 |
 
 ### 2.3 执行状态仪表盘(审计后)
 
@@ -95,10 +99,11 @@
 | **W3** 前端 UI v2 | ✅ 已关闭主体(09-07);方向已锁 White Studio | **W3-1…W3-5 ✅、W2-5 基建 ✅、W3-2 组件迁移 ✅**(产品 tsx 零 CJK,zh/en +600 键);**W3-6 codegen 换用 ✅**(09-07 混合别名方案,§7.2);tsc 0 · vitest 63 · build ✓ |
 | **W4** Phase 4 收尾 | ✅ 已关闭(09-07) | compare/equity 契约修复(GET-only + series 内嵌 7-key metrics)、对比表全列真值、面板死控件删除;golden re-freeze 到 20260831 快照;CI 修复并入;pytest 349 · vitest 65/12(记录 §8.1) |
 | **EB-P5** Phase 5 前置工程债 | ✅ 已关闭(09-07) | 可观测性接入(OTel→Jaeger 单 tracer + API /metrics 聚合队列/心跳 + Sentry 错误门控)、默认口令 env 注入、CORS 收紧同源(不加认证);docker-logs/prune 核对为已落地;pytest 354 · golden 2 · vitest 65(记录 §8.5) |
+| **P5-1** Copilot 底座 | ✅ 已关闭(09-07,当日开工关闭) | Phase 5 首个工作包(§8.2):AI 写路径隔离锁 4 条 + `GET /copilot/context` 只读聚合 + provider 骨架(noop,未知名 fail loud)+ 全局右栏确定性事实面板(试验/闸门/dup/supersede,诚实空态)。产品拍板(09-07):底座先行、P5-2 接 Anthropic 直连、出站仅聚合统计、面板全局窄栏。无 LLM 调用、无聊天框、无写端点、无新表。pytest **370**(354+15+1 路由回归)· golden 2 · vitest 73/14 · tsc 0 · build ✓ · 真实栈 chromium 核查。另修两处潜伏缺陷:GET /validation/specs 被 /{run_id} 吞掉 422(前移+回归测试)、EB-P5 观测依赖锁在 3.11 不可安装(pyproject 改 0.49b0 下限)——记录见 §2.2 |
 
 ---
 
-## 3. 执行总览(RC-W2/3/4 与 EB-P5 已关闭;下一里程碑 N5 = Phase 5)
+## 3. 执行总览(RC-W2/3/4、EB-P5 与 P5-1 已关闭;下一包 P5-2 = Phase 5 Anthropic 劝停)
 
 顺序即依赖:**先关后端残余 → 再接前端接缝 → 再 W4 收尾验收 → Phase 4 关闭 → EB-P5 工程债 → Phase 5**。任何一步都不得越过验证闸门测试与对应 Phase 边界。EB-P5 于 09-07 关闭,Phase 5 前置门槛已清。
 
@@ -108,6 +113,7 @@
 | **RC-W3** | 前端接缝:ValidationRunForm 接线、i18n 迁移、E2E 进 CI、测试 43→60、压超线组件、White Studio 收口、OpenAPI codegen 换用 | ✅ 已关闭(2026-09-07) | W3 六项全部收口;对比表字段与 compare/equity 契约漂移交 RC-W4(§8.1) |
 | **RC-W4** | Phase 4 收尾验收:对比表补字段、compare/equity 契约漂移修复、golden、README/状态同步、关闭 Phase 4(§8.1) | ✅ 已关闭(2026-09-07) | 收尾项少但必须在 Phase 5 之前关闭;golden re-freeze 与 CI 修复经拍板并入(§8.1) |
 | **EB-P5** | Phase 5 前置工程债(§8.5,开 Phase 5 的门槛):可观测性 **OTel→Jaeger**(单 tracer)+ **/metrics 聚合** + **Sentry 错误门控**、默认口令 env 注入、CORS 收紧同源 | ✅ 已关闭(2026-09-07)。深度/出口产品拍板:全栈 + 本地自托管 Jaeger;CORS 按长期最优收紧、**不加认证**(D2 维持) | Phase 5 门槛已清,无前置依赖;下一包 N5 Phase 5(§8.2) |
+| **P5-1** | Copilot 底座(§8.2,09-07 产品拍板):AI 写路径隔离锁 + 只读上下文 API + provider 骨架(noop)+ 全局右栏确定性事实面板 | ✅ 已关闭(2026-09-07) | Phase 5 首个工作包;无 LLM、无聊天、无写端点;下一包 P5-2 Anthropic 劝停 |
 
 **Phase 4 与 EB-P5 均已关闭。** EB-P5 = §8.5 前置工程债清理,2026-09-07 开工当日关闭。开工审计把桶内两项从待办改判为**已落地**(`GET /backtests/{id}/logs` 读 docker stdout/stderr、`prune_jobs.py`);本轮交付三项:① 可观测性——`services/telemetry.py` 集中门控 SDK,OTel 为唯一 tracer(OTLP→本地 Jaeger,compose 新增 jaeger+prometheus 服务),API `/metrics` 聚合 HTTP 计数/延迟 + Celery 队列深度 + worker 心跳年龄,Prometheus 抓单 target,worker 不另起导出端口(Celery prefork 会抢端口);Sentry 仅错误、无 DSN 即 no-op,500 handler 接 capture;② 默认口令——compose/alembic/settings 三层去除 `street:street` 明文默认,`STREET_DATABASE_URL` 必填、`.env.example` 给 `openssl rand` 指引、e2e 显式传凭据;③ CORS 收紧——origins 仅 `http://localhost:3000`(删死 3001)、`allow_credentials=False`、方法最小化,浏览器同源代理零感知。nightly golden 的 CI skip-pass 缺口维持为已知缺口,自托管 runner 不排(§8.6)。验证:ruff/mypy 全绿;pytest tests/unit **354**(+5 观测测试);golden 2 passed(1 skip:缺 Polygon key);前端 tsc 0 · vitest 65;真实 Jaeger OTLP 收 span 冒烟通过。
 
@@ -229,7 +235,16 @@ Phase 4 特性已提前落地(09-05):跨策略 2–6 条回测曲线叠加、MAE
 
 五条不可妥协约束(不变):AI 不得改风控限额 / 不得改验证状态 / 生成策略走完整验证无快速通道 / 每次试验写入试验台账 / 无真实能力不上聊天框。
 
-可抢救设计(已记录,不实现):Copilot 的**交互形态**——右侧常驻上下文面板,感知当前页面与策略版本。最有价值功能仍是**劝用户停下来**("你已在此数据快照上试了 47 次"),试验台账已提供数字。
+**工作包分解(2026-09-07 P5-1 开工拍板登记)**:
+
+| 包 | 内容 | 边界 |
+|----|------|------|
+| **P5-1** 底座 | ✅ 已关闭(09-07) | AI 写路径代码级隔离(锁测试 4 条)+ 只读上下文 API(`GET /copilot/context`)+ provider 适配器骨架(noop,env 门控,未知名 fail loud)+ 全局右栏确定性事实面板(试验计数/闸门/重复参数/快照 supersede,诚实空态)。无 LLM 调用、无聊天框、无写端点、无新表 |
+| P5-2 Anthropic 劝停 | Anthropic 直连(worker synthesize 任务,超时/重试,API 只 enqueue)+ **仅聚合统计**出站组装(key 后端 env,无 key 即关闭)+ 劝停叙述块 | 仍无聊天框;发给 provider 的上下文永不包含策略源码/参数 config/价格序列 |
+| P5-3 建议动作人审闭环 | 面板建议(如参数组合)→ 人审 → 走现有回测/验证通道全量执行,试验自动入台账 | 无自动执行 |
+| P5-4 聊天框形态 | 仅在 P5-2/3 真实能力落地后才评估(约束五) | — |
+
+可抢救设计(已记录,P5-2 起逐步实现):Copilot 的**交互形态**——右侧常驻上下文面板(P5-1 先落确定性事实层),感知当前页面与策略版本。最有价值功能仍是**劝用户停下来**("你已在此数据快照上试了 47 次"),试验台账已提供数字。
 
 ### 8.3 Phase 6 / 7 — Paper 与 Live
 
@@ -267,11 +282,11 @@ nightly golden 的 CI skip-pass 缺口(§8.1):GitHub runner 无 Docker → 维�
 | **N3** | RC-W3 前端接缝 | ✅ 已关闭(09-07) | 表单接线、codegen 混合别名、i18n 零 CJK、测试 63、E2E 按需、组件 ≤400 |
 | **N4** | RC-W4 Phase 4 关闭 | ✅ 已关闭(2026-09-07) | compare/equity 契约修复 + 对比表真值 + golden re-freeze + CI 修复;Phase 4 关闭 |
 | **EB-P5** | Phase 5 前置工程债 | ✅ 已关闭(2026-09-07) | §8.5 全栈可观测性(OTel→Jaeger + /metrics + Sentry 错误门控)+ 默认口令注入 + CORS 收紧;Phase 5 门槛已清,下一里程碑 N5 |
-| N5 | Phase 5 AI Copilot | +~8 周 | AI 加速研究(受闸门约束) |
+| N5 | Phase 5 AI Copilot(§8.2:P5-1 底座 → P5-2 Anthropic 劝停 → P5-3 建议动作 → P5-4 聊天框待议) | P5-1 ✅ 已关闭(09-07);下一包 P5-2 | AI 加速研究(受闸门约束) |
 | N6 | Phase 6/7 Paper+Live | +~16 周 | 研究到执行闭环 + 回测实盘对账(北极星可测) |
 | N7 | Phase 8 组合归因 | +~20 周 | 多策略组合与真 alpha 判定 |
 
-**如果只能做三件事**(09-07 随 EB-P5 关闭修订):① ~~Phase 5 前置工程债~~ —— **EB-P5 已关闭(09-07)**,Phase 5 门槛已清(nightly golden 的 CI 缺口为 §8.6 已知项);② **N5 Phase 5 AI Copilot**(受 §8.2 约束)——下一里程碑;③ N6 的回测–实盘对账(唯一能验证北极星的功能)。
+**如果只能做三件事**(09-07 随 EB-P5 关闭修订):① ~~Phase 5 前置工程债~~ —— **EB-P5 已关闭(09-07)**,Phase 5 门槛已清(nightly golden 的 CI 缺口为 §8.6 已知项);② **N5 Phase 5 AI Copilot**(受 §8.2 约束)——**P5-1 底座已关闭(09-07)**,下一包 P5-2 Anthropic 劝停;③ N6 的回测–实盘对账(唯一能验证北极星的功能)。
 
 ---
 
@@ -295,8 +310,8 @@ nightly golden 的 CI skip-pass 缺口(§8.1):GitHub runner 无 Docker → 维�
 | Python 行数(quant+services) | 14,797 | 实测为主 | RC-W2 后 ≤ 现值,worker 拆包不增行 |
 | 前端行数(web/src) | 9,133 | 实测为主 | ≤400 行/组件;总行数收敛与新增测试抵消 |
 | 第二前端(terminal) | 4,403 | **0** | 0 |
-| Python 测试 | 349 | **354(09-07 EB-P5 收尾实测;较 09-06 净增 5 条观测测试)** | ≥ 现测,不允许减少 |
-| 前端测试 | 18 | **65 / 12 文件(09-07 收尾实测)** | ≥ 60 + 3 E2E(按需 workflow,不阻塞普通 CI) |
+| Python 测试 | 349 | **370(09-07 P5-1 收尾实测;354 + 15 条 copilot + 1 条 specs 路由回归)** | ≥ 现测,不允许减少 |
+| 前端测试 | 18 | **73 / 14 文件(09-07 P5-1 收尾实测)** | ≥ 60 + 3 E2E(按需 workflow,不阻塞普通 CI) |
 | 最大单文件(Python) | `worker/tasks.py` 1,336 | **拆包完成,无单文件 ≥500(最大 `validation.py` 493)** | ≤ 500(✅) |
 | 次大单文件(Python) | `api/services/validation.py` 1,161 | **629** | ≤ 400 |
 | 最大单文件(前端) | `validation-desk.tsx` 668 | **backtest-studio 601** | ≤ 400 |
@@ -311,6 +326,8 @@ nightly golden 的 CI skip-pass 缺口(§8.1):GitHub runner 无 Docker → 维�
 **09-07 RC-W4 收尾实测**:后端 `pytest tests/unit` 349 全绿(ruff/mypy 同绿);前端 tsc 0 · vitest 65/12 · lint 0 · `next build` ✓;golden 2 passed(1 skipped:CI runner 无 Docker,见 §8.1);`codegen:types` 幂等;真实栈 chromium 核查对比面板通过。净值/属性锁数字冻结在 20260831 数据快照(re-freeze 记录见 §8.1)。
 
 **09-07 EB-P5 收尾实测(同日开工关闭)**:后端 `pytest tests/unit` **354** 全绿(349 + 5 条 `tests/unit/test_observability.py`;ruff/mypy 全绿 86 源文件);golden 2 passed(1 skip:缺 Polygon key,非本包);前端 tsc 0 · vitest 65/12(无回归);真实 Jaeger(`all-in-one:1.57`)OTLP 收 `axiom-api` span 冒烟通过、compose 解析 7 服务、缺 POSTGRES_* 时 fail-fast;`git grep "street:street"` 仅剩说明性注释(无凭据字面量)。API 端点 +1(`GET /metrics`);新增依赖 9(prometheus-client/opentelemetry-* /sentry-sdk,见 pyproject)。
+
+**09-07 P5-1 收尾实测(同日开工关闭)**:后端 `pytest tests/unit` **370** 全绿(354 + 15 copilot + 1 specs 路由回归;ruff/mypy 全绿 90 源文件);golden 2 passed(1 skip:缺 Polygon key);前端 tsc 0 · vitest **73/14**(+8:copilot 面板 3 + scope 5)· lint 0 · `next build` ✓;codegen 幂等(`codegen:types` 后 `git diff --exit-code` 无新变化);真实栈 api/web 容器重建后 chromium 核查:右栏在策略详情页渲染试验台账(按快照计数/重复参数/已取代徽标)与闸门结果、`/validation` 列表页诚实空态、console 零错误、窄屏(<1280px)右栏隐藏;`GET /copilot/context` curl 200/404/422 各验一次。API 端点 +1(`GET /copilot/context`);新增文件 13(copilot 后端 5 + 测试 3 + 前端面板 7 + locales 2,见各提交)。
 
 ## 附录 B:关键文献
 

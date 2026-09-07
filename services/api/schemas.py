@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -256,6 +256,46 @@ class TrialStatsOut(BaseModel):
     family_id: Optional[UUID] = None
     total_trials: int
     by_snapshot: list[TrialSnapshotStats] = Field(default_factory=list)
+
+
+class CopilotSnapshotFacts(BaseModel):
+    data_snapshot_id: Optional[UUID] = None
+    snapshot_key: Optional[str] = None
+    superseded_by_key: Optional[str] = None
+    count: int
+    duplicate_parameter_hashes: int = 0
+
+
+class CopilotGateFacts(BaseModel):
+    kind: str
+    status: str
+    passed: bool
+    finished_at: Optional[datetime] = None
+
+
+class CopilotBacktestFacts(BaseModel):
+    id: UUID
+    status: str
+    created_at: datetime
+
+
+class CopilotProviderFacts(BaseModel):
+    name: str
+    enabled: bool
+
+
+class CopilotContextOut(BaseModel):
+    resource: Literal["strategy", "backtest"]
+    strategy_id: UUID
+    strategy_name: str
+    strategy_status: str
+    family_id: Optional[UUID] = None
+    latest_version: Optional[int] = None
+    total_trials: int = 0
+    by_snapshot: list[CopilotSnapshotFacts] = Field(default_factory=list)
+    gates: list[CopilotGateFacts] = Field(default_factory=list)
+    backtest: Optional[CopilotBacktestFacts] = None
+    provider: CopilotProviderFacts
 
 
 class AuditLogOut(ORMModel):

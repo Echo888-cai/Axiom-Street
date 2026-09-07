@@ -763,23 +763,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/validation/{run_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Validation Run */
-        get: operations["get_validation_run_api_v1_validation__run_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/validation/specs": {
         parameters: {
             query?: never;
@@ -789,6 +772,23 @@ export interface paths {
         };
         /** Get Validation Specs */
         get: operations["get_validation_specs_api_v1_validation_specs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/validation/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Validation Run */
+        get: operations["get_validation_run_api_v1_validation__run_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -894,6 +894,23 @@ export interface paths {
         };
         /** List Audit Logs */
         get: operations["list_audit_logs_api_v1_audit_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/copilot/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Context */
+        get: operations["get_context_api_v1_copilot_context_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1229,6 +1246,87 @@ export interface components {
          * @enum {string}
          */
         BacktestStatus: "QUEUED" | "STARTING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+        /** CopilotBacktestFacts */
+        CopilotBacktestFacts: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** CopilotContextOut */
+        CopilotContextOut: {
+            /**
+             * Resource
+             * @enum {string}
+             */
+            resource: "strategy" | "backtest";
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Strategy Name */
+            strategy_name: string;
+            /** Strategy Status */
+            strategy_status: string;
+            /** Family Id */
+            family_id?: string | null;
+            /** Latest Version */
+            latest_version?: number | null;
+            /**
+             * Total Trials
+             * @default 0
+             */
+            total_trials: number;
+            /** By Snapshot */
+            by_snapshot?: components["schemas"]["CopilotSnapshotFacts"][];
+            /** Gates */
+            gates?: components["schemas"]["CopilotGateFacts"][];
+            backtest?: components["schemas"]["CopilotBacktestFacts"] | null;
+            provider: components["schemas"]["CopilotProviderFacts"];
+        };
+        /** CopilotGateFacts */
+        CopilotGateFacts: {
+            /** Kind */
+            kind: string;
+            /** Status */
+            status: string;
+            /** Passed */
+            passed: boolean;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /** CopilotProviderFacts */
+        CopilotProviderFacts: {
+            /** Name */
+            name: string;
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** CopilotSnapshotFacts */
+        CopilotSnapshotFacts: {
+            /** Data Snapshot Id */
+            data_snapshot_id?: string | null;
+            /** Snapshot Key */
+            snapshot_key?: string | null;
+            /** Superseded By Key */
+            superseded_by_key?: string | null;
+            /** Count */
+            count: number;
+            /**
+             * Duplicate Parameter Hashes
+             * @default 0
+             */
+            duplicate_parameter_hashes: number;
+        };
         /** EquityPage */
         EquityPage: {
             /** Items */
@@ -3668,6 +3766,26 @@ export interface operations {
             };
         };
     };
+    get_validation_specs_api_v1_validation_specs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationSpecOut"][];
+                };
+            };
+        };
+    };
     get_validation_run_api_v1_validation__run_id__get: {
         parameters: {
             query?: never;
@@ -3695,26 +3813,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_validation_specs_api_v1_validation_specs_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ValidationSpecOut"][];
                 };
             };
         };
@@ -4001,6 +4099,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditLogPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_context_api_v1_copilot_context_get: {
+        parameters: {
+            query: {
+                resource: "strategy" | "backtest";
+                /** @description 策略或回测 UUID */
+                id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotContextOut"];
                 };
             };
             /** @description Validation Error */
