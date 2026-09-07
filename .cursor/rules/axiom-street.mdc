@@ -11,13 +11,14 @@ When a rule below conflicts with a feature request, the rule wins. When the visi
 
 ## Current scope
 
-- **Active phase: Phase 5 — AI Copilot.** Work packages **P5-1 (底座), P5-2 (模型劝停, DeepSeek) and P5-3 (建议动作人审闭环) are closed (2026-09-07)**; next is **P5-4 聊天框形态 — evaluate only after the P5-2/3 real capabilities are in place (constraint five: no chat UI without real capability)**. Full status lives in `docs/PLAN.md` §2.3 / §8.2; this block is only a pointer.
-- One work package at a time. Do not start the next package until the current one closes and `docs/PLAN.md` §2.3 / 附录 A are synced.
+- **Active phase: Phase 5 — AI Copilot.** Work packages **P5-1 (底座), P5-2 (模型劝停, DeepSeek) and P5-3 (建议动作人审闭环) are closed (2026-09-07)**; next is **P5-4 聊天框形态 — evaluate only after the P5-2/3 real capabilities are in place (constraint five: no chat UI without real capability)**. Full status lives in `docs/PLAN.md`; this block is only a pointer.
+- One work package at a time. Do not start the next package until the current one closes and `docs/PLAN.md` is synced.
+- `services/agent` owns Agent domain logic; `services/api` owns HTTP/database adapters; `services/worker` owns asynchronous execution and LEAN orchestration.
 - Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
 - **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.
 - **Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.**
 - **No module that synthesizes backtest data may exist in this repository.** (Synthetic price series, metrics, trades, heatmaps — all prohibited. This rule is `grep`-checkable; the previous "purpose-based" rule was not.)
-- **Single source of truth for phase/status.** "当前阶段" 与 "已交付能力" 在整个仓库只允许声明一处（`docs/PLAN.md` §2.3 仪表盘与 §0 文档表）。其余文档一律指向此处，不得自行复述。
+- **Single source of truth for phase/status.** "当前阶段" 与 "已交付能力" 在整个仓库只允许声明一处（`docs/PLAN.md`）。其余文档一律指向此处，不得自行复述。
 
 ## Fail loud, never degrade silently
 
