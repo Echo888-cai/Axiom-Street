@@ -1,4 +1,5 @@
 import { request, API_URL, unwrapList } from "./http";
+import type { operations } from "../api-types.gen";
 import type {
   Backtest,
   BacktestMetrics,
@@ -10,6 +11,12 @@ import type {
   MaeMfePoint,
   CompareEquityResponse,
 } from "./types";
+
+// Query params are wired to the spec operation so contract changes
+// (renames, new required params) fail the typecheck, not just the API.
+type CompareEquityQuery = NonNullable<
+  operations["compare_equity_api_v1_backtests_compare_equity_get"]["parameters"]
+>["query"];
 
 export const backtestsApi = {
   listBacktests: (params?: { strategy_id?: string; status?: string }) => {
@@ -62,10 +69,16 @@ export const backtestsApi = {
   tearsheetHtmlUrl: (id: string) =>
     `${API_URL}/api/v1/backtests/${id}/tearsheet.html`,
   eventsUrl: (id: string) => `${API_URL}/api/v1/backtests/${id}/events`,
-  compareEquity: (ids: string[], normalized: boolean = false, period: string = "ALL") =>
-    request<CompareEquityResponse>("/api/v1/backtests/compare/equity", {
-      method: "POST",
-      body: JSON.stringify({ ids, normalized, period }),
-    }),
+  compareEquity: (
+    ids: CompareEquityQuery["ids"],
+    normalized?: CompareEquityQuery["normalized"],
+  ) => {
+    const search = new URLSearchParams();
+    for (const id of ids ?? []) search.append("ids", id);
+    if (normalized) search.set("normalized", "true");
+    return request<CompareEquityResponse>(
+      `/api/v1/backtests/compare/equity?${search.toString()}`,
+    );
+  },
   getMaeMfe: (id: string) => request<MaeMfePoint[]>(`/api/v1/backtests/${id}/mae-mfe`),
 };

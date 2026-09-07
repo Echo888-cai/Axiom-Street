@@ -4,11 +4,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { EquityCurve } from "@/components/charts/equity-curve";
 import { api, type Backtest, type CompareSeries } from "@/lib/api";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, formatPct, formatUsd } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
 interface ComparePanelProps {
@@ -19,7 +18,6 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
   const t = useT();
   const [selectedIds, setSelectedIds] = useState<string[]>([currentBacktestId]);
   const [normalized, setNormalized] = useState(false);
-  const [period, setPeriod] = useState<"1M" | "3M" | "YTD" | "1Y" | "ALL">("ALL");
 
   const { data: allBacktests } = useQuery<Backtest[]>({
     queryKey: ["backtests", "all", "COMPLETED"],
@@ -27,7 +25,7 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
   });
 
   const { data: compareData } = useQuery({
-    queryKey: ["compare", "equity", [...selectedIds].sort().join(","), normalized, period],
+    queryKey: ["compare", "equity", [...selectedIds].sort().join(","), normalized],
     queryFn: () => api.compareEquity(selectedIds, normalized),
     enabled: selectedIds.length >= 2,
   });
@@ -94,46 +92,21 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
               />
               <span className="text-muted-foreground">{t("backtest.compare.normalized")}</span>
             </label>
-            <div className="space-y-1">
-              <Label htmlFor="period">{t("backtest.compare.period")}</Label>
-              <Select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value as typeof period)}
-                className="w-[140px]"
-              >
-                <SelectItem value="1M">{t("backtest.compare.periods.m1")}</SelectItem>
-                <SelectItem value="3M">{t("backtest.compare.periods.m3")}</SelectItem>
-                <SelectItem value="YTD">{t("backtest.compare.periods.ytd")}</SelectItem>
-                <SelectItem value="1Y">{t("backtest.compare.periods.y1")}</SelectItem>
-                <SelectItem value="ALL">{t("backtest.period.all")}</SelectItem>
-              </Select>
-            </div>
           </div>
         </div>
 
         {selectedIds.length >= 2 && compareData?.series?.length && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                {compareData.series.map((s: CompareSeries, i: number) => (
-                  <Badge
-                    key={s.id}
-                    tone={(["blue", "green", "amber", "red", "neutral"] as const)[i % 5]}
-                    className="cursor-pointer hover:opacity-80"
-                  >
-                    {s.label}
-                  </Badge>
-                ))}
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={normalized}
-                  onChange={(e) => setNormalized(e.target.checked)}
-                  className="accent-as-primary"
-                />
-                <span className="text-muted-foreground">{t("backtest.compare.normalized")}</span>
-              </label>
+            <div className="flex flex-wrap gap-2">
+              {compareData.series.map((s: CompareSeries, i: number) => (
+                <Badge
+                  key={s.id}
+                  tone={(["blue", "green", "amber", "red", "neutral"] as const)[i % 5]}
+                  className="cursor-pointer hover:opacity-80"
+                >
+                  {s.label}
+                </Badge>
+              ))}
             </div>
 
             <EquityCurve
@@ -171,11 +144,7 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
                 </thead>
                 <tbody>
                   {compareData.series.map((s: CompareSeries, i: number) => {
-                    const lastPoint = s.data[s.data.length - 1];
-                    const firstPoint = s.data[0];
-                    const totalRet = firstPoint && lastPoint
-                      ? ((lastPoint.value / firstPoint.value - 1) * 100).toFixed(2)
-                      : "—";
+                    const m = s.metrics ?? null;
                     return (
                       <tr key={s.id} className="border-b border-as-border last:border-0 hover:bg-as-secondary/50">
                         <td className="px-4 py-3 font-medium">
@@ -183,13 +152,13 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
                             {s.label}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 tabular text-as-text">{lastPoint ? formatNumber(lastPoint.value) : "—"}</td>
-                        <td className="px-4 py-3 tabular text-as-text">{totalRet}%</td>
-                        <td className="px-4 py-3 tabular text-as-text">{s.cagr?.toFixed(2) ?? "—"}</td>
-                        <td className="px-4 py-3 tabular text-as-text">{s.sharpe?.toFixed(2) ?? "—"}</td>
-                        <td className="px-4 py-3 tabular text-as-text">{s.maxDrawdown?.toFixed(2) ?? "—"}</td>
-                        <td className="px-4 py-3 tabular text-as-text">{s.volatility?.toFixed(2) ?? "—"}</td>
-                        <td className="px-4 py-3 tabular text-as-text">{s.tradeCount ?? "—"}</td>
+                        <td className="px-4 py-3 tabular text-as-text">{m?.final_equity != null ? formatUsd(m.final_equity) : "—"}</td>
+                        <td className="px-4 py-3 tabular text-as-text">{m?.total_return != null ? formatPct(m.total_return) : "—"}</td>
+                        <td className="px-4 py-3 tabular text-as-text">{m?.cagr != null ? formatPct(m.cagr) : "—"}</td>
+                        <td className="px-4 py-3 tabular text-as-text">{m?.sharpe != null ? formatNumber(m.sharpe) : "—"}</td>
+                        <td className="px-4 py-3 tabular text-as-text">{m?.max_drawdown != null ? formatPct(m.max_drawdown) : "—"}</td>
+                        <td className="px-4 py-3 tabular text-as-text">{m?.volatility != null ? formatPct(m.volatility) : "—"}</td>
+                        <td className="px-4 py-3 tabular text-as-text">{m?.trade_count != null ? formatNumber(m.trade_count, 0) : "—"}</td>
                       </tr>
                     );
                   })}

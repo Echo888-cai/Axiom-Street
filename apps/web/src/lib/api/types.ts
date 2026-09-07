@@ -109,15 +109,25 @@ export type ValidationGates = {
   note?: string;
 };
 
+// Metrics the backend attaches per compare series. Derived from the
+// BacktestMetricsOut schema by key, so renames/type changes in the contract
+// surface here at compile time; the endpoint only ever writes these keys.
+export type CompareSeriesMetrics = {
+  [K in
+    | "final_equity"
+    | "total_return"
+    | "cagr"
+    | "sharpe"
+    | "max_drawdown"
+    | "volatility"
+    | "trade_count"]: NonNullable<S["BacktestMetricsOut"][K]>;
+};
+
 export type CompareSeries = {
   id: string;
   label: string;
   data: Array<{ time: string; value: number }>;
-  cagr?: number | null;
-  sharpe?: number | null;
-  maxDrawdown?: number | null;
-  volatility?: number | null;
-  tradeCount?: number | null;
+  metrics?: CompareSeriesMetrics | null;
 };
 
 export type CompareEquityResponse = {

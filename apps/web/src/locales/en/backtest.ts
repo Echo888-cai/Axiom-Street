@@ -28,16 +28,9 @@ export const backtest = {
       title: "Multi-backtest Compare",
       selectLabel: "Select backtests",
       normalized: "Normalized to 100",
-      period: "Period",
       hint: "Select 2–6 completed backtests for cross-strategy comparison",
       noCompleted: "No completed backtests",
       minTwo: "Select at least 2 backtests",
-      periods: {
-        m1: "1M",
-        m3: "3M",
-        ytd: "YTD",
-        y1: "1Y",
-      },
       table: {
         strategy: "Strategy",
         finalEquity: "Final Equity",

@@ -28,16 +28,9 @@ export const backtest = {
       title: "多回测对比",
       selectLabel: "选择回测",
       normalized: "归一化到 100",
-      period: "周期",
       hint: "选择 2-6 个已完成的回测进行跨策略对比",
       noCompleted: "暂无已完成回测",
       minTwo: "至少选择 2 个回测",
-      periods: {
-        m1: "1 月",
-        m3: "3 月",
-        ytd: "今年以来",
-        y1: "1 年",
-      },
       table: {
         strategy: "策略",
         finalEquity: "期末权益",
