@@ -17,7 +17,7 @@ from typing import Any, Protocol, cast
 from openai import APIConnectionError, APIError, APITimeoutError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 
-from services.api.services.copilot.prompts import (
+from services.agent.copilot.prompts import (
     _MAX_SUGGEST_REASON_CHARS,
     build_messages,
     build_suggest_messages,
