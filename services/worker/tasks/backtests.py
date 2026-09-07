@@ -39,6 +39,7 @@ from services.api.models import (
 from services.api.settings import get_settings
 from services.worker import tasks as _tasks
 from services.worker.celery_app import celery_app
+from services.worker.tasks.risk_config import resolve_risk_config_json
 
 from ._common import (
     _set_progress,
@@ -171,6 +172,16 @@ def execute_backtest(backtest_id: str, *, record_gates: bool = True) -> dict:
             db.commit()
             return {"error": "universe_missing", "message": str(exc)}
 
+        try:
+            risk_config_json = resolve_risk_config_json(version.config)
+        except ValueError as exc:
+            backtest.status = BacktestStatus.FAILED
+            backtest.error = {"code": "risk_limits_invalid", "message": str(exc)}
+            backtest.finished_at = datetime.now(timezone.utc)
+            backtest.progress_step = "Failed"
+            db.commit()
+            return {"error": "risk_limits_invalid", "message": str(exc)}
+
         engine = _tasks.LeanQuantEngine(
             lean_image=settings.lean_image,
             data_root=data_root,
@@ -205,6 +216,7 @@ def execute_backtest(backtest_id: str, *, record_gates: bool = True) -> dict:
             universe=universe,
             memberships=memberships,
             data_root=data_root,
+            risk_config_json=risk_config_json,
             timeout_seconds=settings.lean_timeout_seconds,
             cancel_check=_cancelled,
         )
