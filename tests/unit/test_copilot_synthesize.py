@@ -14,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 from services.api import db as db_module
 from services.api.db import Base
 from services.api.models import CopilotInsight, CopilotInsightStatus, Strategy
-from services.api.services.copilot.providers import CopilotProviderError
+from services.agent.copilot.providers import CopilotProviderError
 from services.api.settings import get_settings
 from services.worker.tasks.copilot import execute_synthesize
 

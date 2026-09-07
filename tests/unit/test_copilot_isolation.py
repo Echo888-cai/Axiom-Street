@@ -14,7 +14,7 @@ inside their ledger-write helpers ``_record_insight`` (``copilot_insights``)
 and ``_record_suggestion`` (``copilot_suggestions``). Any other write call
 site fails the lock.
 
-``services/api/services/suggestions.py`` (P5-3 deterministic derivation) lives
+``services/agent/suggestions.py`` (P5-3 deterministic derivation) lives
 OUTSIDE the copilot package on purpose: it must read ``StrategyVersion.code``
 to decide which validation kinds a strategy can actually run — a read that is
 forbidden inside scanned copilot sources. Read-only there is enforced by its
@@ -30,10 +30,11 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-COPILOT_DIR = ROOT / "services" / "api" / "services" / "copilot"
+AGENT_DIR = ROOT / "services" / "agent"
+COPILOT_DIR = AGENT_DIR / "copilot"
 ROUTER_FILE = ROOT / "services" / "api" / "routers" / "copilot.py"
 TASK_FILE = ROOT / "services" / "worker" / "tasks" / "copilot.py"
-SUGGESTIONS_FILE = ROOT / "services" / "api" / "services" / "suggestions.py"
+SUGGESTIONS_FILE = AGENT_DIR / "suggestions.py"
 
 # The worker tasks orchestrate the outbound calls and own the ledger writes, so
 # they must not sit outside every lock; but ORM writes are permitted only in
@@ -194,7 +195,7 @@ def test_suggestions_module_never_imports_write_services() -> None:
 
 def test_suggestions_cards_never_carry_source_fields() -> None:
     """Card output keys are white-listed; research-IP/market columns cannot leak."""
-    from services.api.services.suggestions import CARD_KEYS
+    from services.agent.suggestions import CARD_KEYS
 
     assert CARD_KEYS <= {
         "key",

@@ -20,7 +20,7 @@ from services.api.models import (
     StrategyVersion,
     ValidationRun,
 )
-from services.api.services.copilot.context import build_context
+from services.agent.copilot.context import build_context
 
 
 def _ts(year: int, month: int, day: int) -> datetime:

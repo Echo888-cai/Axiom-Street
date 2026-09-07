@@ -19,7 +19,7 @@ from services.api.models import (
     StrategyVersion,
     ValidationRun,
 )
-from services.api.services.suggestions import CARD_KEYS, derive_suggestions
+from services.agent.suggestions import CARD_KEYS, derive_suggestions
 
 
 def _ts(year: int, month: int, day: int) -> datetime:

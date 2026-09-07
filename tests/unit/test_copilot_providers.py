@@ -8,8 +8,8 @@ import httpx
 import pytest
 from openai import APIConnectionError, APIStatusError
 
-from services.api.services.copilot import providers as providers_module
-from services.api.services.copilot.providers import (
+from services.agent.copilot import providers as providers_module
+from services.agent.copilot.providers import (
     CopilotProviderError,
     DeepSeekProvider,
     NoopProvider,

@@ -150,7 +150,7 @@ def test_execute_suggest_out_of_set_pick_records_failed(db_session, monkeypatch)
 
 
 def test_execute_suggest_provider_error_records_failed(db_session, monkeypatch) -> None:
-    from services.api.services.copilot.providers import CopilotProviderError
+    from services.agent.copilot.providers import CopilotProviderError
 
     provider, _calls = _fake_provider(exc=CopilotProviderError("无法连接 DeepSeek"))
     monkeypatch.setattr("services.worker.tasks.copilot.get_provider", lambda: provider)

@@ -19,8 +19,8 @@ from services.api.schemas import (
     CopilotSynthesizeAccepted,
     CopilotSynthesizeIn,
 )
-from services.api.services import copilot as copilot_service
-from services.api.services.suggestions import derive_suggestions
+from services.agent import copilot as copilot_service
+from services.agent import suggestions as suggestions_service
 
 router = APIRouter(prefix="/copilot", tags=["copilot"])
 
@@ -101,7 +101,10 @@ def suggestions(
     """
     if db.get(Strategy, strategy_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="策略不存在")
-    cards = [CopilotSuggestionCard.model_validate(c) for c in derive_suggestions(db, strategy_id)]
+    cards = [
+        CopilotSuggestionCard.model_validate(c)
+        for c in suggestions_service.derive_suggestions(db, strategy_id)
+    ]
     return CopilotSuggestionsOut(candidates=cards)
 
 
