@@ -1,19 +1,26 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from services.api.db import get_db
+from services.api.models import Strategy
 from services.api.schemas import (
     CopilotContextOut,
     CopilotInsightOut,
+    CopilotSuggestAccepted,
+    CopilotSuggestIn,
+    CopilotSuggestionCard,
+    CopilotSuggestionOut,
+    CopilotSuggestionsOut,
     CopilotSynthesizeAccepted,
     CopilotSynthesizeIn,
 )
 from services.api.services import copilot as copilot_service
+from services.api.services.suggestions import derive_suggestions
 
 router = APIRouter(prefix="/copilot", tags=["copilot"])
 
@@ -79,3 +86,67 @@ def insights(
     """Synthesize ledger for a strategy, newest first (P5-2)."""
     rows = copilot_service.list_insights(db, strategy_id, limit=limit)
     return [CopilotInsightOut.model_validate(row) for row in rows]
+
+
+@router.get("/suggestions", response_model=CopilotSuggestionsOut)
+def suggestions(
+    db: Session = Depends(get_db),
+    strategy_id: UUID = Query(...),
+) -> CopilotSuggestionsOut:
+    """Deterministic actionable cards for a strategy (P5-3).
+
+    Stateless derivation on every call — the executable source of truth for
+    what the copilot can recommend. The model (when enabled) only picks within
+    these cards.
+    """
+    if db.get(Strategy, strategy_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="策略不存在")
+    cards = [CopilotSuggestionCard.model_validate(c) for c in derive_suggestions(db, strategy_id)]
+    return CopilotSuggestionsOut(candidates=cards)
+
+
+@router.get(
+    "/suggestions/recommendation",
+    response_model=Optional[CopilotSuggestionOut],
+)
+def suggestion_recommendation(
+    db: Session = Depends(get_db),
+    strategy_id: UUID = Query(...),
+) -> Optional[CopilotSuggestionOut]:
+    """Newest model priority pick for a strategy, or null when none yet."""
+    row = copilot_service.latest_suggestion(db, strategy_id)
+    if row is None:
+        return None
+    return CopilotSuggestionOut.model_validate(row)
+
+
+@router.post(
+    "/suggest",
+    response_model=CopilotSuggestAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def suggest(
+    payload: CopilotSuggestIn,
+    db: Session = Depends(get_db),
+) -> CopilotSuggestAccepted:
+    """Enqueue one model priority pick over the deterministic candidates (P5-3).
+
+    API only enqueues; the worker derives candidates, calls the provider
+    constrained to that set, and records one row in ``copilot_suggestions``.
+    Provider disabled fails loud with 503 before anything is queued.
+    """
+    context = copilot_service.build_context(db, payload.resource, payload.id)
+    if context is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_DETAIL_BY_RESOURCE[payload.resource]
+        )
+    provider = copilot_service.get_provider()
+    if not provider.enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"模型 {provider.name} 未启用:未配置 API key(无 key 即关闭)",
+        )
+    from services.worker.tasks import run_suggest_task
+
+    run_suggest_task.delay(payload.resource, str(payload.id))
+    return CopilotSuggestAccepted(status="queued")

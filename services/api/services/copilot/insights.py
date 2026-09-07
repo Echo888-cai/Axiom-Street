@@ -13,7 +13,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.api.models import CopilotInsight
+from services.api.models import CopilotInsight, CopilotSuggestion
 
 
 def list_insights(db: Session, strategy_id: UUID, limit: int = 10) -> list[dict]:
@@ -37,3 +37,30 @@ def list_insights(db: Session, strategy_id: UUID, limit: int = 10) -> list[dict]
         }
         for row in rows
     ]
+
+
+def latest_suggestion(db: Session, strategy_id: UUID) -> dict | None:
+    """Newest model priority pick for a strategy (P5-3), or None."""
+    row = (
+        db.execute(
+            select(CopilotSuggestion)
+            .where(CopilotSuggestion.strategy_id == strategy_id)
+            .order_by(CopilotSuggestion.created_at.desc(), CopilotSuggestion.id.desc())
+        )
+        .scalars()
+        .first()
+    )
+    if row is None:
+        return None
+    return {
+        "id": row.id,
+        "strategy_id": row.strategy_id,
+        "status": row.status.value if isinstance(row.status, Enum) else row.status,
+        "model": row.model,
+        "picked_id": row.picked_id,
+        "reason": row.reason or "",
+        "error": row.error,
+        "duration_ms": row.duration_ms,
+        "created_at": row.created_at,
+        "finished_at": row.finished_at,
+    }

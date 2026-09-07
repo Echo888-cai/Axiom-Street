@@ -160,3 +160,89 @@ def test_synthesize_connection_error_translated(monkeypatch) -> None:
     _install_fake(monkeypatch, APIConnectionError(message="nope", request=request))
     with pytest.raises(CopilotProviderError, match="无法连接"):
         get_provider().synthesize({"total_trials": 1})
+
+
+# ------------------------------------------------------------------ suggest
+
+
+_CANDIDATES = [
+    {
+        "key": "run_validation:PBO",
+        "action": "run_validation",
+        "validation_kind": "PBO",
+        "reason_code": "never_run",
+        "target_version": 1,
+    },
+    {"key": "discipline:duplicate", "action": "discipline", "reason_code": "duplicate_parameters"},
+]
+
+
+def test_noop_suggest_returns_none(monkeypatch) -> None:
+    _clear_settings(monkeypatch)
+    monkeypatch.setenv("STREET_COPILOT_PROVIDER", "noop")
+    assert get_provider().suggest({}, _CANDIDATES) is None
+
+
+def test_disabled_deepseek_suggest_never_constructs_client(monkeypatch) -> None:
+    _clear_settings(monkeypatch)
+    calls: list = []
+    monkeypatch.setattr(providers_module, "OpenAI", lambda **kw: calls.append(kw))
+    assert get_provider().suggest({}, _CANDIDATES) is None
+    assert calls == []
+
+
+def test_suggest_returns_in_set_pick(monkeypatch) -> None:
+    _clear_settings(monkeypatch)
+    monkeypatch.setenv("STREET_DEEPSEEK_API_KEY", "sk-test")
+    fake = _install_fake(
+        monkeypatch,
+        _text_response('{"picked_id": "run_validation:PBO", "reason": "先补 PBO 闸门。"}'),
+    )
+
+    pick = get_provider().suggest({"total_trials": 47}, _CANDIDATES)
+
+    assert pick == {"picked_id": "run_validation:PBO", "reason": "先补 PBO 闸门。"}
+    roles = [m["role"] for m in fake.call_kwargs["messages"]]
+    assert roles == ["system", "user"]
+    assert "run_validation:PBO" in fake.call_kwargs["messages"][1]["content"]
+
+
+def test_suggest_accepts_code_fenced_json(monkeypatch) -> None:
+    _clear_settings(monkeypatch)
+    monkeypatch.setenv("STREET_DEEPSEEK_API_KEY", "sk-test")
+    _install_fake(
+        monkeypatch,
+        _text_response(
+            '```json\n{"picked_id": "discipline:duplicate", "reason": "先停重复试验。"}\n```'
+        ),
+    )
+    pick = get_provider().suggest({}, _CANDIDATES)
+    assert pick["picked_id"] == "discipline:duplicate"
+
+
+def test_suggest_out_of_set_pick_is_rejected(monkeypatch) -> None:
+    _clear_settings(monkeypatch)
+    monkeypatch.setenv("STREET_DEEPSEEK_API_KEY", "sk-test")
+    _install_fake(
+        monkeypatch,
+        _text_response('{"picked_id": "run_validation:DSR", "reason": "随便挑的。"}'),
+    )
+    with pytest.raises(CopilotProviderError, match="候选之外"):
+        get_provider().suggest({}, _CANDIDATES)
+
+
+def test_suggest_malformed_or_incomplete_reply_is_rejected(monkeypatch) -> None:
+    _clear_settings(monkeypatch)
+    monkeypatch.setenv("STREET_DEEPSEEK_API_KEY", "sk-test")
+    _install_fake(monkeypatch, _text_response("not json"))
+    with pytest.raises(CopilotProviderError, match="不是合法 JSON"):
+        get_provider().suggest({}, _CANDIDATES)
+
+    _install_fake(monkeypatch, _text_response('{"picked_id": "discipline:duplicate"}'))
+    with pytest.raises(CopilotProviderError, match="缺少 reason"):
+        get_provider().suggest({}, _CANDIDATES)
+
+    long_text = '{"picked_id": "discipline:duplicate", "reason": "' + ("太长了" * 60) + '"}'
+    _install_fake(monkeypatch, _text_response(long_text))
+    with pytest.raises(CopilotProviderError, match="超过"):
+        get_provider().suggest({}, _CANDIDATES)

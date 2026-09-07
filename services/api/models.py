@@ -528,3 +528,36 @@ class CopilotInsight(Base):
     duration_ms: Mapped[Optional[int]] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class CopilotSuggestionStatus(str, enum.Enum):
+    DONE = "DONE"
+    FAILED = "FAILED"
+
+
+class CopilotSuggestion(Base):
+    """Copilot suggestion ledger (P5-3): one row per model priority pick.
+
+    Append-only transport for the LLM re-rank of deterministic suggestion
+    cards. The row records which card the model picked (``picked_id`` is a
+    card key) and its Chinese rationale, or the error when the model call
+    failed. Deterministic cards themselves are stateless — this table only
+    carries the optional model recommendation on top of them.
+    """
+
+    __tablename__ = "copilot_suggestions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    status: Mapped[CopilotSuggestionStatus] = mapped_column(
+        _enum(CopilotSuggestionStatus, "copilot_suggestion_status"), nullable=False
+    )
+    model: Mapped[Optional[str]] = mapped_column(String(64))
+    picked_id: Mapped[Optional[str]] = mapped_column(String(64))
+    reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    error: Mapped[Optional[str]] = mapped_column(Text)
+    duration_ms: Mapped[Optional[int]] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

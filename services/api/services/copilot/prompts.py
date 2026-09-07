@@ -55,3 +55,45 @@ def build_messages(context: dict[str, Any]) -> list[dict[str, str]]:
         + "\n\n请根据这些事实判断:该停了吗?"
     )
     return [{"role": "system", "content": _SYSTEM}, {"role": "user", "content": user}]
+
+
+# --- P5-3 suggest mode: pick one actionable card, never invent one ---
+
+_MAX_SUGGEST_REASON_CHARS = 120
+
+_SUGGEST_SYSTEM = (
+    "你是 Axiom Street 量化研究平台的助手。下面的候选建议由平台确定性规则生成,"
+    "每条都来自真实研究上下文且可执行;纪律/指引类候选同样基于真实台账事实。"
+    "你的唯一任务:在候选中挑一个你判断当下最该采取的动作,给一句简短中文理由。"
+    '硬规则:① 只能从候选里挑一个,输出 JSON {"picked_id":"...","reason":"..."};'
+    "② reason 只能引用候选本身给出的信息(类型/闸门/版本),"
+    f"≤{_MAX_SUGGEST_REASON_CHARS} 字,严禁编造数字、动作或候选外的建议;"
+    "③ 不要输出候选以外的任何字段。"
+)
+
+
+def build_suggest_messages(candidates: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Render the deterministic candidate cards into one system + one user msg.
+
+    Candidates carry only machine card metadata (key/action/kind/version) —
+    never strategy source, parameter values, or price series. The model is
+    confined to this set by construction; membership is enforced again on the
+    reply (``providers.DeepSeekProvider.suggest``).
+    """
+    summaries = [
+        {
+            "key": c["key"],
+            "action": c.get("action"),
+            "kind": c.get("validation_kind"),
+            "reason_code": c.get("reason_code"),
+            "version": c.get("target_version"),
+        }
+        for c in candidates
+        if c.get("key")
+    ]
+    user = (
+        "候选建议:\n"
+        + json.dumps(summaries, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        + '\n\n请返回 JSON:{"picked_id": "<候选 key>", "reason": "<中文理由>"}。'
+    )
+    return [{"role": "system", "content": _SUGGEST_SYSTEM}, {"role": "user", "content": user}]

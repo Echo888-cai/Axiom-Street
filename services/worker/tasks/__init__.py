@@ -53,9 +53,11 @@ run_spa_task = validation_post.run_spa_task  # type: ignore[has-type]
 run_ingest_task = data.run_ingest_task
 reconcile_market_data_task = data.reconcile_market_data_task
 
-# Copilot domain (P5-2)
+# Copilot domain (P5-2 / P5-3)
 execute_synthesize = copilot.execute_synthesize
 run_synthesize_task = copilot.run_synthesize_task  # type: ignore[has-type]
+execute_suggest = copilot.execute_suggest
+run_suggest_task = copilot.run_suggest_task  # type: ignore[has-type]
 
 __all__ = [
     "SessionLocal",
@@ -86,4 +88,6 @@ __all__ = [
     "reconcile_market_data_task",
     "execute_synthesize",
     "run_synthesize_task",
+    "execute_suggest",
+    "run_suggest_task",
 ]

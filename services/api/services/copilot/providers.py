@@ -11,12 +11,17 @@ JSON, or price series.
 
 from __future__ import annotations
 
+import json
 from typing import Any, Protocol, cast
 
 from openai import APIConnectionError, APIError, APITimeoutError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 
-from services.api.services.copilot.prompts import build_messages
+from services.api.services.copilot.prompts import (
+    _MAX_SUGGEST_REASON_CHARS,
+    build_messages,
+    build_suggest_messages,
+)
 from services.api.settings import get_settings
 
 
@@ -35,6 +40,14 @@ class Provider(Protocol):
         """Produce a narrative insight, or None when the provider is disabled."""
         ...
 
+    def suggest(self, context: dict[str, Any], candidates: list[dict[str, Any]]) -> dict | None:
+        """Pick one card among the deterministic candidates + a reason.
+
+        Returns None when the provider is disabled. The reply is validated to
+        stay inside ``candidates`` — the model can never invent an action.
+        """
+        ...
+
 
 class NoopProvider:
     """Deterministic fallback: the platform never dials out."""
@@ -43,6 +56,9 @@ class NoopProvider:
     enabled = False
 
     def synthesize(self, context: dict[str, Any]) -> str | None:
+        return None
+
+    def suggest(self, context: dict[str, Any], candidates: list[dict[str, Any]]) -> dict | None:
         return None
 
 
@@ -59,7 +75,7 @@ def _translate_status(status_code: int | None) -> str:
 
 
 class DeepSeekProvider:
-    """P5-2 outbound provider: DeepSeek V4 over the OpenAI-compatible API.
+    """P5-2/3 outbound provider: DeepSeek V4 over the OpenAI-compatible API.
 
     Synchronous (worker-side) with an explicit timeout; the SDK retries
     transient failures a bounded number of times (``max_retries``). Errors are
@@ -75,11 +91,8 @@ class DeepSeekProvider:
     def enabled(self) -> bool:
         return bool(get_settings().deepseek_api_key)
 
-    def synthesize(self, context: dict[str, Any]) -> str | None:
+    def _chat(self, messages: list[ChatCompletionMessageParam]) -> str:
         settings = get_settings()
-        if not settings.deepseek_api_key:
-            return None
-        messages = cast(list[ChatCompletionMessageParam], build_messages(context))
         client = OpenAI(
             api_key=settings.deepseek_api_key,
             base_url=self.base_url,
@@ -101,11 +114,50 @@ class DeepSeekProvider:
         except APIError as exc:
             status_code = getattr(exc, "status_code", None)
             raise CopilotProviderError(_translate_status(status_code)) from exc
-        choice = response.choices[0]
-        text = choice.message.content
+        text = response.choices[0].message.content
         if text is None or not text.strip():
             raise CopilotProviderError("模型返回了空内容")
         return text.strip()
+
+    def synthesize(self, context: dict[str, Any]) -> str | None:
+        if not self.enabled:
+            return None
+        messages = cast(list[ChatCompletionMessageParam], build_messages(context))
+        return self._chat(messages)
+
+    @staticmethod
+    def _parse_suggest(text: str, allowed_keys: set[str]) -> dict[str, str]:
+        """Defensive JSON parse; the pick must be inside the candidate set."""
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.strip("`")
+            cleaned = cleaned.removeprefix("json").lstrip()
+        try:
+            payload = json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            raise CopilotProviderError("模型建议不是合法 JSON") from exc
+        if not isinstance(payload, dict):
+            raise CopilotProviderError("模型建议 JSON 不是对象")
+        picked_id = payload.get("picked_id")
+        reason = payload.get("reason")
+        if not isinstance(picked_id, str) or picked_id not in allowed_keys:
+            raise CopilotProviderError("模型选择了候选之外的动作,已拒绝")
+        if not isinstance(reason, str) or not reason.strip():
+            raise CopilotProviderError("模型建议缺少 reason")
+        reason = reason.strip()
+        if len(reason) > _MAX_SUGGEST_REASON_CHARS:
+            raise CopilotProviderError(
+                f"模型建议 reason 超过 {_MAX_SUGGEST_REASON_CHARS} 字,已拒绝"
+            )
+        return {"picked_id": picked_id, "reason": reason}
+
+    def suggest(self, context: dict[str, Any], candidates: list[dict[str, Any]]) -> dict | None:
+        if not self.enabled:
+            return None
+        messages = cast(list[ChatCompletionMessageParam], build_suggest_messages(candidates))
+        text = self._chat(messages)
+        allowed = {c["key"] for c in candidates if c.get("key")}
+        return self._parse_suggest(text, allowed)
 
 
 _REGISTRY: dict[str, type[Provider]] = {"noop": NoopProvider, "deepseek": DeepSeekProvider}
