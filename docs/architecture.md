@@ -10,6 +10,7 @@
 | `apps/web` | Next.js 研究工作台 UI（**唯一产品前端**） |
 | `services/api` | FastAPI；唯一的数据库写入路径 |
 | `services/worker` | Celery worker；持有 `docker.sock`，执行 LEAN |
+| `services/agent` | Agent/Copilot 领域层；聚合上下文、Provider、提示词和确定式建议 |
 | `quant/` | 纯 Python 量化核心（不依赖 web framework） |
 | `data/` | 不可变行情快照与 manifest |
 | `tests/` | 单元测试 + Golden Backtest |
@@ -23,32 +24,33 @@
 
 `apps/web/src/app` 负责路由；`features` 负责业务；`components` 负责通用外观；`lib/api` 按策略、回测、验证、数据、标的池、笔记和代码服务拆分。浏览器经 `/api/backend` 同源网关访问 FastAPI，`API_BASE_URL` 在 Next.js 服务端运行时读取。SSE 与下载均走同一链路。详细目录及运行约定见 [前端接手说明](frontend-handoff.md)。
 
+## Agent 领域
+
+`services/agent` 负责 Copilot 上下文组装、Provider 适配、提示词、洞察台账查询和确定式建议推导。API 路由只负责 HTTP 适配与 enqueue；Worker 任务负责异步执行和 Copilot 台账写入。Agent 输入只允许聚合事实或白名单建议元数据，策略源码、参数配置和原始行情序列不能进入 Provider 边界。
+
 ## 1. 分层与边界
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Web (Next.js)                                              │
-│  Strategy Lab · Tearsheet · Validation · Research notes      │
-└───────────────────────────┬─────────────────────────────────┘
-                            │  REST /api/v1  +  SSE
-┌───────────────────────────▼─────────────────────────────────┐
-│  API (FastAPI)                                              │
-│  routers → services → models          ← 唯一的 DB 写入路径   │
-└─────────┬─────────────────────────────────┬─────────────────┘
-          │ Celery (Redis broker)           │
-┌─────────▼───────────────┐     ┌───────────▼─────────────────┐
-│  Worker (Celery)        │     │  PostgreSQL                 │
-│  回测 · 验证 · 摄取      │     │  策略 · 回测 · 试验台账      │
-└─────────┬───────────────┘     └─────────────────────────────┘
-          │
-┌─────────▼───────────────────────────────────────────────────┐
-│  quant/  (纯 Python 库，不依赖 FastAPI / Celery)             │
-│  engine · data · metrics · validation · risk · strategy_sdk  │
-└─────────┬───────────────────────────────────────────────────┘
-          │ docker run --network none
-┌─────────▼───────────────────────────────────────────────────┐
-│  LEAN (quantconnect/lean:pinned)  ← 唯一的回测执行者          │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    User[研究者] --> Web[apps/web\nNext.js 前端]
+    Web -->|同源 REST / SSE| API[services/api\nFastAPI + DB 写入边界]
+    API -->|只读 Agent API| Agent[services/agent\nCopilot 领域层]
+    API -->|enqueue-only| Worker[services/worker\nCelery 异步执行]
+    Worker --> Agent
+    Worker -->|唯一持有 docker.sock| Lean[LEAN\n固定版本 Docker]
+    API --> DB[(PostgreSQL)]
+    Worker --> DB
+    Agent -->|仅聚合统计/候选元数据| Provider[DeepSeek Provider\n可关闭、受约束]
+    Worker -->|读取| Quant[quant\n纯 Python 量化核心]
+    Quant --> Data[data/snapshots\n不可变快照]
+    Worker -->|落台账| DB
+
+    classDef frontend fill:#eef6ff,stroke:#4a90e2,color:#132238;
+    classDef backend fill:#eef9f0,stroke:#3a8f5a,color:#173b24;
+    classDef agent fill:#fff5e6,stroke:#c4811d,color:#4a2b00;
+    class Web frontend;
+    class API,Worker,Quant,Lean,DB backend;
+    class Agent,Provider agent;
 ```
 
 ### 不可违反的边界
