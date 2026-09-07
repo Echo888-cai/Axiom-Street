@@ -4,9 +4,15 @@ import structlog
 from celery import Celery
 from celery.signals import worker_ready
 
+from services import telemetry
 from services.api.settings import get_settings
 
 settings = get_settings()
+
+# OTel traces worker tasks to the same local Jaeger; Sentry captures task errors.
+# Both are internal no-ops unless enabled (unit tests run disabled).
+telemetry.configure_otel("axiom-worker")
+telemetry.configure_sentry()
 
 celery_app = Celery(
     "axiom_street",

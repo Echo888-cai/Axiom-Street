@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from contextlib import asynccontextmanager
 
+import structlog
 from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI, HTTPException, Request
@@ -10,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from services import telemetry
 from services.api.db import Base, SessionLocal, engine
 from services.api.health import collect_health
 from services.api.models import User
@@ -74,10 +76,13 @@ app.add_middleware(RequestIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,  # single-user, same-origin proxy — no cross-origin credentials (EB-P5)
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+# Outermost so it times the full request including CORS handling (EB-P5).
+app.add_middleware(telemetry.PrometheusMiddleware)
+telemetry.register_metrics(app)
 
 app.include_router(strategies.router, prefix="/api/v1")
 app.include_router(backtests.router, prefix="/api/v1")
@@ -88,6 +93,12 @@ app.include_router(validation.router, prefix="/api/v1")
 app.include_router(research.router, prefix="/api/v1")
 app.include_router(code_router.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
+
+# OTel is the single tracer (OTLP -> Jaeger in the compose stack); Sentry is
+# errors-only. Both are internal no-ops unless enabled in settings, so unit
+# tests never dial out.
+telemetry.configure_otel("axiom-api", app=app)
+telemetry.configure_sentry()
 
 
 @app.exception_handler(HTTPException)
@@ -111,6 +122,10 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError) 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
+    structlog.get_logger("api.unhandled").error(
+        "unhandled exception", exc_type=type(exc).__name__, error=str(exc)
+    )
+    telemetry.capture_exception(exc)
     return JSONResponse(
         status_code=500,
         content={"detail": {"code": "internal_error", "message": str(exc)}},

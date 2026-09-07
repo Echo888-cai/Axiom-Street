@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="STREET_", env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql+psycopg://street:street@localhost:5432/street"
+    # Database credentials are intentionally NOT defaulted: the weak street:street
+    # fallback was removed (EB-P5). Local dev supplies STREET_DATABASE_URL via .env.
+    database_url: str = Field(min_length=1)
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
@@ -37,6 +40,13 @@ class Settings(BaseSettings):
     ingest_concurrency: int = 4
     ingest_burst: float = 2.0
 
+    # Observability (EB-P5). All SDK init is gated on these so unit tests never
+    # dial out; compose enables them in the deployed stack.
+    otel_enabled: bool = False
+    otel_endpoint: str = "http://localhost:4317"  # OTLP/gRPC — Jaeger in compose
+    prometheus_enabled: bool = True
+    sentry_dsn: str = ""  # empty => Sentry fully no-op
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -44,4 +54,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # type: ignore[call-arg]  # values come from env/.env, not kwargs

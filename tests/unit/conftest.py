@@ -8,6 +8,11 @@ os.environ.setdefault("STREET_SYNC_INGESTS", "1")
 os.environ.setdefault("STREET_SKIP_MIGRATIONS", "1")
 os.environ.setdefault("STREET_INGEST_RPS", "0")
 os.environ.setdefault("STREET_INGEST_CONCURRENCY", "1")
+# Observability SDK init must stay off under unit tests (EB-P5): no OTel/Sentry
+# exporters may dial out, and the prometheus HTTP-timing middleware stays inert.
+os.environ.setdefault("STREET_OTEL_ENABLED", "false")
+os.environ.setdefault("STREET_PROMETHEUS_ENABLED", "false")
+os.environ.pop("STREET_SENTRY_DSN", None)
 # Unit tests must not pick Polygon just because the developer has a key locally.
 os.environ.pop("POLYGON_API_KEY", None)
 os.environ.pop("STREET_RECONCILE_WITH", None)
