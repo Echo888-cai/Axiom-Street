@@ -1,150 +1,112 @@
-export type Strategy = {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string;
-  asset_class: string;
-  benchmark: string;
-  created_at: string;
-  updated_at: string;
-  latest_version?: StrategyVersion | null;
+// Contract-first API types (W3-6, scope: frontend hybrid alias + checks).
+//
+// Every shape the OpenAPI spec models is aliased straight from
+// api-types.gen.ts — that file is the single source of truth and the CI
+// drift guard (`codegen:types && git diff --exit-code`) owns it. Fields the
+// backend leaves unmodeled (bare dicts / anonymous responses) keep narrow
+// local read models, keyed to the keys the backend actually writes; the
+// type-level checks at the bottom of this file pin each read model as a
+// structural subtype of its contract counterpart so unmodeled drift stays
+// visible. Governance: docs/PLAN.md §7.2 W3-6.
+
+import type { components, operations } from "../api-types.gen";
+
+type S = components["schemas"];
+
+// ---------- whole-shape aliases: the contract owns the field set ----------
+
+export type Strategy = S["StrategyOut"];
+export type StrategyVersion = S["StrategyVersionOut"];
+export type BacktestMetrics = S["BacktestMetricsOut"];
+export type EquityPoint = S["EquityPoint"];
+export type Trade = S["TradeOut"];
+export type TimeSeriesPoint = S["TimeSeriesPointOut"];
+export type LspCompletion = S["LspCompletion"];
+export type MonthlyReturn = S["MonthlyReturnOut"];
+export type MaeMfePoint = S["MaeMfePoint"];
+export type ResearchNote = S["ResearchNoteOut"];
+export type UniverseMember = S["UniverseMemberOut"];
+export type ValidationSpec = S["ValidationSpecOut"];
+
+// spec kinds are plain strings; the UI narrows to the eight known kinds.
+export type ValidationKind =
+  | "walk_forward"
+  | "dsr"
+  | "pbo"
+  | "sensitivity"
+  | "cost"
+  | "bootstrap"
+  | "regime"
+  | "spa";
+
+// ---------- narrowed read models: contract base + local shape for fields
+// the backend returns as bare dicts but the UI actually reads ----------
+
+// Backend writes {code, message} and adds line on engine errors
+// (services/worker/tasks/backtests.py).
+export type BacktestError = { code?: string; message?: string; line?: number };
+
+export type BacktestUniverseMember = {
+  symbol: string;
+  effective_from: string;
+  effective_to: string | null;
 };
 
-export type StrategyVersion = {
-  id: string;
-  strategy_id: string;
-  version: number;
-  code: string;
-  config: Record<string, unknown>;
-  commit_message: string | null;
-  created_by: string;
-  created_at: string;
+export type Backtest = Omit<S["BacktestOut"], "error" | "universe_snapshot"> & {
+  error: BacktestError | null;
+  universe_snapshot?: BacktestUniverseMember[] | null;
 };
 
-export type Backtest = {
-  id: string;
-  strategy_version_id: string;
-  start_date: string;
-  end_date: string;
-  benchmark: string;
-  initial_capital: number;
-  status: string;
-  engine_version: string | null;
-  data_version: string | null;
-  parameters: Record<string, unknown>;
-  progress_step: string | null;
-  error: { message?: string; line?: number; code?: string } | null;
-  started_at: string | null;
-  finished_at: string | null;
-  created_at: string;
-  strategy_id?: string | null;
-  strategy_name?: string | null;
-  version_number?: number | null;
-  total_return?: number | null;
-  sharpe?: number | null;
-  max_drawdown?: number | null;
-  trade_count?: number | null;
-  final_equity?: number | null;
-  data_snapshot_id?: string | null;
-  universe_id?: string | null;
-  universe_snapshot?: Array<{
-    symbol: string;
-    effective_from: string;
-    effective_to: string | null;
-  }> | null;
-  result_fingerprint?: string | null;
-  cache_hit?: boolean;
+// Backend writes {code, message} for failed runs, same shape as BacktestError
+// (services/worker/tasks/backtests.py / scans.py).
+export type ValidationRun = Omit<S["ValidationRunOut"], "error"> & {
+  error?: BacktestError | null;
 };
 
-export type BacktestMetrics = {
-  backtest_id: string;
-  total_return: number | null;
-  cagr: number | null;
-  sharpe: number | null;
-  max_drawdown: number | null;
-  volatility: number | null;
-  win_rate: number | null;
-  trade_count: number | null;
-  final_equity: number | null;
-  benchmark_return: number | null;
-  excess_return: number | null;
-  alpha_capm: number | null;
-  beta: number | null;
-  information_ratio: number | null;
-  tracking_error: number | null;
-  sortino: number | null;
-  calmar: number | null;
-  commission: number | null;
-  deflated_sharpe: number | null;
-  probabilistic_sharpe: number | null;
-  dsr_n_trials: number | null;
-  dsr_sr_star: number | null;
-  tail_ratio?: number | null;
-  skewness?: number | null;
-  kurtosis?: number | null;
-  var_95?: number | null;
-  cvar_95?: number | null;
-  omega_ratio?: number | null;
-  turnover?: number | null;
-  gross_exposure?: number | null;
-  net_exposure?: number | null;
-  extras?: Record<string, unknown>;
-  [key: string]: unknown;
+// Rules mirror quant/data/universe_rules.py UniverseRuleSet keys.
+export type Universe = Omit<S["UniverseOut"], "rules"> & {
+  rules?: {
+    min_price?: number;
+    min_adv_usd?: number;
+    lookback_days?: number;
+    min_market_cap_usd?: number;
+    sectors?: string[];
+    industries?: string[];
+  } | null;
 };
 
-export type EquityPoint = {
-  ts: string;
-  strategy_value: number;
-  benchmark_value: number | null;
-  drawdown: number | null;
+// by_snapshot rows are returned unmodeled; narrow for trial-stats display.
+export type TrialStats = Omit<S["TrialStatsOut"], "by_snapshot"> & {
+  by_snapshot?: Array<{
+    data_snapshot_id: string | null;
+    snapshot_key: string | null;
+    count: number;
+    sharpe_mean: number | null;
+    sharpe_var: number | null;
+    sharpe_max: number | null;
+    duplicate_parameter_hashes: number;
+  }>;
 };
 
-export type Trade = {
-  id: number;
-  trade_date: string;
-  ticker: string;
-  direction: string;
-  quantity: number;
-  entry_price: number | null;
-  exit_price: number | null;
-  pnl: number | null;
-  return_pct: number | null;
-  holding_period: number | null;
-  commission: number | null;
-  slippage: number | null;
-  signal: string | null;
+// ---------- local-only read models: the API has no named schema for these
+// responses yet (bare dict in OpenAPI). Shape stays hand-maintained until
+// the backend models them; endpoint pins at the bottom keep the mapping
+// honest. ----------
+
+export type Page<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
 };
 
-export type TimeSeriesPoint = {
-  name: string;
-  ts: string;
-  value: number;
-};
-
-export type LspCompletion = {
-  label: string;
-  insert: string;
-  kind: string;
-  detail: string | null;
-};
-
-export type MonthlyReturn = {
-  year: number;
-  month: number;
-  return_pct: number;
-};
-
-export type MaeMfePoint = {
-  trade_id: string;
-  trade_date: string | null;
-  ticker: string;
-  direction: string;
-  entry_price: number | null;
-  exit_price: number | null;
-  pnl: number | null;
-  mae: number | null;
-  mfe: number | null;
-  holding_period: number | null;
+// The spec's ValidationPage carries a bare `gates` object; narrow read model
+// below, guarded against ValidationPage by the compound check at the bottom.
+export type ValidationGates = {
+  validated_requires?: string[];
+  available?: string[];
+  missing?: string[];
+  note?: string;
 };
 
 export type CompareSeries = {
@@ -160,111 +122,6 @@ export type CompareSeries = {
 
 export type CompareEquityResponse = {
   series: CompareSeries[];
-};
-
-export type ResearchNote = {
-  id: string;
-  strategy_id: string;
-  strategy_version_id: string | null;
-  backtest_id: string | null;
-  title: string;
-  hypothesis: string;
-  method: string;
-  conclusion: string;
-  failure_modes: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Page<T> = {
-  items: T[];
-  total: number;
-  limit: number;
-  offset: number;
-};
-
-export type TrialStats = {
-  strategy_id: string;
-  family_id: string | null;
-  total_trials: number;
-  by_snapshot: Array<{
-    data_snapshot_id: string | null;
-    snapshot_key: string | null;
-    count: number;
-    sharpe_mean: number | null;
-    sharpe_var: number | null;
-    sharpe_max: number | null;
-    duplicate_parameter_hashes: number;
-  }>;
-};
-
-export type ValidationKind =
-  | "walk_forward"
-  | "dsr"
-  | "pbo"
-  | "sensitivity"
-  | "cost"
-  | "bootstrap"
-  | "regime"
-  | "spa";
-
-export type ValidationSpec = {
-  kind: ValidationKind;
-  display_name: string;
-  description: string;
-  auto_on_backtest: boolean;
-  params_schema: Record<string, unknown>;
-};
-
-export type ValidationRun = {
-  id: string;
-  strategy_id: string | null;
-  strategy_version_id: string | null;
-  backtest_id: string | null;
-  kind: string;
-  status: string;
-  progress_step: string | null;
-  params: Record<string, unknown>;
-  result: Record<string, unknown>;
-  passed: boolean;
-  error: { code?: string; message?: string } | null;
-  created_at: string;
-  finished_at: string | null;
-};
-
-export type ValidationSpecOut = {
-  kind: ValidationKind;
-  display_name: string;
-  description: string;
-  auto_on_backtest: boolean;
-  params_schema: Record<string, unknown>;
-};
-
-export type UniverseMember = {
-  id: string;
-  universe_id: string;
-  symbol: string;
-  effective_from: string;
-  effective_to: string | null;
-};
-
-export type Universe = {
-  id: string;
-  name: string;
-  description: string | null;
-  kind: string;
-  rules?: {
-    min_price?: number;
-    min_adv_usd?: number;
-    lookback_days?: number;
-    min_market_cap_usd?: number;
-    sectors?: string[];
-    industries?: string[];
-  } | null;
-  created_at: string;
-  updated_at: string;
-  member_count: number;
-  members: UniverseMember[];
 };
 
 export type IngestJob = {
@@ -367,3 +224,92 @@ export type DataStatus = {
     effective_to: string;
   }>;
 };
+
+// ---------- structural checks: each read model must stay a subtype of its
+// contract counterpart (exported so lint/compilers treat them as used) ----------
+
+type Check<T extends true> = T;
+type Extends<A, B> = [A] extends [B] ? true : false;
+
+export type _C_Backtest = Check<Extends<Backtest, S["BacktestOut"]>>;
+export type _C_ValidationRun = Check<
+  Extends<ValidationRun, S["ValidationRunOut"]>
+>;
+export type _C_Universe = Check<Extends<Universe, S["UniverseOut"]>>;
+export type _C_TrialStats = Check<Extends<TrialStats, S["TrialStatsOut"]>>;
+export type _C_Strategy = Check<Extends<Strategy, S["StrategyOut"]>>;
+export type _C_StrategyVersion = Check<
+  Extends<StrategyVersion, S["StrategyVersionOut"]>
+>;
+export type _C_BacktestMetrics = Check<
+  Extends<BacktestMetrics, S["BacktestMetricsOut"]>
+>;
+export type _C_EquityPoint = Check<Extends<EquityPoint, S["EquityPoint"]>>;
+export type _C_Trade = Check<Extends<Trade, S["TradeOut"]>>;
+export type _C_TimeSeriesPoint = Check<
+  Extends<TimeSeriesPoint, S["TimeSeriesPointOut"]>
+>;
+export type _C_LspCompletion = Check<Extends<LspCompletion, S["LspCompletion"]>>;
+export type _C_MonthlyReturn = Check<
+  Extends<MonthlyReturn, S["MonthlyReturnOut"]>
+>;
+export type _C_MaeMfePoint = Check<Extends<MaeMfePoint, S["MaeMfePoint"]>>;
+export type _C_ResearchNote = Check<
+  Extends<ResearchNote, S["ResearchNoteOut"]>
+>;
+export type _C_UniverseMember = Check<
+  Extends<UniverseMember, S["UniverseMemberOut"]>
+>;
+export type _C_ValidationSpec = Check<
+  Extends<ValidationSpec, S["ValidationSpecOut"]>
+>;
+
+// Page<T> mirrors the spec's page envelopes; pins keep the generic honest.
+export type _C_PageBacktest = Check<
+  Extends<Page<Backtest>, S["BacktestPage"]>
+>;
+export type _C_PageStrategy = Check<
+  Extends<Page<Strategy>, S["StrategyPage"]>
+>;
+export type _C_PageEquity = Check<Extends<Page<EquityPoint>, S["EquityPage"]>>;
+export type _C_PageTrade = Check<Extends<Page<Trade>, S["TradePage"]>>;
+export type _C_PageUniverse = Check<Extends<Page<Universe>, S["UniversePage"]>>;
+export type _C_PageValidation = Check<
+  Extends<Page<ValidationRun>, S["ValidationPage"]>
+>;
+export type _C_PageValidationGates = Check<
+  Extends<Page<ValidationRun> & { gates?: ValidationGates }, S["ValidationPage"]>
+>;
+export type _C_PageResearch = Check<
+  Extends<Page<ResearchNote>, S["ResearchNotePage"]>
+>;
+
+// Endpoint pins for unmodeled responses: the response bodies are bare dicts
+// in the spec, so the subtype checks above cannot protect them; these pins
+// fail loudly if the route/method/response is remodeled, and then the local
+// read model above must follow.
+type OpBody<K extends keyof operations> =
+  operations[K]["responses"] extends {
+    200: { content: { "application/json": infer J } };
+  }
+    ? J
+    : never;
+
+export type _C_DataStatus = Check<
+  Extends<DataStatus, OpBody<"get_data_status_api_v1_data_status_get">>
+>;
+export type _C_IngestJob = Check<
+  Extends<
+    IngestJob,
+    OpBody<"get_ingest_job_api_v1_data_ingest__job_id__get">
+  >
+>;
+export type _C_DataSnapshot = Check<
+  Extends<DataSnapshot, OpBody<"list_snapshots_api_v1_data_snapshots_get">>
+>;
+export type _C_CompareEquity = Check<
+  Extends<
+    CompareEquityResponse,
+    OpBody<"compare_equity_api_v1_backtests_compare_equity_get">
+  >
+>;

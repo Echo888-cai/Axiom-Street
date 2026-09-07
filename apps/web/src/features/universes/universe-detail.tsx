@@ -128,7 +128,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
   }
 
   const row = universe.data;
-  const members = [...row.members].sort((a, b) =>
+  const members = [...(row.members ?? [])].sort((a, b) =>
     a.symbol === b.symbol
       ? a.effective_from.localeCompare(b.effective_from)
       : a.symbol.localeCompare(b.symbol),

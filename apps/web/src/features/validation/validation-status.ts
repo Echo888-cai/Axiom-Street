@@ -36,7 +36,7 @@ export function conclusion(row: ValidationRun) {
       : { tone: "amber" as const, label: tr("validation.conclusion.bootstrapFailed") };
   }
   if (row.kind === "REGIME") {
-    if (row.passed && row.result.single_regime === true) {
+    if (row.passed && row.result?.single_regime === true) {
       return { tone: "amber" as const, label: tr("validation.conclusion.edgeConcentrated") };
     }
     return row.passed

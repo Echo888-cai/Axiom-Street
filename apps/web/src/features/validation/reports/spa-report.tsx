@@ -15,26 +15,27 @@ export function asModels(
 
 export function SpaReport({ run }: { run: ValidationRun }) {
   const t = useT();
+  const result: Record<string, unknown> = run.result ?? {};
   const reason =
-    typeof run.result.reason === "string" ? run.result.reason : null;
+    typeof result.reason === "string" ? result.reason : null;
   const pRc =
-    typeof run.result.p_reality_check === "number"
-      ? run.result.p_reality_check
+    typeof result.p_reality_check === "number"
+      ? result.p_reality_check
       : null;
   const pLower =
-    typeof run.result.p_spa_lower === "number" ? run.result.p_spa_lower : null;
+    typeof result.p_spa_lower === "number" ? result.p_spa_lower : null;
   const pConsistent =
-    typeof run.result.p_spa_consistent === "number"
-      ? run.result.p_spa_consistent
+    typeof result.p_spa_consistent === "number"
+      ? result.p_spa_consistent
       : null;
   const pUpper =
-    typeof run.result.p_spa_upper === "number" ? run.result.p_spa_upper : null;
+    typeof result.p_spa_upper === "number" ? result.p_spa_upper : null;
   const nModels =
-    typeof run.result.n_models === "number" ? run.result.n_models : null;
-  const nObs = typeof run.result.n_obs === "number" ? run.result.n_obs : null;
+    typeof result.n_models === "number" ? result.n_models : null;
+  const nObs = typeof result.n_obs === "number" ? result.n_obs : null;
   const statistic =
-    typeof run.result.statistic === "number" ? run.result.statistic : null;
-  const models = asModels(run.result);
+    typeof result.statistic === "number" ? result.statistic : null;
+  const models = asModels(result);
   return (
     <Card>
       <CardHeader

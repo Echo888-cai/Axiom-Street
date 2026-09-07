@@ -8,19 +8,20 @@ import { useT } from "@/lib/i18n";
 
 export function CostReport({ run }: { run: ValidationRun }) {
   const t = useT();
+  const result: Record<string, unknown> = run.result ?? {};
   const conclusionText =
-    typeof run.result.conclusion === "string" ? run.result.conclusion : null;
+    typeof result.conclusion === "string" ? result.conclusion : null;
   const reason =
-    typeof run.result.reason === "string" ? run.result.reason : null;
+    typeof result.reason === "string" ? result.reason : null;
   const breakeven =
-    typeof run.result.breakeven_bps === "number"
-      ? run.result.breakeven_bps
+    typeof result.breakeven_bps === "number"
+      ? result.breakeven_bps
       : null;
   const realistic =
-    typeof run.result.realistic_one_way_bps === "number"
-      ? run.result.realistic_one_way_bps
+    typeof result.realistic_one_way_bps === "number"
+      ? result.realistic_one_way_bps
       : null;
-  const points = asPoints(run.result);
+  const points = asPoints(result);
   return (
     <Card>
       <CardHeader

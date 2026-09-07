@@ -37,12 +37,13 @@ function asConfigs(result: Record<string, unknown>): ConfigRow[] {
 
 function PboReport({ run }: { run: ValidationRun }) {
   const t = useT();
-  const pbo = typeof run.result.pbo === "number" ? run.result.pbo : null;
-  const nSlices = typeof run.result.n_slices === "number" ? run.result.n_slices : null;
+  const result: Record<string, unknown> = run.result ?? {};
+  const pbo = typeof result.pbo === "number" ? result.pbo : null;
+  const nSlices = typeof result.n_slices === "number" ? result.n_slices : null;
   const nCombos =
-    typeof run.result.n_combinations === "number" ? run.result.n_combinations : null;
-  const nObs = typeof run.result.n_obs_aligned === "number" ? run.result.n_obs_aligned : null;
-  const configs = asConfigs(run.result);
+    typeof result.n_combinations === "number" ? result.n_combinations : null;
+  const nObs = typeof result.n_obs_aligned === "number" ? result.n_obs_aligned : null;
+  const configs = asConfigs(result);
   const maxAbs = Math.max(0.5, ...configs.map((row) => Math.abs(Number(row.sharpe) || 0)));
 
   return (
@@ -197,10 +198,12 @@ export function ExperimentsDesk() {
             </thead>
             <tbody>
               {items.map((row) => {
+                const result: Record<string, unknown> = row.result ?? {};
+                const params: Record<string, unknown> = row.params ?? {};
                 const badge = conclusion(row, t);
-                const pbo = typeof row.result.pbo === "number" ? row.result.pbo : null;
-                const values = Array.isArray(row.params.values)
-                  ? (row.params.values as number[]).join(", ")
+                const pbo = typeof result.pbo === "number" ? result.pbo : null;
+                const values = Array.isArray(params.values)
+                  ? (params.values as number[]).join(", ")
                   : "—";
                 return (
                   <tr key={row.id} className="border-b border-as-border last:border-0">

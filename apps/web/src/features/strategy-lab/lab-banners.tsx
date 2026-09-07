@@ -17,7 +17,7 @@ export function LabBanners({
   legacyCode: boolean;
 }) {
   const t = useT();
-  const firstSnapshot = trials?.by_snapshot[0];
+  const firstSnapshot = trials?.by_snapshot?.[0];
   return (
     <>
       {trials && trials.total_trials > 0 ? (

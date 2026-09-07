@@ -15,16 +15,17 @@ export function asPoints(
 
 export function SensitivityReport({ run }: { run: ValidationRun }) {
   const t = useT();
+  const result: Record<string, unknown> = run.result ?? {};
   const reason =
-    typeof run.result.reason === "string" ? run.result.reason : null;
-  const shape = typeof run.result.shape === "string" ? run.result.shape : null;
+    typeof result.reason === "string" ? result.reason : null;
+  const shape = typeof result.shape === "string" ? result.shape : null;
   const peakSharpe =
-    typeof run.result.peak_sharpe === "number" ? run.result.peak_sharpe : null;
+    typeof result.peak_sharpe === "number" ? result.peak_sharpe : null;
   const width =
-    typeof run.result.plateau_width === "number"
-      ? run.result.plateau_width
+    typeof result.plateau_width === "number"
+      ? result.plateau_width
       : null;
-  const points = asPoints(run.result);
+  const points = asPoints(result);
   return (
     <Card>
       <CardHeader

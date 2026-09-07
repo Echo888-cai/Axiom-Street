@@ -15,13 +15,14 @@ export function asSlices(
 
 export function RegimeReport({ run }: { run: ValidationRun }) {
   const t = useT();
+  const result: Record<string, unknown> = run.result ?? {};
   const reason =
-    typeof run.result.reason === "string" ? run.result.reason : null;
+    typeof result.reason === "string" ? result.reason : null;
   const concentrated =
-    typeof run.result.concentrated_in === "string"
-      ? run.result.concentrated_in
+    typeof result.concentrated_in === "string"
+      ? result.concentrated_in
       : null;
-  const slices = asSlices(run.result);
+  const slices = asSlices(result);
   return (
     <Card>
       <CardHeader
@@ -35,7 +36,7 @@ export function RegimeReport({ run }: { run: ValidationRun }) {
       {reason ? (
         <p className="mb-4 text-sm leading-relaxed text-as-text">{reason}</p>
       ) : null}
-      {run.result.single_regime === true ? (
+      {result.single_regime === true ? (
         <p className="mb-4 text-xs text-as-muted">
           {t("validation.reports.regime.edgePrefix")}{" "}
           {concentrated || t("validation.reports.regime.singleRegime")}

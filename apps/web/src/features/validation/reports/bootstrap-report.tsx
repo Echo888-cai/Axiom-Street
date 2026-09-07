@@ -65,20 +65,21 @@ export function IntervalRow({
 
 export function BootstrapReport({ run }: { run: ValidationRun }) {
   const t = useT();
+  const result: Record<string, unknown> = run.result ?? {};
   const reason =
-    typeof run.result.reason === "string" ? run.result.reason : null;
-  const sharpe = asInterval(run.result.sharpe);
-  const cagr = asInterval(run.result.cagr);
-  const maxDd = asInterval(run.result.max_drawdown);
+    typeof result.reason === "string" ? result.reason : null;
+  const sharpe = asInterval(result.sharpe);
+  const cagr = asInterval(result.cagr);
+  const maxDd = asInterval(result.max_drawdown);
   const nBoot =
-    typeof run.result.n_boot === "number" ? run.result.n_boot : null;
+    typeof result.n_boot === "number" ? result.n_boot : null;
   const meanBlock =
-    typeof run.result.mean_block_length === "number"
-      ? run.result.mean_block_length
+    typeof result.mean_block_length === "number"
+      ? result.mean_block_length
       : null;
   const level =
-    typeof run.result.confidence_level === "number"
-      ? run.result.confidence_level
+    typeof result.confidence_level === "number"
+      ? result.confidence_level
       : 0.95;
   return (
     <Card>

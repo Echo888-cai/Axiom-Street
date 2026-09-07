@@ -183,31 +183,32 @@ export function ValidationDesk() {
             </thead>
             <tbody>
               {items.map((row) => {
+                const result: Record<string, unknown> = row.result ?? {};
                 const badge = conclusion(row);
                 const pbo =
-                  typeof row.result.pbo === "number" ? row.result.pbo : null;
+                  typeof result.pbo === "number" ? result.pbo : null;
                 const dsr =
-                  typeof row.result.dsr === "number" ? row.result.dsr : null;
+                  typeof result.dsr === "number" ? result.dsr : null;
                 const n =
-                  typeof row.result.n_trials === "number"
-                    ? row.result.n_trials
+                  typeof result.n_trials === "number"
+                    ? result.n_trials
                     : null;
                 const oos =
-                  typeof row.result.combined_oos_sharpe === "number"
-                    ? row.result.combined_oos_sharpe
+                  typeof result.combined_oos_sharpe === "number"
+                    ? result.combined_oos_sharpe
                     : null;
                 const shape =
-                  typeof row.result.shape === "string"
-                    ? row.result.shape
+                  typeof result.shape === "string"
+                    ? result.shape
                     : null;
                 const breakeven =
-                  typeof row.result.breakeven_bps === "number"
-                    ? row.result.breakeven_bps
+                  typeof result.breakeven_bps === "number"
+                    ? result.breakeven_bps
                     : null;
-                const sharpeCi = asInterval(row.result.sharpe);
+                const sharpeCi = asInterval(result.sharpe);
                 const concentrated =
-                  typeof row.result.concentrated_in === "string"
-                    ? row.result.concentrated_in
+                  typeof result.concentrated_in === "string"
+                    ? result.concentrated_in
                     : null;
                 const summary =
                   row.kind === "DSR"
@@ -239,9 +240,9 @@ export function ValidationDesk() {
                                   ? t("validation.desk.acrossRegimes")
                                   : t("validation.results.failed")
                               : row.kind === "SPA"
-                                ? typeof row.result.p_spa_consistent ===
+                                ? typeof result.p_spa_consistent ===
                                   "number"
-                                  ? `SPA_c ${row.result.p_spa_consistent.toFixed(3)}`
+                                  ? `SPA_c ${result.p_spa_consistent.toFixed(3)}`
                                   : "—"
                                 : oos == null
                                   ? "—"

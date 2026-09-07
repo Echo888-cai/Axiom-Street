@@ -34,23 +34,25 @@ export function asEquity(
 
 export function WalkForwardReport({ run }: { run: ValidationRun }) {
   const t = useT();
-  const folds = asFolds(run.result);
-  const equity = asEquity(run.result);
+  const result: Record<string, unknown> = run.result ?? {};
+  const params: Record<string, unknown> = run.params ?? {};
+  const folds = asFolds(result);
+  const equity = asEquity(result);
   const combined =
-    typeof run.result.combined_oos_sharpe === "number"
-      ? run.result.combined_oos_sharpe
+    typeof result.combined_oos_sharpe === "number"
+      ? result.combined_oos_sharpe
       : null;
   const reason =
-    typeof run.result.reason === "string" ? run.result.reason : null;
+    typeof result.reason === "string" ? result.reason : null;
   return (
     <Card>
       <CardHeader
         title={t("validation.reports.walkForward.title")}
         hint={
           <p className="text-xs text-as-muted">
-            {`${run.params.mode === "anchored"
+            {`${params.mode === "anchored"
               ? t("validation.reports.walkForward.anchored")
-              : t("validation.reports.walkForward.rolling")} · ${t("validation.reports.walkForward.trainLabel")} ${String(run.params.train_years ?? "—")} ${t("validation.reports.walkForward.yearsUnit")} / ${t("validation.reports.walkForward.testLabel")} ${String(run.params.test_years ?? "—")} ${t("validation.reports.walkForward.yearsUnit")}`}
+              : t("validation.reports.walkForward.rolling")} · ${t("validation.reports.walkForward.trainLabel")} ${String(params.train_years ?? "—")} ${t("validation.reports.walkForward.yearsUnit")} / ${t("validation.reports.walkForward.testLabel")} ${String(params.test_years ?? "—")} ${t("validation.reports.walkForward.yearsUnit")}`}
           </p>
         }
       />
@@ -63,7 +65,7 @@ export function WalkForwardReport({ run }: { run: ValidationRun }) {
           <span className="tabular-nums text-as-text">
             {combined.toFixed(2)}
           </span>
-          {run.result.overfit_collapse === true
+          {result.overfit_collapse === true
             ? ` · ${t("validation.reports.walkForward.collapse")}`
             : ""}
         </p>

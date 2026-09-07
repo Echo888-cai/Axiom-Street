@@ -1,5 +1,11 @@
 import { request } from "./http";
-import type { TrialStats, ValidationRun, ValidationSpec } from "./types";
+import type {
+  Page,
+  TrialStats,
+  ValidationGates,
+  ValidationRun,
+  ValidationSpec,
+} from "./types";
 
 export const validationApi = {
   listValidationSpecs: () =>
@@ -11,18 +17,9 @@ export const validationApi = {
     if (params?.strategy_id) search.set("strategy_id", params.strategy_id);
     if (params?.kind) search.set("kind", params.kind);
     const q = search.toString();
-    return request<{
-      items: ValidationRun[];
-      total: number;
-      limit: number;
-      offset: number;
-      gates: {
-        validated_requires?: string[];
-        available?: string[];
-        missing?: string[];
-        note?: string;
-      };
-    }>(`/api/v1/validation${q ? `?${q}` : ""}`);
+    return request<Page<ValidationRun> & { gates?: ValidationGates }>(
+      `/api/v1/validation${q ? `?${q}` : ""}`,
+    );
   },
   getValidationRun: (id: string) =>
     request<ValidationRun>(`/api/v1/validation/${id}`),
