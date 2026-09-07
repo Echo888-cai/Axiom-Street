@@ -33,6 +33,40 @@ export const copilot = {
     retryHint: "Retry once; repeated failures usually mean a model-service or account problem",
     model: "Model",
   },
+  suggestions: {
+    title: "Suggested actions",
+    empty: "No suggested actions right now",
+    failed: "Could not load suggested actions",
+    adopt: "Adopt",
+    submitting: "Submitting…",
+    queued: "Validation submitted — gate results will flow back here when done",
+    reason: {
+      never_run: "This gate has never run on the latest version",
+      not_passed: "The latest run did not pass — worth one more full run",
+      backtest_first:
+        "This version has no completed full-sample backtest yet. Run one first; gate suggestions will then appear.",
+      superseded_snapshot:
+        "Some trials still sit on a data snapshot superseded by a newer one",
+      duplicate_parameters:
+        "Duplicated parameter trials exist — more fine-tuning feeds the multiple-testing penalty",
+    },
+    model: {
+      title: "Model priority",
+      boundary:
+        "The model only picks among the deterministic cards above and explains why — it never proposes an action on its own",
+      pick: "Model pick:",
+      order: "Ask Copilot to rank",
+      ordering: "Ranking — usually a few seconds…",
+      idle: "No ranking yet. The model picks one of the deterministic cards and says why.",
+      failed: "Ranking failed this time",
+    },
+    confirm: {
+      title: "Adopt this suggestion?",
+      note: "runs with spec-default parameters on the latest version",
+      version: "version",
+      submit: "Submit validation",
+    },
+  },
   empty: {
     title: "No research context on this page",
     description:

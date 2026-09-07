@@ -45,3 +45,24 @@ Object.defineProperty(window, "matchMedia", {
 
 // Mock scrollTo
 window.scrollTo = vi.fn();
+
+// jsdom has no native <dialog>; polyfill the minimal surface Modal uses.
+if (typeof window.HTMLDialogElement !== "undefined") {
+  const proto = window.HTMLDialogElement.prototype;
+  if (!proto.showModal) {
+    Object.defineProperty(proto, "showModal", {
+      writable: true,
+      value: function showModal(this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+  }
+  if (!proto.close) {
+    Object.defineProperty(proto, "close", {
+      writable: true,
+      value: function close(this: HTMLDialogElement) {
+        this.removeAttribute("open");
+      },
+    });
+  }
+}

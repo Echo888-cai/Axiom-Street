@@ -12,6 +12,7 @@ import { parseScope, type CopilotScope } from "./scope";
 import { ScopeEmpty } from "./scope-empty";
 import { TrialsBlock } from "./trials-block";
 import { GatesBlock } from "./gates-block";
+import { ActionsBlock } from "./actions-block";
 import { InsightBlock } from "./copilot-insight";
 
 type BadgeTone = "neutral" | "blue" | "green" | "red" | "amber";
@@ -102,6 +103,13 @@ function ScopedContext({ scope }: { scope: CopilotScope }) {
       <div className="min-h-0 flex-1 space-y-5">
         <TrialsBlock rows={query.data.by_snapshot ?? []} total={query.data.total_trials ?? 0} />
         <GatesBlock gates={query.data.gates ?? []} />
+        <ActionsBlock
+          resource={scope.resource}
+          id={scope.id}
+          strategyId={query.data.strategy_id}
+          providerEnabled={query.data.provider?.enabled ?? false}
+          providerName={query.data.provider?.name ?? ""}
+        />
         <InsightBlock
           resource={scope.resource}
           id={scope.id}

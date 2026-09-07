@@ -39,6 +39,13 @@ export type CopilotGateFacts = S["CopilotGateFacts"];
 export type CopilotInsight = S["CopilotInsightOut"];
 export type CopilotSynthesizeAccepted = S["CopilotSynthesizeAccepted"];
 
+// Copilot suggestion cards (P5-3): deterministic cards, the recommendation
+// row and the enqueue ack are all fully modeled by the spec, so all alias it.
+export type CopilotSuggestionCard = S["CopilotSuggestionCard"];
+export type CopilotSuggestions = S["CopilotSuggestionsOut"];
+export type CopilotSuggestion = S["CopilotSuggestionOut"];
+export type CopilotSuggestAccepted = S["CopilotSuggestAccepted"];
+
 // spec kinds are plain strings; the UI narrows to the eight known kinds.
 export type ValidationKind =
   | "walk_forward"
