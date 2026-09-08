@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Any, Dict, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from services.api.models import BacktestStatus, StrategyStatus
 
@@ -308,6 +308,20 @@ class CopilotSuggestIn(BaseModel):
     id: UUID
 
 
+class CopilotChatIn(BaseModel):
+    resource: Literal["strategy", "backtest"]
+    id: UUID
+    message: str = Field(min_length=1, max_length=1200)
+
+    @field_validator("message")
+    @classmethod
+    def normalize_message(cls, value: str) -> str:
+        message = value.strip()
+        if not message:
+            raise ValueError("message 不能为空")
+        return message
+
+
 class CopilotSynthesizeAccepted(BaseModel):
     status: Literal["queued"]
 
@@ -344,6 +358,10 @@ class CopilotSuggestAccepted(BaseModel):
     status: Literal["queued"]
 
 
+class CopilotChatAccepted(BaseModel):
+    status: Literal["queued"]
+
+
 class CopilotSuggestionOut(BaseModel):
     id: UUID
     strategy_id: UUID
@@ -351,6 +369,21 @@ class CopilotSuggestionOut(BaseModel):
     model: Optional[str] = None
     picked_id: Optional[str] = None
     reason: str = ""
+    error: Optional[str] = None
+    duration_ms: Optional[int] = None
+    created_at: datetime
+    finished_at: Optional[datetime] = None
+
+
+class CopilotChatOut(BaseModel):
+    id: UUID
+    strategy_id: UUID
+    resource: Literal["strategy", "backtest"]
+    resource_id: UUID
+    user_message: str
+    assistant_message: Optional[str] = None
+    status: str
+    model: Optional[str] = None
     error: Optional[str] = None
     duration_ms: Optional[int] = None
     created_at: datetime

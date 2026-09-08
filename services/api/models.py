@@ -561,3 +561,32 @@ class CopilotSuggestion(Base):
     duration_ms: Mapped[Optional[int]] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class CopilotChatStatus(str, enum.Enum):
+    QUEUED = "QUEUED"
+    DONE = "DONE"
+    FAILED = "FAILED"
+
+
+class CopilotChatMessage(Base):
+    """Auditable, scoped Copilot chat turn (P5-4)."""
+
+    __tablename__ = "copilot_chat_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    resource: Mapped[str] = mapped_column(String(16), nullable=False)
+    resource_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
+    user_message: Mapped[str] = mapped_column(Text, nullable=False)
+    assistant_message: Mapped[Optional[str]] = mapped_column(Text)
+    status: Mapped[CopilotChatStatus] = mapped_column(
+        _enum(CopilotChatStatus, "copilot_chat_status"), nullable=False
+    )
+    model: Mapped[Optional[str]] = mapped_column(String(64))
+    error: Mapped[Optional[str]] = mapped_column(Text)
+    duration_ms: Mapped[Optional[int]] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
