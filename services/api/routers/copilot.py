@@ -11,6 +11,9 @@ from services.agent import suggestions as suggestions_service
 from services.api.db import get_db
 from services.api.models import Strategy
 from services.api.schemas import (
+    CopilotChatAccepted,
+    CopilotChatIn,
+    CopilotChatOut,
     CopilotContextOut,
     CopilotInsightOut,
     CopilotSuggestAccepted,
@@ -41,6 +44,35 @@ def get_context(
     provider = copilot_service.get_provider()
     context["provider"] = {"name": provider.name, "enabled": provider.enabled}
     return CopilotContextOut.model_validate(context)
+
+
+@router.get("/chat", response_model=list[CopilotChatOut])
+def chat_history(
+    db: Session = Depends(get_db),
+    strategy_id: UUID = Query(...),
+    limit: int = Query(30, ge=1, le=100),
+) -> list[CopilotChatOut]:
+    rows = copilot_service.list_chat_messages(db, strategy_id, limit=limit)
+    return [CopilotChatOut.model_validate(row) for row in rows]
+
+
+@router.post("/chat", response_model=CopilotChatAccepted, status_code=status.HTTP_202_ACCEPTED)
+def chat(payload: CopilotChatIn, db: Session = Depends(get_db)) -> CopilotChatAccepted:
+    context = copilot_service.build_context(db, payload.resource, payload.id)
+    if context is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=_DETAIL_BY_RESOURCE[payload.resource]
+        )
+    provider = copilot_service.get_provider()
+    if not provider.enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"模型 {provider.name} 未启用:未配置 API key(无 key 即关闭)",
+        )
+    from services.worker.tasks import run_chat_task
+
+    run_chat_task.delay(payload.resource, str(payload.id), payload.message)
+    return CopilotChatAccepted(status="queued")
 
 
 @router.post(

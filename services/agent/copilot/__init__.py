@@ -8,7 +8,13 @@ Synthesize rows are written only by the worker task
 """
 
 from services.agent.copilot.context import build_context
-from services.agent.copilot.insights import latest_suggestion, list_insights
+from services.agent.copilot.insights import latest_suggestion, list_chat_messages, list_insights
 from services.agent.copilot.providers import get_provider
 
-__all__ = ["build_context", "get_provider", "latest_suggestion", "list_insights"]
+__all__ = [
+    "build_context",
+    "get_provider",
+    "latest_suggestion",
+    "list_chat_messages",
+    "list_insights",
+]

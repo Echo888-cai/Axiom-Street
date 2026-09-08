@@ -56,6 +56,8 @@ reconcile_market_data_task = data.reconcile_market_data_task
 # Agent/Copilot task domain (P5-2 / P5-3)
 execute_synthesize = copilot.execute_synthesize
 run_synthesize_task = copilot.run_synthesize_task  # type: ignore[has-type]
+execute_chat = copilot.execute_chat
+run_chat_task = copilot.run_chat_task  # type: ignore[has-type]
 execute_suggest = copilot.execute_suggest
 run_suggest_task = copilot.run_suggest_task  # type: ignore[has-type]
 
@@ -88,6 +90,8 @@ __all__ = [
     "reconcile_market_data_task",
     "execute_synthesize",
     "run_synthesize_task",
+    "execute_chat",
+    "run_chat_task",
     "execute_suggest",
     "run_suggest_task",
 ]

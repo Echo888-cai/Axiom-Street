@@ -22,6 +22,8 @@ from services.agent.copilot.context import build_context
 from services.agent.copilot.providers import CopilotProviderError, get_provider
 from services.agent.suggestions import derive_suggestions
 from services.api.models import (
+    CopilotChatMessage,
+    CopilotChatStatus,
     CopilotInsight,
     CopilotInsightStatus,
     CopilotSuggestion,
@@ -91,6 +93,37 @@ def _record_suggestion(
     return {"suggestion_id": str(row.id), "status": status.value.lower()}
 
 
+def _record_chat(
+    db,
+    strategy_id: UUID,
+    *,
+    resource: str,
+    resource_id: UUID,
+    user_message: str,
+    status: CopilotChatStatus,
+    model: str,
+    assistant_message: str | None = None,
+    error: str | None = None,
+    duration_ms: int | None = None,
+) -> dict:
+    """Single write point for the P5-4 chat ledger."""
+    row = CopilotChatMessage(
+        strategy_id=strategy_id,
+        resource=resource,
+        resource_id=resource_id,
+        user_message=user_message,
+        status=status,
+        model=model,
+        assistant_message=assistant_message,
+        error=error,
+        duration_ms=duration_ms,
+        finished_at=_now(),
+    )
+    db.add(row)
+    db.commit()
+    return {"chat_id": str(row.id), "status": status.value.lower()}
+
+
 def execute_synthesize(resource: str, resource_id: str) -> dict:
     """Run one synthesize pass and record exactly one ledger row."""
     # Celery delivers JSON strings; convert before the typed query.
@@ -151,6 +184,77 @@ def execute_synthesize(resource: str, resource_id: str) -> dict:
 @celery_app.task(name="copilot.synthesize")
 def run_synthesize_task(resource: str, resource_id: str) -> dict:
     return execute_synthesize(resource, resource_id)
+
+
+def execute_chat(resource: str, resource_id: str, user_message: str) -> dict:
+    """Run one bounded chat turn and record exactly one ledger row."""
+    try:
+        scope_id = UUID(resource_id)
+    except (ValueError, AttributeError):
+        return {"status": "not_found", "detail": _DETAIL_BY_RESOURCE[resource]}
+    with _tasks.SessionLocal() as db:
+        context = build_context(db, resource, scope_id)
+        if context is None:
+            return {"status": "not_found", "detail": _DETAIL_BY_RESOURCE[resource]}
+        strategy_id = context["strategy_id"]
+        model = get_settings().copilot_model
+        provider = get_provider()
+        if not provider.enabled:
+            return _record_chat(
+                db,
+                strategy_id,
+                resource=resource,
+                resource_id=scope_id,
+                user_message=user_message,
+                status=CopilotChatStatus.FAILED,
+                model=model,
+                error="模型未启用:未配置 STREET_DEEPSEEK_API_KEY",
+                duration_ms=0,
+            )
+        started = time.monotonic()
+        try:
+            answer = provider.chat(context, user_message)
+        except CopilotProviderError as exc:
+            return _record_chat(
+                db,
+                strategy_id,
+                resource=resource,
+                resource_id=scope_id,
+                user_message=user_message,
+                status=CopilotChatStatus.FAILED,
+                model=model,
+                error=str(exc)[:_MAX_ERROR_CHARS],
+                duration_ms=int((time.monotonic() - started) * 1000),
+            )
+        text = answer.strip() if answer else ""
+        if not text:
+            return _record_chat(
+                db,
+                strategy_id,
+                resource=resource,
+                resource_id=scope_id,
+                user_message=user_message,
+                status=CopilotChatStatus.FAILED,
+                model=model,
+                error="模型未返回回答",
+                duration_ms=int((time.monotonic() - started) * 1000),
+            )
+        return _record_chat(
+            db,
+            strategy_id,
+            resource=resource,
+            resource_id=scope_id,
+            user_message=user_message,
+            status=CopilotChatStatus.DONE,
+            model=model,
+            assistant_message=text,
+            duration_ms=int((time.monotonic() - started) * 1000),
+        )
+
+
+@celery_app.task(name="copilot.chat")
+def run_chat_task(resource: str, resource_id: str, user_message: str) -> dict:
+    return execute_chat(resource, resource_id, user_message)
 
 
 def execute_suggest(resource: str, resource_id: str) -> dict:

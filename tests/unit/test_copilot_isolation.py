@@ -40,7 +40,9 @@ SUGGESTIONS_FILE = AGENT_DIR / "suggestions.py"
 # they must not sit outside every lock; but ORM writes are permitted only in
 # these ledger-write helpers there (see the ``_record_insight`` /
 # ``_record_suggestion`` functions).
-LEDGER_WRITE_HELPERS: frozenset[str] = frozenset({"_record_insight", "_record_suggestion"})
+LEDGER_WRITE_HELPERS: frozenset[str] = frozenset(
+    {"_record_insight", "_record_suggestion", "_record_chat"}
+)
 
 # Importing any of these puts a write path inside copilot code.
 FORBIDDEN_MODULES: tuple[str, ...] = (
