@@ -17,7 +17,7 @@ Related documents:
 - Runtime domains: `services/api`, `services/worker`, `quant`, and `services/agent`.
 - Current phase: Phase 9 operational hardening and operator workflows.
 - Phase 5 is closed through P5-4; Phase 6/7 is closed through E6-2 with paper execution and a fail-closed Live readiness guard.
-- Current package: paper/risk UI, portfolio write workflows, Phase 9 security hardening, and operations monitoring are closed. The next item is evaluation-only design for a future Broker; no real Broker is implemented. Factor exposure remains explicitly unavailable and Live remains fail-closed.
+- Current package: paper/risk UI, portfolio write workflows, Phase 9 security hardening, operations monitoring, and the design-only Broker evaluation are closed. No real Broker is implemented. Factor exposure remains explicitly unavailable and Live remains fail-closed.
 
 ## Active work
 
@@ -39,7 +39,6 @@ Related documents:
 |---|---|---|
 | Phase 6/7 | Live remains disabled until paper execution and backtest-to-live reconciliation are measurable | E6-1 paper substrate and reconciliation contract closed |
 | Phase 8 | Portfolio and attribution | E6-2 remains closed and Live stays fail-closed |
-| Broker evaluation | Design-only review of a future real Broker boundary, reconciliation, credentials, kill switch, and rollout gates | P9-H is closed; this package must not add an external broker call |
 
 ## Closed work packages
 
@@ -58,6 +57,7 @@ Related documents:
 | P9-1 | 2026-09-08 | Paper trading operator desk, read-only risk summary API, risk monitor, and real-data empty/error states |
 | P9-2 | 2026-09-08 | Portfolio creation, allocation weights, returns submission UI, typed write client, and server-owned attribution inputs |
 | P9-H | 2026-09-08 | Non-root/read-only/seccomp LEAN sandbox, strategy AST preflight, Worker heartbeat checks, and operations monitor |
+| Broker evaluation | 2026-09-08 | Design-only assessment; recommendation is to keep Live closed until order state, reconciliation, credentials, kill switch, approval, and disaster drills exist |
 
 ## Update discipline
 
