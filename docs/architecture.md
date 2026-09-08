@@ -65,7 +65,7 @@ flowchart TB
 | API ↛ Docker | 只有 worker 持有 `docker.sock` | API 进程内起容器无法编排、重启即孤儿 |
 | quant/ ↛ web framework | `quant/` 包不 import FastAPI / Celery | 无法在 notebook 或 CLI 中独立使用 |
 
-**当前状态**：`API ↛ Docker` 已在 Phase 1.5 落地（Celery worker 持有 `docker.sock`）。`Risk ⊥ everything` 已实体化：`quant/risk/` 纯风控引擎在 LEAN 回测和纸面执行中复用，限额统一读取 `StrategyVersion.config["risk_limits"]`。E6-1 已接入 `quant/execution` 纸面 Broker、订单/成交/持仓/对账台账；Live Broker 尚不存在，Live 仍保持关闭。
+**当前状态**：`API ↛ Docker` 已在 Phase 1.5 落地（Celery worker 持有 `docker.sock`）。`Risk ⊥ everything` 已实体化：`quant/risk/` 纯风控引擎在 LEAN 回测和纸面执行中复用，限额统一读取 `StrategyVersion.config["risk_limits"]`。E6-1 已接入纸面 Broker、订单/成交/持仓/对账台账；E6-2 已接入 Live readiness 证据和 fail-closed 激活守卫。Live Broker 尚不存在，Live 仍保持关闭。
 
 ---
 
@@ -158,7 +158,7 @@ PostgreSQL：metrics · equity · trades · monthly_returns · rolling_windows
 
 ### Phase 8 新增
 
-`portfolios` · `portfolio_allocations` · `factor_exposures`
+`portfolios` · `portfolio_allocations` · `factor_exposures`（E8-1 正在落地；归因先做可重建快照，不伪造实时因子数据）
 
 ---
 

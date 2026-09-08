@@ -3679,6 +3679,83 @@
         }
       }
     },
+    "/api/v1/live/readiness": {
+      "get": {
+        "tags": [
+          "live"
+        ],
+        "summary": "Get Live Readiness",
+        "operationId": "get_live_readiness_api_v1_live_readiness_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveReadinessOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live/activate": {
+      "post": {
+        "tags": [
+          "live"
+        ],
+        "summary": "Activate Live",
+        "operationId": "activate_live_api_v1_live_activate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveActivateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -5608,6 +5685,45 @@
         },
         "type": "object",
         "title": "IngestRequest"
+      },
+      "LiveActivateIn": {
+        "properties": {
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_id"
+        ],
+        "title": "LiveActivateIn"
+      },
+      "LiveReadinessOut": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ready"
+        ],
+        "title": "LiveReadinessOut"
       },
       "LspCompleteOut": {
         "properties": {

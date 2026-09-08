@@ -15,9 +15,9 @@ Related documents:
 
 - Product: `apps/web` is the only product frontend.
 - Runtime domains: `services/api`, `services/worker`, `quant`, and `services/agent`.
-- Current phase: Phase 6/7 Paper and Live execution safety.
-- Phase 5 is closed through P5-4; the bounded research chat is available only from aggregate Copilot facts.
-- Current execution package: build the paper execution ledger, risk gate, broker seam, and reconciliation path before any live switch.
+- Current phase: Phase 8 Portfolio and attribution.
+- Phase 5 is closed through P5-4; Phase 6/7 is closed through E6-2 with paper execution and a fail-closed Live readiness guard.
+- Current portfolio package: aggregate paper/research outputs into explicit portfolio ownership, allocation, and attribution records.
 
 ## Active work
 
@@ -26,14 +26,15 @@ Related documents:
 | Project organization | Closed | Frontend/backend/Agent ownership, active-plan cleanup, architecture diagram | `make test-all` plus focused Agent boundary tests |
 | P5-4 guided chat | Closed | Bounded research chat with aggregate-only provider input, async ledger, and honest UI states | Agent isolation tests, API/worker tests, 89 frontend tests, typecheck |
 | E6-1 paper execution substrate | Closed | Order/position/fill ledger, risk-gated paper broker seam, idempotency, and reconciliation contract | 15 focused tests; 485 Python tests; 89 frontend tests; mypy/tsc/build |
-| E6-2 live readiness guard | In progress | Keep Live closed by default; add explicit readiness evidence and a server-side activation guard | TDD policy/route tests; no external broker calls |
+| E6-2 live readiness guard | Closed | Explicit readiness evidence and a server-side fail-closed activation guard; no external broker calls | 5 focused tests; 490 Python tests; 89 frontend tests; mypy/tsc/build |
+| E8-1 portfolio attribution substrate | In progress | Portfolio/strategy allocation ledger, attribution snapshots, and read-only API contract | TDD pure attribution/API tests plus migration and full suite |
 
 ## Future work
 
 | Phase | Scope | Entry condition |
 |---|---|---|
 | Phase 6/7 | Live remains disabled until paper execution and backtest-to-live reconciliation are measurable | E6-1 paper substrate and reconciliation contract closed |
-| Phase 8 | Portfolio and attribution | Phase 6/7 reconciliation is measurable |
+| Phase 8 | Portfolio and attribution | E6-2 remains closed and Live stays fail-closed |
 
 ## Closed work packages
 
@@ -46,6 +47,7 @@ Related documents:
 | P5-3 | 2026-09-07 | Deterministic suggestions and human-confirmed execution |
 | P5-4 | 2026-09-08 | Bounded guided chat, aggregate-only provider context, async message ledger, and frontend polling UI |
 | E6-1 | 2026-09-08 | Risk-gated paper order execution, idempotency, fills, positions, cash, and reconciliation snapshots |
+| E6-2 | 2026-09-08 | Live readiness evidence and activation guard; Live Broker remains intentionally absent |
 
 ## Update discipline
 

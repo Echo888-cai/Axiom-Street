@@ -1101,6 +1101,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/live/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Live Readiness */
+        get: operations["get_live_readiness_api_v1_live_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/live/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate Live */
+        post: operations["activate_live_api_v1_live_activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1791,6 +1825,25 @@ export interface components {
              * @description optional secondary provider for dual-source reconciliation
              */
             reconcile_with?: string | null;
+        };
+        /** LiveActivateIn */
+        LiveActivateIn: {
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+        };
+        /** LiveReadinessOut */
+        LiveReadinessOut: {
+            /** Ready */
+            ready: boolean;
+            /** Reasons */
+            reasons?: string[];
+            /** Evidence */
+            evidence?: {
+                [key: string]: unknown;
+            };
         };
         /** LspCompleteOut */
         LspCompleteOut: {
@@ -5016,6 +5069,68 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaperReconciliationOut"] | null;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_live_readiness_api_v1_live_readiness_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveReadinessOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_live_api_v1_live_activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiveActivateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
