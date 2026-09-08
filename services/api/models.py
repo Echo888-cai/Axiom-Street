@@ -590,3 +590,128 @@ class CopilotChatMessage(Base):
     duration_ms: Mapped[Optional[int]] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class PaperOrderSide(str, enum.Enum):
+    BUY = "BUY"
+    SELL = "SELL"
+
+
+class PaperOrderStatus(str, enum.Enum):
+    QUEUED = "QUEUED"
+    FILLED = "FILLED"
+    REJECTED = "REJECTED"
+    FAILED = "FAILED"
+
+
+class PaperReconciliationStatus(str, enum.Enum):
+    MATCHED = "MATCHED"
+    DRIFT = "DRIFT"
+
+
+class PaperAccount(Base):
+    """One isolated simulation account per strategy."""
+
+    __tablename__ = "paper_accounts"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("strategies.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    initial_capital: Mapped[float] = mapped_column(Float, nullable=False)
+    cash: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PaperOrder(Base):
+    """Append-only paper order request and its final risk outcome."""
+
+    __tablename__ = "paper_orders"
+    __table_args__ = (
+        UniqueConstraint("strategy_id", "client_order_id", name="uq_paper_order_client_key"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    strategy_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("strategy_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    client_order_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    side: Mapped[PaperOrderSide] = mapped_column(
+        _enum(PaperOrderSide, "paper_order_side"), nullable=False
+    )
+    requested_quantity: Mapped[float] = mapped_column(Float, nullable=False)
+    filled_quantity: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    simulation_price: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[PaperOrderStatus] = mapped_column(
+        _enum(PaperOrderStatus, "paper_order_status"), nullable=False
+    )
+    risk_reason: Mapped[Optional[str]] = mapped_column(String(255))
+    risk_details: Mapped[dict] = mapped_column(JSON, default=dict)
+    error: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class PaperFill(Base):
+    __tablename__ = "paper_fills"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("paper_orders.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    side: Mapped[PaperOrderSide] = mapped_column(
+        _enum(PaperOrderSide, "paper_fill_side"), nullable=False
+    )
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)
+    price: Mapped[float] = mapped_column(Float, nullable=False)
+    fee: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PaperPosition(Base):
+    __tablename__ = "paper_positions"
+    __table_args__ = (UniqueConstraint("strategy_id", "symbol", name="uq_paper_position_symbol"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)
+    average_price: Mapped[float] = mapped_column(Float, nullable=False)
+    realized_pnl: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    mark_price: Mapped[float] = mapped_column(Float, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PaperReconciliation(Base):
+    __tablename__ = "paper_reconciliations"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    status: Mapped[PaperReconciliationStatus] = mapped_column(
+        _enum(PaperReconciliationStatus, "paper_reconciliation_status"), nullable=False
+    )
+    expected_positions: Mapped[dict] = mapped_column(JSON, default=dict)
+    actual_positions: Mapped[dict] = mapped_column(JSON, default=dict)
+    differences: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
