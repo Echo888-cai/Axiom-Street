@@ -154,11 +154,11 @@ PostgreSQL：metrics · equity · trades · monthly_returns · rolling_windows
 
 ### Phase 6–7 新增
 
-`paper_accounts` · `paper_orders` · `paper_positions` · `paper_fills` · `paper_reconciliations`（E6-1 已落地）；真实 `orders` / `positions` / `fills` 与外部 Broker 对接仍需后续安全评审。
+`paper_accounts` · `paper_orders` · `paper_positions` · `paper_fills` · `paper_reconciliations`（E6-1 已落地）；`portfolios` · `portfolio_allocations` · `portfolio_attributions`（E8-1 已落地）。真实 `orders` / `positions` / `fills` 与外部 Broker 对接仍需后续安全评审。
 
 ### Phase 8 新增
 
-`portfolios` · `portfolio_allocations` · `factor_exposures`（E8-1 正在落地；归因先做可重建快照，不伪造实时因子数据）
+`portfolios` · `portfolio_allocations` · `portfolio_attributions`（E8-1 已落地）；`factor_exposures` 和实时组合监控仍未实现，不能用模拟数据填充。
 
 ---
 
