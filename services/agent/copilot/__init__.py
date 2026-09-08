@@ -7,8 +7,8 @@ Synthesize rows are written only by the worker task
 (``services/worker/tasks/copilot.py``); this package stays read-only.
 """
 
-from services.api.services.copilot.context import build_context
-from services.api.services.copilot.insights import latest_suggestion, list_insights
-from services.api.services.copilot.providers import get_provider
+from services.agent.copilot.context import build_context
+from services.agent.copilot.insights import latest_suggestion, list_insights
+from services.agent.copilot.providers import get_provider
 
 __all__ = ["build_context", "get_provider", "latest_suggestion", "list_insights"]

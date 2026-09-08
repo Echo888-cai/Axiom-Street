@@ -45,10 +45,16 @@ apps/web/src/
     tearsheet.ts            纯计算与统计变换
 services/api/               routers → services → 数据模型
 services/worker/            Celery 作业与 LEAN 执行
+services/agent/             Copilot 上下文、Provider、提示词与确定式建议
 quant/                      纯 Python 量化领域逻辑
 ```
 
 不为追求目录变化搬动 Python 领域包。它已经拥有 engine / data / metrics / validation 的清晰边界。以后新增页面保持薄路由，业务放在对应 feature；新增 API 放在对应 domain module。
+
+`apps/web/src/components/copilot` 和 `apps/web/src/lib/api/copilot.ts` 只负责
+Copilot 的前端展示与 API 客户端调用。Agent 行为由 `services/agent` 负责，
+前端只能通过已文档化的 API 端点消费它；浏览器不直接访问 Agent Provider、数据库或
+Celery。
 
 ## 启动
 
