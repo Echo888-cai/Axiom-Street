@@ -715,3 +715,67 @@ class PaperReconciliation(Base):
     actual_positions: Mapped[dict] = mapped_column(JSON, default=dict)
     differences: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PortfolioStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+
+
+class Portfolio(Base):
+    __tablename__ = "portfolios"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    base_currency: Mapped[str] = mapped_column(String(8), default="USD", nullable=False)
+    status: Mapped[PortfolioStatus] = mapped_column(
+        _enum(PortfolioStatus, "portfolio_status"), default=PortfolioStatus.DRAFT, nullable=False
+    )
+    initial_capital: Mapped[float] = mapped_column(Float, default=100_000.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PortfolioAllocation(Base):
+    __tablename__ = "portfolio_allocations"
+    __table_args__ = (
+        UniqueConstraint(
+            "portfolio_id", "strategy_id", "effective_from", name="uq_portfolio_allocation_period"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    portfolio_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    weight: Mapped[float] = mapped_column(Float, nullable=False)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[Optional[date]] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PortfolioAttribution(Base):
+    __tablename__ = "portfolio_attributions"
+    __table_args__ = (
+        UniqueConstraint("portfolio_id", "as_of", name="uq_portfolio_attribution_period"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    portfolio_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    as_of: Mapped[date] = mapped_column(Date, nullable=False)
+    portfolio_return: Mapped[float] = mapped_column(Float, nullable=False)
+    benchmark_return: Mapped[float] = mapped_column(Float, nullable=False)
+    allocation_effect: Mapped[float] = mapped_column(Float, nullable=False)
+    selection_effect: Mapped[float] = mapped_column(Float, nullable=False)
+    interaction_effect: Mapped[float] = mapped_column(Float, nullable=False)
+    active_return: Mapped[float] = mapped_column(Float, nullable=False)
+    inputs: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
