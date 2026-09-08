@@ -8,8 +8,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import create_engine
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -18,9 +17,9 @@ from services.agent.copilot.providers import CopilotProviderError
 from services.api import db as db_module
 from services.api.db import Base
 from services.api.models import CopilotChatMessage, CopilotChatStatus, Strategy
+from services.api.schemas import CopilotChatIn
 from services.api.settings import get_settings
 from services.worker.tasks.copilot import execute_chat
-from services.api.schemas import CopilotChatIn
 
 
 def test_chat_input_rejects_blank_and_overlong_messages() -> None:

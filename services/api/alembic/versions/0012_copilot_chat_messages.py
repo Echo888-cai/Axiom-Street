@@ -39,8 +39,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["strategy_id"], ["strategies.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_copilot_chat_messages_strategy_id", "copilot_chat_messages", ["strategy_id"])
-    op.create_index("ix_copilot_chat_messages_resource_id", "copilot_chat_messages", ["resource_id"])
+    op.create_index(
+        "ix_copilot_chat_messages_strategy_id", "copilot_chat_messages", ["strategy_id"]
+    )
+    op.create_index(
+        "ix_copilot_chat_messages_resource_id", "copilot_chat_messages", ["resource_id"]
+    )
 
 
 def downgrade() -> None:

@@ -1,6 +1,8 @@
 import { request } from "./http";
 import type {
   CopilotContext,
+  CopilotChatAccepted,
+  CopilotChatMessage,
   CopilotInsight,
   CopilotSuggestAccepted,
   CopilotSuggestion,
@@ -41,4 +43,13 @@ export const copilotApi = {
     request<CopilotSuggestion | null>(
       `/api/v1/copilot/suggestions/recommendation?strategy_id=${encodeURIComponent(strategyId)}`,
     ),
+  listChat: (strategyId: string, limit = 30) =>
+    request<CopilotChatMessage[]>(
+      `/api/v1/copilot/chat?strategy_id=${encodeURIComponent(strategyId)}&limit=${limit}`,
+    ),
+  chat: (resource: CopilotResource, id: string, message: string) =>
+    request<CopilotChatAccepted>("/api/v1/copilot/chat", {
+      method: "POST",
+      body: JSON.stringify({ resource, id, message }),
+    }),
 };

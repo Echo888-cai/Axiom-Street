@@ -136,7 +136,9 @@ class DeepSeekProvider:
     def chat(self, context: dict[str, Any], user_message: str) -> str | None:
         if not self.enabled:
             return None
-        messages = cast(list[ChatCompletionMessageParam], build_chat_messages(context, user_message))
+        messages = cast(
+            list[ChatCompletionMessageParam], build_chat_messages(context, user_message)
+        )
         return self._chat(messages)
 
     @staticmethod

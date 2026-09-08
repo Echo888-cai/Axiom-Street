@@ -46,6 +46,11 @@ export type CopilotSuggestions = S["CopilotSuggestionsOut"];
 export type CopilotSuggestion = S["CopilotSuggestionOut"];
 export type CopilotSuggestAccepted = S["CopilotSuggestAccepted"];
 
+// Guided research conversation (P5-4): the provider only receives aggregate
+// Copilot facts; the ledger row and enqueue acknowledgement are contract-owned.
+export type CopilotChatMessage = S["CopilotChatOut"];
+export type CopilotChatAccepted = S["CopilotChatAccepted"];
+
 // spec kinds are plain strings; the UI narrows to the eight known kinds.
 export type ValidationKind =
   | "walk_forward"

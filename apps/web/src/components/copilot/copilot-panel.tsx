@@ -14,6 +14,7 @@ import { TrialsBlock } from "./trials-block";
 import { GatesBlock } from "./gates-block";
 import { ActionsBlock } from "./actions-block";
 import { InsightBlock } from "./copilot-insight";
+import { ChatBlock } from "./chat-block";
 
 type BadgeTone = "neutral" | "blue" | "green" | "red" | "amber";
 
@@ -111,6 +112,13 @@ function ScopedContext({ scope }: { scope: CopilotScope }) {
           providerName={query.data.provider?.name ?? ""}
         />
         <InsightBlock
+          resource={scope.resource}
+          id={scope.id}
+          strategyId={query.data.strategy_id}
+          providerEnabled={query.data.provider?.enabled ?? false}
+          providerName={query.data.provider?.name ?? ""}
+        />
+        <ChatBlock
           resource={scope.resource}
           id={scope.id}
           strategyId={query.data.strategy_id}

@@ -919,6 +919,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/copilot/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chat History */
+        get: operations["chat_history_api_v1_copilot_chat_get"];
+        put?: never;
+        /** Chat */
+        post: operations["chat_api_v1_copilot_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/copilot/synthesize": {
         parameters: {
             query?: never;
@@ -1372,6 +1390,71 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** CopilotChatAccepted */
+        CopilotChatAccepted: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "queued";
+        };
+        /** CopilotChatIn */
+        CopilotChatIn: {
+            /**
+             * Resource
+             * @enum {string}
+             */
+            resource: "strategy" | "backtest";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Message */
+            message: string;
+        };
+        /** CopilotChatOut */
+        CopilotChatOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /**
+             * Resource
+             * @enum {string}
+             */
+            resource: "strategy" | "backtest";
+            /**
+             * Resource Id
+             * Format: uuid
+             */
+            resource_id: string;
+            /** User Message */
+            user_message: string;
+            /** Assistant Message */
+            assistant_message?: string | null;
+            /** Status */
+            status: string;
+            /** Model */
+            model?: string | null;
+            /** Error */
+            error?: string | null;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
         };
         /** CopilotContextOut */
         CopilotContextOut: {
@@ -4385,6 +4468,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CopilotContextOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_history_api_v1_copilot_chat_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotChatOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_api_v1_copilot_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CopilotChatIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotChatAccepted"];
                 };
             };
             /** @description Validation Error */
