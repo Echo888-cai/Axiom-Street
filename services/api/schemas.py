@@ -486,6 +486,72 @@ class LiveActivateIn(BaseModel):
     strategy_id: UUID
 
 
+class PortfolioCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    base_currency: str = Field(default="USD", min_length=3, max_length=8)
+    initial_capital: float = Field(default=100_000.0, gt=0, allow_inf_nan=False)
+
+    @field_validator("base_currency")
+    @classmethod
+    def normalize_currency(cls, value: str) -> str:
+        currency = value.strip().upper()
+        if not currency:
+            raise ValueError("base_currency 不能为空")
+        return currency
+
+
+class PortfolioOut(ORMModel):
+    id: UUID
+    name: str
+    base_currency: str
+    status: str
+    initial_capital: float
+    created_at: datetime
+    updated_at: datetime
+
+
+class PortfolioAllocationIn(BaseModel):
+    strategy_id: UUID
+    weight: float = Field(ge=0, allow_inf_nan=False)
+    effective_from: date
+    effective_to: Optional[date] = None
+
+
+class PortfolioAllocationOut(ORMModel):
+    id: UUID
+    portfolio_id: UUID
+    strategy_id: UUID
+    weight: float
+    effective_from: date
+    effective_to: Optional[date] = None
+    created_at: datetime
+
+
+class PortfolioReturnIn(BaseModel):
+    strategy_id: UUID
+    strategy_return: float = Field(allow_inf_nan=False)
+    benchmark_return: float = Field(allow_inf_nan=False)
+
+
+class PortfolioAttributionIn(BaseModel):
+    as_of: date
+    returns: list[PortfolioReturnIn] = Field(min_length=1)
+
+
+class PortfolioAttributionOut(ORMModel):
+    id: UUID
+    portfolio_id: UUID
+    as_of: date
+    portfolio_return: float
+    benchmark_return: float
+    allocation_effect: float
+    selection_effect: float
+    interaction_effect: float
+    active_return: float
+    inputs: Dict[str, Any]
+    created_at: datetime
+
+
 class AuditLogOut(ORMModel):
     id: int
     actor: str
