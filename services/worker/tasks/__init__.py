@@ -22,7 +22,7 @@ from __future__ import annotations
 from quant.engine.lean import LeanQuantEngine
 from services.api.db import SessionLocal
 
-from . import backtests, copilot, data, validation, validation_post
+from . import backtests, copilot, data, paper, validation, validation_post
 from ._common import cancel_key, flag_cancel, is_cancel_flagged, log
 
 # Backtest domain
@@ -61,6 +61,10 @@ run_chat_task = copilot.run_chat_task  # type: ignore[has-type]
 execute_suggest = copilot.execute_suggest
 run_suggest_task = copilot.run_suggest_task  # type: ignore[has-type]
 
+# Paper execution domain (E6-1)
+execute_paper_order = paper.execute_paper_order
+run_paper_order_task = paper.run_paper_order_task  # type: ignore[has-type]
+
 __all__ = [
     "SessionLocal",
     "LeanQuantEngine",
@@ -94,4 +98,6 @@ __all__ = [
     "run_chat_task",
     "execute_suggest",
     "run_suggest_task",
+    "execute_paper_order",
+    "run_paper_order_task",
 ]
