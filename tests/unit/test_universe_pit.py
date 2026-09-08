@@ -122,3 +122,20 @@ def test_docker_volume_overlay_shadows_snapshot_map_files(tmp_path):
     assert args.index("-v") < args.index(data_mount)
     assert args.index(data_mount) < args.index(overlay_mount)
     assert str(tmp_path / "snapshot") not in overlay_mount
+
+
+def test_cold_lean_command_uses_shared_security_policy(tmp_path):
+    from quant.engine.lean import build_cold_lean_command
+
+    command = build_cold_lean_command(
+        container_name="axiom-lean-test",
+        image="lean:test",
+        config_path=tmp_path / "config.json",
+        algo_dir=tmp_path / "algo",
+        lean_data=tmp_path / "data",
+        results_dir=tmp_path / "results",
+    )
+
+    assert command[:4] == ["docker", "run", "--rm", "--name"]
+    assert "--read-only" in command
+    assert command[command.index("--network") + 1] == "none"

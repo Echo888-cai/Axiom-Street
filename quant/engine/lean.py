@@ -16,6 +16,7 @@ from quant.engine.errors import BacktestCancelled, EngineTimeout
 from quant.engine.pool import build_lean_view, get_pool
 from quant.engine.result_parser import find_result_json, parse_lean_result
 from quant.risk.gate import compose_strategy_code, runtime_files
+from quant.security.sandbox import docker_security_args, validate_strategy_source
 
 LEAN_CONFIG_TEMPLATE = {
     "environment": "backtesting",
@@ -65,6 +66,41 @@ def docker_volume_args(
         args.extend(["-v", f"{map_overlay.resolve()}:/Data/equity/usa/map_files:ro"])
     args.extend(["-v", f"{results_dir.resolve()}:/Results"])
     return args
+
+
+def build_cold_lean_command(
+    *,
+    container_name: str,
+    image: str,
+    config_path: Path,
+    algo_dir: Path,
+    lean_data: Path,
+    results_dir: Path,
+    map_overlay: Path | None = None,
+) -> list[str]:
+    """Build the isolated cold-start command used by the LEAN engine."""
+    return [
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        container_name,
+        *docker_security_args(),
+        *docker_volume_args(
+            config_path=config_path,
+            algo_dir=algo_dir,
+            lean_data=lean_data,
+            results_dir=results_dir,
+            map_overlay=map_overlay,
+        ),
+        image,
+        "--data-folder",
+        "/Data",
+        "--results-destination-folder",
+        "/Results",
+        "--config",
+        "/Lean/Launcher/config.json",
+    ]
 
 
 def lean_runtime_parameters(request: BacktestRequest) -> dict[str, str]:
@@ -170,6 +206,8 @@ class LeanQuantEngine(QuantEngine):
         request: BacktestRequest,
         on_progress: ProgressCallback | None = None,
     ) -> BacktestEngineResult:
+        validate_strategy_source(request.strategy_code)
+
         def progress(step: str) -> None:
             if on_progress:
                 on_progress(step)
@@ -256,35 +294,15 @@ class LeanQuantEngine(QuantEngine):
                 config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
                 container_name = f"axiom-lean-{request.backtest_id[:8]}"
                 self._containers[request.backtest_id] = container_name
-                cmd = [
-                    "docker",
-                    "run",
-                    "--rm",
-                    "--name",
-                    container_name,
-                    "--network",
-                    "none",
-                    "--memory",
-                    "2g",
-                    "--cpus",
-                    "2",
-                    "--pids-limit",
-                    "256",
-                    *docker_volume_args(
-                        config_path=config_path,
-                        algo_dir=algo_dir,
-                        lean_data=lean_data,
-                        results_dir=results_dir,
-                        map_overlay=map_overlay,
-                    ),
-                    self.lean_image,
-                    "--data-folder",
-                    "/Data",
-                    "--results-destination-folder",
-                    "/Results",
-                    "--config",
-                    "/Lean/Launcher/config.json",
-                ]
+                cmd = build_cold_lean_command(
+                    container_name=container_name,
+                    image=self.lean_image,
+                    config_path=config_path,
+                    algo_dir=algo_dir,
+                    lean_data=lean_data,
+                    results_dir=results_dir,
+                    map_overlay=map_overlay,
+                )
 
             proc = subprocess.Popen(
                 cmd,

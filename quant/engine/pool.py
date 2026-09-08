@@ -9,6 +9,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
+from quant.security.sandbox import docker_security_args
+
 
 def build_lean_view(job_dir: Path, lean_data: Path, map_overlay: Path | None = None) -> Path:
     """Job-local LEAN data tree that can be executed from a warm container.
@@ -172,14 +174,7 @@ class LeanSlotPool:
                 "-d",
                 "--name",
                 name,
-                "--network",
-                "none",
-                "--memory",
-                "2g",
-                "--cpus",
-                "2",
-                "--pids-limit",
-                "256",
+                *docker_security_args(),
                 "--entrypoint",
                 "sleep",
                 "-v",
