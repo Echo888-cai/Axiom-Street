@@ -10,6 +10,7 @@ import { settings } from "./zh/settings";
 import { navigation } from "./zh/navigation";
 import { nav } from "./zh/nav";
 import { layout } from "./zh/layout";
+import { portfolio } from "./zh/portfolio";
 
 export const zhCN = {
   common,
@@ -24,6 +25,7 @@ export const zhCN = {
   navigation,
   nav,
   layout,
+  portfolio,
 } as const;
 
 export type ZhCN = typeof zhCN;

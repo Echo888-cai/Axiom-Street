@@ -22,7 +22,7 @@
 
 ## 当前前端实现（2026-09-05）
 
-`apps/web/src/app` 负责路由；`features` 负责业务；`components` 负责通用外观；`lib/api` 按策略、回测、验证、数据、标的池、笔记和代码服务拆分。浏览器经 `/api/backend` 同源网关访问 FastAPI，`API_BASE_URL` 在 Next.js 服务端运行时读取。SSE 与下载均走同一链路。详细目录及运行约定见 [前端接手说明](frontend-handoff.md)。
+`apps/web/src/app` 负责路由；`features` 负责业务；`components` 负责通用外观；`lib/api` 按策略、回测、验证、数据、标的池、笔记、代码和组合服务拆分。组合归因页面位于 `/portfolios`，读取服务端配置与归因快照；因子暴露未实现时只显示明确空状态。浏览器经 `/api/backend` 同源网关访问 FastAPI，`API_BASE_URL` 在 Next.js 服务端运行时读取。SSE 与下载均走同一链路。详细目录及运行约定见 [前端接手说明](frontend-handoff.md)。
 
 ## Agent 领域
 

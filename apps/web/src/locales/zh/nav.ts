@@ -9,5 +9,6 @@ export const nav = {
     live: "实盘",
     risk: "风控",
     reports: "研究笔记",
+    portfolios: "组合归因",
     settings: "设置",
   } as const;

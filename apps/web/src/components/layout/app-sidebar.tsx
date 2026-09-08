@@ -18,7 +18,7 @@ import { api } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 const SECTIONS: { labelKey: keyof typeof import("@/locales").zhCN.layout; english: string; hrefs: string[] }[] = [
-  { labelKey: "workspace", english: "WORKSPACE", hrefs: ["/", "/strategies", "/backtests", "/validation", "/universes", "/experiments", "/reports"] },
+  { labelKey: "workspace", english: "WORKSPACE", hrefs: ["/", "/strategies", "/backtests", "/validation", "/universes", "/experiments", "/reports", "/portfolios"] },
   { labelKey: "execution", english: "EXECUTION", hrefs: ["/paper", "/live", "/risk"] },
 ];
 

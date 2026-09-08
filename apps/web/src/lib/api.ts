@@ -8,6 +8,7 @@ import { backtestsApi } from "./api/backtests";
 import { codeApi } from "./api/code";
 import { researchApi } from "./api/research";
 import { universesApi } from "./api/universes";
+import { portfoliosApi } from "./api/portfolios";
 
 export const api = {
   ...dataApi,
@@ -17,4 +18,5 @@ export const api = {
   ...codeApi,
   ...researchApi,
   ...universesApi,
+  ...portfoliosApi,
 };

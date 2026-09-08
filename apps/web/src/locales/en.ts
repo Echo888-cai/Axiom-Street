@@ -10,6 +10,7 @@ import { settings } from "./en/settings";
 import { navigation } from "./en/navigation";
 import { nav } from "./en/nav";
 import { layout } from "./en/layout";
+import { portfolio } from "./en/portfolio";
 
 export const en = {
   common,
@@ -24,6 +25,7 @@ export const en = {
   navigation,
   nav,
   layout,
+  portfolio,
 } as const;
 
 export type En = typeof en;

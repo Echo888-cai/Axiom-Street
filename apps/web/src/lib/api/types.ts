@@ -51,6 +51,12 @@ export type CopilotSuggestAccepted = S["CopilotSuggestAccepted"];
 export type CopilotChatMessage = S["CopilotChatOut"];
 export type CopilotChatAccepted = S["CopilotChatAccepted"];
 
+// Portfolio attribution (E8-1): portfolio configuration and the additive
+// Brinson result are both contract-owned API shapes.
+export type Portfolio = S["PortfolioOut"];
+export type PortfolioAllocation = S["PortfolioAllocationOut"];
+export type PortfolioAttribution = S["PortfolioAttributionOut"];
+
 // spec kinds are plain strings; the UI narrows to the eight known kinds.
 export type ValidationKind =
   | "walk_forward"

@@ -9,5 +9,6 @@ export const nav = {
     live: "Live",
     risk: "Risk",
     reports: "Research Notes",
+    portfolios: "Portfolio Attribution",
     settings: "Settings",
   } as const;

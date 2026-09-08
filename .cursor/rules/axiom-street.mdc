@@ -11,8 +11,8 @@ When a rule below conflicts with a feature request, the rule wins. When the visi
 
 ## Current scope
 
-- **Active phase: Phase 8 — Portfolio and attribution.** P5-1 through P5-4, E6-1/E6-2, and E8-1 are closed; E6-2 is a fail-closed readiness guard and Live remains disabled by default. Current package is **E8-2 portfolio attribution UI and factor evidence**. Full status lives in `docs/PLAN.md`; this block is only a pointer.
-- One work package at a time. Do not start the next package until the current one closes and `docs/PLAN.md` is synced.
+- **Active phase: Phase 8 — Portfolio and attribution is closed through E8-2.** Portfolio attribution UI is wired to the typed API; factor exposure is not implemented; E6-2 is a fail-closed readiness guard and Live remains disabled by default. Full status lives in `docs/PLAN.md`; this block is only a pointer.
+- One work package at a time. Do not start the next package until `docs/PLAN.md` explicitly defines it.
 - `services/agent` owns Agent domain logic; `services/api` owns HTTP/database adapters; `services/worker` owns asynchronous execution and LEAN orchestration.
 - Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
 - **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.

@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   Beaker,
+  BriefcaseBusiness,
   FileBarChart2,
   FlaskConical,
   Home,
@@ -26,5 +27,6 @@ export const NAV_ITEMS: { href: string; key: NavKey; icon: typeof Home }[] = [
   { href: "/live", key: "live", icon: Workflow },
   { href: "/risk", key: "risk", icon: Shield },
   { href: "/reports", key: "reports", icon: FileBarChart2 },
+  { href: "/portfolios", key: "portfolios", icon: BriefcaseBusiness },
   { href: "/settings", key: "settings", icon: Settings },
 ];

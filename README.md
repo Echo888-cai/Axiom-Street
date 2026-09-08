@@ -99,7 +99,7 @@ Mature components over vanity engineering. We do not rewrite a backtester for sp
 
 | Phase | Status |
 |-------|--------|
-| **当前阶段:Phase 8 Portfolio and attribution（E8-1 已关闭，E8-2 进行中，Live 保持关闭）** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
+| 当前状态 | 以 [`docs/PLAN.md`](docs/PLAN.md) 为唯一准确信息；Live 保持关闭 |
 
 Backtest numbers are research output, not investment advice.
 
