@@ -64,6 +64,37 @@ export type PaperPositions = S["PaperPositionsOut"];
 export type PaperReconciliation = S["PaperReconciliationOut"];
 export type RiskSummary = S["RiskSummaryOut"];
 
+export type HealthCheck = {
+  ok: boolean;
+  note?: string | null;
+  reported_at?: string | null;
+  age_seconds?: number | null;
+  heartbeat_ttl_seconds?: number | null;
+  image?: string | null;
+  docker_available?: boolean;
+  network?: string;
+  rootfs_read_only?: boolean;
+  non_root?: boolean;
+  seccomp?: string;
+  capabilities_dropped?: string;
+  no_new_privileges?: boolean;
+  tmpfs?: string | null;
+};
+
+export type HealthStatus = {
+  status: "ok" | "degraded" | "down" | string;
+  service: string;
+  version: string;
+  checks: {
+    postgres?: HealthCheck;
+    redis?: HealthCheck;
+    docker?: HealthCheck;
+    worker?: HealthCheck;
+    security?: HealthCheck;
+    [key: string]: HealthCheck | undefined;
+  };
+};
+
 // spec kinds are plain strings; the UI narrows to the eight known kinds.
 export type ValidationKind =
   | "walk_forward"

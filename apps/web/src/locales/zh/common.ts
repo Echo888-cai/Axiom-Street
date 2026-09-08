@@ -204,6 +204,18 @@ export const common = {
         marketJobFailed: "行情任务失败",
         reconcileDoneToast: "全量校验完成（新旧快照均保留）",
         parseFailedToast: "行情任务结束，但无法解析结果",
+        operationsHealthTitle: "运行监控",
+        operationsHealthUnavailable: "运行监控暂不可用",
+        operationsRefresh: "刷新运行状态",
+        operationsWorker: "Worker",
+        operationsDocker: "Docker / LEAN",
+        operationsSandbox: "执行沙箱",
+        operationsSecondsAgo: "秒前心跳",
+        operationsUnavailable: "—",
+        operationsSandboxReady: "只读根文件系统 · 非 root · seccomp default",
+        operationsSandboxUnavailable: "沙箱策略未就绪",
+        operationsMetricsHint: "Prometheus 指标：/metrics · 每 30 秒自动刷新",
+        operationsStatus: { ok: "运行正常", degraded: "运行降级", down: "服务异常" },
     },
 
     diagnostics: {

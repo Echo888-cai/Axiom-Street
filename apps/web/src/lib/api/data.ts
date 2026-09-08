@@ -2,7 +2,6 @@ import { request, API_URL } from "./http";
 import type { IngestJob, DataSnapshot, DataStatus } from "./types";
 
 export const dataApi = {
-  health: () => request<{ status: string; version: string }>("/health"),
   dataStatus: () => request<DataStatus>("/api/v1/data/status"),
   reconcileMarket: (force = false) =>
     request<{

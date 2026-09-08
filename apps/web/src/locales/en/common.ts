@@ -204,6 +204,18 @@ export const common = {
         marketJobFailed: "Market data job failed",
         reconcileDoneToast: "Full reconcile complete (both old and new snapshots kept)",
         parseFailedToast: "Market data job finished, but the result could not be parsed",
+        operationsHealthTitle: "Operations Monitor",
+        operationsHealthUnavailable: "Operations monitor unavailable",
+        operationsRefresh: "Refresh operations status",
+        operationsWorker: "Worker",
+        operationsDocker: "Docker / LEAN",
+        operationsSandbox: "Execution sandbox",
+        operationsSecondsAgo: "s since heartbeat",
+        operationsUnavailable: "—",
+        operationsSandboxReady: "read-only root · non-root · seccomp default",
+        operationsSandboxUnavailable: "Sandbox policy is not ready",
+        operationsMetricsHint: "Prometheus metrics: /metrics · refreshes every 30 seconds",
+        operationsStatus: { ok: "Healthy", degraded: "Degraded", down: "Service down" },
     },
 
     diagnostics: {

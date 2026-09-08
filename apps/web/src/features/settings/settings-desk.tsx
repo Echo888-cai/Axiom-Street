@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { OperationsHealthCard } from "./operations-health-card";
 
 export default function SettingsPage() {
   const qc = useQueryClient();
@@ -119,6 +120,8 @@ export default function SettingsPage() {
         title={t("settings.title")}
         description={t("common.settings.description")}
       />
+
+      <OperationsHealthCard />
 
       {status.isError && (
         <Card>

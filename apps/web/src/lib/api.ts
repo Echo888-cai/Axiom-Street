@@ -11,6 +11,7 @@ import { universesApi } from "./api/universes";
 import { portfoliosApi } from "./api/portfolios";
 import { paperApi } from "./api/paper";
 import { riskApi } from "./api/risk";
+import { healthApi } from "./api/health";
 
 export const api = {
   ...dataApi,
@@ -23,4 +24,5 @@ export const api = {
   ...portfoliosApi,
   ...paperApi,
   ...riskApi,
+  ...healthApi,
 };
