@@ -1049,6 +1049,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/paper/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Paper Orders */
+        get: operations["list_paper_orders_api_v1_paper_orders_get"];
+        put?: never;
+        /** Create Paper Order */
+        post: operations["create_paper_order_api_v1_paper_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Paper Positions */
+        get: operations["get_paper_positions_api_v1_paper_positions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Paper Reconciliation */
+        get: operations["get_paper_reconciliation_api_v1_paper_reconciliation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1813,6 +1865,149 @@ export interface components {
             month: number;
             /** Return Pct */
             return_pct: number;
+        };
+        /** PaperAccountOut */
+        PaperAccountOut: {
+            /** Initial Capital */
+            initial_capital: number;
+            /** Cash */
+            cash: number;
+        };
+        /** PaperOrderAccepted */
+        PaperOrderAccepted: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "queued";
+        };
+        /** PaperOrderIn */
+        PaperOrderIn: {
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Symbol */
+            symbol: string;
+            /** Side */
+            side: string;
+            /** Quantity */
+            quantity: number;
+            /** Simulation Price */
+            simulation_price: number;
+            /** Client Order Id */
+            client_order_id: string;
+        };
+        /** PaperOrderOut */
+        PaperOrderOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Strategy Version Id */
+            strategy_version_id?: string | null;
+            /** Client Order Id */
+            client_order_id: string;
+            /** Symbol */
+            symbol: string;
+            /** Side */
+            side: string;
+            /** Requested Quantity */
+            requested_quantity: number;
+            /** Filled Quantity */
+            filled_quantity: number;
+            /** Simulation Price */
+            simulation_price: number;
+            /** Status */
+            status: string;
+            /** Risk Reason */
+            risk_reason?: string | null;
+            /** Risk Details */
+            risk_details?: {
+                [key: string]: unknown;
+            };
+            /** Error */
+            error?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /** PaperPositionOut */
+        PaperPositionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Symbol */
+            symbol: string;
+            /** Quantity */
+            quantity: number;
+            /** Average Price */
+            average_price: number;
+            /** Realized Pnl */
+            realized_pnl: number;
+            /** Mark Price */
+            mark_price: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** PaperPositionsOut */
+        PaperPositionsOut: {
+            account?: components["schemas"]["PaperAccountOut"] | null;
+            /** Positions */
+            positions?: components["schemas"]["PaperPositionOut"][];
+        };
+        /** PaperReconciliationOut */
+        PaperReconciliationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Status */
+            status: string;
+            /** Expected Positions */
+            expected_positions: {
+                [key: string]: unknown;
+            };
+            /** Actual Positions */
+            actual_positions: {
+                [key: string]: unknown;
+            };
+            /** Differences */
+            differences: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** ResearchNoteCreate */
         ResearchNoteCreate: {
@@ -4693,6 +4888,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CopilotSuggestAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_paper_orders_api_v1_paper_orders_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperOrderOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_paper_order_api_v1_paper_orders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaperOrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperOrderAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_paper_positions_api_v1_paper_positions_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperPositionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_paper_reconciliation_api_v1_paper_reconciliation_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperReconciliationOut"] | null;
                 };
             };
             /** @description Validation Error */

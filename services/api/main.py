@@ -21,6 +21,7 @@ from services.api.routers import (
     backtests,
     copilot,
     data,
+    paper,
     research,
     strategies,
     universes,
@@ -95,6 +96,7 @@ app.include_router(research.router, prefix="/api/v1")
 app.include_router(code_router.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 app.include_router(copilot.router, prefix="/api/v1")
+app.include_router(paper.router, prefix="/api/v1")
 
 # OTel is the single tracer (OTLP -> Jaeger in the compose stack); Sentry is
 # errors-only. Both are internal no-ops unless enabled in settings, so unit

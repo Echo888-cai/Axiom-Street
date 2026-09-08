@@ -3487,6 +3487,198 @@
         }
       }
     },
+    "/api/v1/paper/orders": {
+      "post": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Create Paper Order",
+        "operationId": "create_paper_order_api_v1_paper_orders_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperOrderIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperOrderAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "List Paper Orders",
+        "operationId": "list_paper_orders_api_v1_paper_orders_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaperOrderOut"
+                  },
+                  "title": "Response List Paper Orders Api V1 Paper Orders Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper/positions": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Get Paper Positions",
+        "operationId": "get_paper_positions_api_v1_paper_positions_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperPositionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper/reconciliation": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Get Paper Reconciliation",
+        "operationId": "get_paper_reconciliation_api_v1_paper_reconciliation_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PaperReconciliationOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Paper Reconciliation Api V1 Paper Reconciliation Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -5680,6 +5872,318 @@
           "return_pct"
         ],
         "title": "MonthlyReturnOut"
+      },
+      "PaperAccountOut": {
+        "properties": {
+          "initial_capital": {
+            "type": "number",
+            "title": "Initial Capital"
+          },
+          "cash": {
+            "type": "number",
+            "title": "Cash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "initial_capital",
+          "cash"
+        ],
+        "title": "PaperAccountOut"
+      },
+      "PaperOrderAccepted": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "PaperOrderAccepted"
+      },
+      "PaperOrderIn": {
+        "properties": {
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "symbol": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Symbol"
+          },
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "quantity": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity"
+          },
+          "simulation_price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Simulation Price"
+          },
+          "client_order_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Client Order Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_id",
+          "symbol",
+          "side",
+          "quantity",
+          "simulation_price",
+          "client_order_id"
+        ],
+        "title": "PaperOrderIn"
+      },
+      "PaperOrderOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "strategy_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Version Id"
+          },
+          "client_order_id": {
+            "type": "string",
+            "title": "Client Order Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "requested_quantity": {
+            "type": "number",
+            "title": "Requested Quantity"
+          },
+          "filled_quantity": {
+            "type": "number",
+            "title": "Filled Quantity"
+          },
+          "simulation_price": {
+            "type": "number",
+            "title": "Simulation Price"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "risk_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Reason"
+          },
+          "risk_details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Risk Details"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "strategy_id",
+          "client_order_id",
+          "symbol",
+          "side",
+          "requested_quantity",
+          "filled_quantity",
+          "simulation_price",
+          "status",
+          "created_at"
+        ],
+        "title": "PaperOrderOut"
+      },
+      "PaperPositionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "average_price": {
+            "type": "number",
+            "title": "Average Price"
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl"
+          },
+          "mark_price": {
+            "type": "number",
+            "title": "Mark Price"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "strategy_id",
+          "symbol",
+          "quantity",
+          "average_price",
+          "realized_pnl",
+          "mark_price",
+          "updated_at"
+        ],
+        "title": "PaperPositionOut"
+      },
+      "PaperPositionsOut": {
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaperAccountOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/PaperPositionOut"
+            },
+            "type": "array",
+            "title": "Positions"
+          }
+        },
+        "type": "object",
+        "title": "PaperPositionsOut"
+      },
+      "PaperReconciliationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "expected_positions": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Expected Positions"
+          },
+          "actual_positions": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Actual Positions"
+          },
+          "differences": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Differences"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "strategy_id",
+          "status",
+          "expected_positions",
+          "actual_positions",
+          "differences",
+          "created_at"
+        ],
+        "title": "PaperReconciliationOut"
       },
       "ResearchNoteCreate": {
         "properties": {

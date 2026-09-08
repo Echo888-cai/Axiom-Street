@@ -390,6 +390,92 @@ class CopilotChatOut(BaseModel):
     finished_at: Optional[datetime] = None
 
 
+class PaperOrderIn(BaseModel):
+    strategy_id: UUID
+    symbol: str = Field(min_length=1, max_length=32)
+    side: str
+    quantity: float = Field(gt=0, allow_inf_nan=False)
+    simulation_price: float = Field(gt=0, allow_inf_nan=False)
+    client_order_id: str = Field(min_length=1, max_length=128)
+
+    @field_validator("symbol")
+    @classmethod
+    def normalize_symbol(cls, value: str) -> str:
+        symbol = value.strip().upper()
+        if not symbol:
+            raise ValueError("symbol 不能为空")
+        return symbol
+
+    @field_validator("side")
+    @classmethod
+    def normalize_side(cls, value: str) -> str:
+        side = value.strip().upper()
+        if side not in {"BUY", "SELL"}:
+            raise ValueError("side 必须是 BUY 或 SELL")
+        return side
+
+    @field_validator("client_order_id")
+    @classmethod
+    def normalize_client_order_id(cls, value: str) -> str:
+        key = value.strip()
+        if not key:
+            raise ValueError("client_order_id 不能为空")
+        return key
+
+
+class PaperOrderAccepted(BaseModel):
+    status: Literal["queued"]
+
+
+class PaperOrderOut(ORMModel):
+    id: UUID
+    strategy_id: UUID
+    strategy_version_id: Optional[UUID] = None
+    client_order_id: str
+    symbol: str
+    side: str
+    requested_quantity: float
+    filled_quantity: float
+    simulation_price: float
+    status: str
+    risk_reason: Optional[str] = None
+    risk_details: Dict[str, Any] = Field(default_factory=dict)
+    error: Optional[str] = None
+    created_at: datetime
+    finished_at: Optional[datetime] = None
+
+
+class PaperAccountOut(ORMModel):
+    initial_capital: float
+    cash: float
+
+
+class PaperPositionOut(ORMModel):
+    id: UUID
+    strategy_id: UUID
+    symbol: str
+    quantity: float
+    average_price: float
+    realized_pnl: float
+    mark_price: float
+    updated_at: datetime
+
+
+class PaperPositionsOut(BaseModel):
+    account: Optional[PaperAccountOut] = None
+    positions: list[PaperPositionOut] = Field(default_factory=list)
+
+
+class PaperReconciliationOut(ORMModel):
+    id: UUID
+    strategy_id: UUID
+    status: str
+    expected_positions: Dict[str, Any]
+    actual_positions: Dict[str, Any]
+    differences: Dict[str, Any]
+    created_at: datetime
+
+
 class AuditLogOut(ORMModel):
     id: int
     actor: str
