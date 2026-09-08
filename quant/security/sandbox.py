@@ -86,6 +86,8 @@ def docker_security_args(container_user: str | None = None) -> list[str]:
     if not container_user:
         uid = getattr(os, "getuid", lambda: 65532)()
         gid = getattr(os, "getgid", lambda: 65532)()
+        if uid == 0:
+            uid, gid = 65532, 65532
         container_user = f"{uid}:{gid}"
     return [
         "--network",
