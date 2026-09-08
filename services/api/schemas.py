@@ -476,6 +476,16 @@ class PaperReconciliationOut(ORMModel):
     created_at: datetime
 
 
+class LiveReadinessOut(BaseModel):
+    ready: bool
+    reasons: list[str] = Field(default_factory=list)
+    evidence: Dict[str, Any] = Field(default_factory=dict)
+
+
+class LiveActivateIn(BaseModel):
+    strategy_id: UUID
+
+
 class AuditLogOut(ORMModel):
     id: int
     actor: str

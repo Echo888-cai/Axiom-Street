@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     copilot_provider: str = "deepseek"
     deepseek_api_key: str = ""  # empty => provider disabled, no outbound call
     copilot_model: str = "deepseek-v4-flash"  # override via STREET_COPILOT_MODEL
+    # Live execution stays fail-closed; this flag is only one readiness input.
+    live_enabled: bool = False
 
     @property
     def cors_origin_list(self) -> list[str]:
