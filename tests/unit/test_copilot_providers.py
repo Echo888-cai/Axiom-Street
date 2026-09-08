@@ -246,3 +246,25 @@ def test_suggest_malformed_or_incomplete_reply_is_rejected(monkeypatch) -> None:
     _install_fake(monkeypatch, _text_response(long_text))
     with pytest.raises(CopilotProviderError, match="超过"):
         get_provider().suggest({}, _CANDIDATES)
+
+
+def test_chat_returns_text_and_keeps_the_question_in_user_message(monkeypatch) -> None:
+    _clear_settings(monkeypatch)
+    monkeypatch.setenv("STREET_DEEPSEEK_API_KEY", "sk-test")
+    fake = _install_fake(monkeypatch, _text_response("建议先停下来补验证。"))
+
+    answer = get_provider().chat({"total_trials": 47}, "下一步验证什么？")
+
+    assert answer == "建议先停下来补验证。"
+    assert [m["role"] for m in fake.call_kwargs["messages"]] == ["system", "user"]
+    assert "下一步验证什么？" in fake.call_kwargs["messages"][1]["content"]
+    assert '"total_trials":47' in fake.call_kwargs["messages"][1]["content"]
+
+
+def test_disabled_chat_never_constructs_client(monkeypatch) -> None:
+    _clear_settings(monkeypatch)
+    calls: list = []
+    monkeypatch.setattr(providers_module, "OpenAI", lambda **kw: calls.append(kw))
+
+    assert get_provider().chat({"total_trials": 1}, "该停了吗？") is None
+    assert calls == []

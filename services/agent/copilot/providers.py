@@ -19,6 +19,7 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 
 from services.agent.copilot.prompts import (
     _MAX_SUGGEST_REASON_CHARS,
+    build_chat_messages,
     build_messages,
     build_suggest_messages,
 )
@@ -40,6 +41,10 @@ class Provider(Protocol):
         """Produce a narrative insight, or None when the provider is disabled."""
         ...
 
+    def chat(self, context: dict[str, Any], user_message: str) -> str | None:
+        """Answer one bounded question, or None when the provider is disabled."""
+        ...
+
     def suggest(self, context: dict[str, Any], candidates: list[dict[str, Any]]) -> dict | None:
         """Pick one card among the deterministic candidates + a reason.
 
@@ -56,6 +61,9 @@ class NoopProvider:
     enabled = False
 
     def synthesize(self, context: dict[str, Any]) -> str | None:
+        return None
+
+    def chat(self, context: dict[str, Any], user_message: str) -> str | None:
         return None
 
     def suggest(self, context: dict[str, Any], candidates: list[dict[str, Any]]) -> dict | None:
@@ -123,6 +131,12 @@ class DeepSeekProvider:
         if not self.enabled:
             return None
         messages = cast(list[ChatCompletionMessageParam], build_messages(context))
+        return self._chat(messages)
+
+    def chat(self, context: dict[str, Any], user_message: str) -> str | None:
+        if not self.enabled:
+            return None
+        messages = cast(list[ChatCompletionMessageParam], build_chat_messages(context, user_message))
         return self._chat(messages)
 
     @staticmethod

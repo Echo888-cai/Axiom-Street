@@ -16,6 +16,7 @@ from typing import Any
 from uuid import UUID
 
 MAX_NARRATIVE_CHARS = 180
+MAX_CHAT_MESSAGE_CHARS = 1200
 
 _SYSTEM = (
     "你是 Axiom Street 量化研究平台的守门人助手。你的唯一职责:依据给定的研究"
@@ -55,6 +56,31 @@ def build_messages(context: dict[str, Any]) -> list[dict[str, str]]:
         + "\n\n请根据这些事实判断:该停了吗?"
     )
     return [{"role": "system", "content": _SYSTEM}, {"role": "user", "content": user}]
+
+
+_CHAT_SYSTEM = (
+    "你是 Axiom Street 量化研究平台的研究助手。你只能依据给定的聚合研究事实回答用户问题。"
+    "上下文已经剔除策略源码、参数配置、风险限额和原始行情。"
+    "硬规则:① 不编造上下文没有的数字或事实;② 不生成策略代码;③ 不修改策略、验证状态或风险配置;"
+    "④ 如果问题需要缺失数据,直接说明;⑤ 用中文回答,不超过 400 字。"
+)
+
+
+def build_chat_messages(context: dict[str, Any], user_message: str) -> list[dict[str, str]]:
+    """Render one bounded user question with aggregate-only Copilot facts."""
+    message = user_message.strip()
+    if not message:
+        raise ValueError("chat message 不能为空")
+    if len(message) > MAX_CHAT_MESSAGE_CHARS:
+        raise ValueError(f"chat message 超过 {MAX_CHAT_MESSAGE_CHARS} 字")
+    facts = {k: _clean(v) for k, v in context.items() if v is not None}
+    user = (
+        "当前研究上下文(仅聚合统计,已剔除策略代码、参数、风险限额与行情):\n"
+        + json.dumps(facts, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        + "\n\n用户问题:\n"
+        + message
+    )
+    return [{"role": "system", "content": _CHAT_SYSTEM}, {"role": "user", "content": user}]
 
 
 # --- P5-3 suggest mode: pick one actionable card, never invent one ---

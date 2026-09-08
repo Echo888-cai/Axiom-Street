@@ -13,7 +13,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from services.api.models import CopilotInsight, CopilotSuggestion
+from services.api.models import CopilotChatMessage, CopilotInsight, CopilotSuggestion
 
 
 def list_insights(db: Session, strategy_id: UUID, limit: int = 10) -> list[dict]:
@@ -64,3 +64,30 @@ def latest_suggestion(db: Session, strategy_id: UUID) -> dict | None:
         "created_at": row.created_at,
         "finished_at": row.finished_at,
     }
+
+
+def list_chat_messages(db: Session, strategy_id: UUID, limit: int = 30) -> list[dict]:
+    """Return recent scoped chat turns newest first."""
+    rows = db.execute(
+        select(CopilotChatMessage)
+        .where(CopilotChatMessage.strategy_id == strategy_id)
+        .order_by(CopilotChatMessage.created_at.desc(), CopilotChatMessage.id.desc())
+        .limit(limit)
+    ).scalars()
+    return [
+        {
+            "id": row.id,
+            "strategy_id": row.strategy_id,
+            "resource": row.resource,
+            "resource_id": row.resource_id,
+            "user_message": row.user_message,
+            "assistant_message": row.assistant_message,
+            "status": row.status.value if isinstance(row.status, Enum) else row.status,
+            "model": row.model,
+            "error": row.error,
+            "duration_ms": row.duration_ms,
+            "created_at": row.created_at,
+            "finished_at": row.finished_at,
+        }
+        for row in rows
+    ]
