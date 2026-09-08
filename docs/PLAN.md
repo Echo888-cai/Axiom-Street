@@ -17,7 +17,7 @@ Related documents:
 - Runtime domains: `services/api`, `services/worker`, `quant`, and `services/agent`.
 - Current phase: Phase 9 operational hardening and operator workflows.
 - Phase 5 is closed through P5-4; Phase 6/7 is closed through E6-2 with paper execution and a fail-closed Live readiness guard.
-- Current package: the paper/risk operator UI is closed; the next package is portfolio write workflows, followed by Phase 9 security hardening and monitoring. Factor exposure remains explicitly unavailable and Live remains fail-closed.
+- Current package: paper/risk UI, portfolio write workflows, Phase 9 security hardening, and operations monitoring are closed. The next item is evaluation-only design for a future Broker; no real Broker is implemented. Factor exposure remains explicitly unavailable and Live remains fail-closed.
 
 ## Active work
 
@@ -30,6 +30,8 @@ Related documents:
 | E8-1 portfolio attribution substrate | Closed | Portfolio/strategy allocation ledger, single-period Brinson attribution snapshots, and read-only API contract | 7 focused tests; 497 Python tests; 89 frontend tests; mypy/tsc/build |
 | E8-2 portfolio attribution UI and factor evidence | Closed | `/portfolios` reads server-owned allocations and Brinson attribution; unavailable factor exposures have an honest empty state | 3 focused frontend tests; full Python/frontend/typecheck/build suite |
 | P9-1 paper/risk operator UI | Closed | `/paper` submits real paper orders and shows account/positions/orders/reconciliation; `/risk` shows server-owned risk summary and blockers | 6 focused Python tests; 6 focused frontend tests; 98 frontend tests; mypy/tsc/build |
+| P9-2 portfolio write workflows | Closed | `/portfolios` creates portfolios, submits server-validated allocation weights, and records single-period returns without client-owned attribution weights | 5 focused frontend tests; 102 frontend tests; typecheck/lint |
+| P9-H security and monitoring | Closed | Hardened LEAN sandbox, strategy AST preflight, Worker heartbeat aggregation, and settings-page operations monitor | 9 sandbox tests; 5 health tests; 105 frontend tests; typecheck/lint |
 
 ## Future work
 
@@ -37,8 +39,7 @@ Related documents:
 |---|---|---|
 | Phase 6/7 | Live remains disabled until paper execution and backtest-to-live reconciliation are measurable | E6-1 paper substrate and reconciliation contract closed |
 | Phase 8 | Portfolio and attribution | E6-2 remains closed and Live stays fail-closed |
-| P9-2 | Portfolio write workflows | P9-1 is closed; use existing server-side validation for create/allocation/attribution writes |
-| Phase 9 hardening | Operational hardening and live safety review | P9-2 is closed; Live Broker remains absent and cannot be enabled by configuration alone |
+| Broker evaluation | Design-only review of a future real Broker boundary, reconciliation, credentials, kill switch, and rollout gates | P9-H is closed; this package must not add an external broker call |
 
 ## Closed work packages
 
@@ -55,6 +56,8 @@ Related documents:
 | E8-1 | 2026-09-08 | Portfolio configuration, server-owned allocations, and reproducible single-period attribution snapshots |
 | E8-2 | 2026-09-08 | Portfolio attribution UI, typed API client, navigation entry, and honest factor-exposure empty state |
 | P9-1 | 2026-09-08 | Paper trading operator desk, read-only risk summary API, risk monitor, and real-data empty/error states |
+| P9-2 | 2026-09-08 | Portfolio creation, allocation weights, returns submission UI, typed write client, and server-owned attribution inputs |
+| P9-H | 2026-09-08 | Non-root/read-only/seccomp LEAN sandbox, strategy AST preflight, Worker heartbeat checks, and operations monitor |
 
 ## Update discipline
 

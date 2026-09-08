@@ -11,10 +11,7 @@ from quant.security.sandbox import (
 
 def test_algorithm_imports_and_safe_stdlib_are_allowed():
     validate_strategy_source(
-        "from AlgorithmImports import *\n"
-        "import math\n"
-        "from datetime import date\n"
-        "class Demo: pass\n"
+        "from AlgorithmImports import *\nimport math\nfrom datetime import date\nclass Demo: pass\n"
     )
 
 

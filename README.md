@@ -75,7 +75,7 @@ Hard boundaries (non-negotiable):
 - Strategies never know about brokers
 - Risk cannot be bypassed by strategy code or AI
 - Backtests run in workers, never in the API process
-- Paper execution runs in workers through `quant/execution`; `/paper` and `/risk` expose the operator views; Live broker access is not enabled
+- Paper execution runs in workers through `quant/execution`; `/paper`, `/risk`, and `/portfolios` expose operator workflows; `/settings` exposes real API/Worker/Docker/sandbox health; Live broker access is not enabled
 
 Details: [`docs/architecture.md`](docs/architecture.md)
 

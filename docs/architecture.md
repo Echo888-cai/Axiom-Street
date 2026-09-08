@@ -22,7 +22,7 @@
 
 ## 当前前端实现（2026-09-05）
 
-`apps/web/src/app` 负责路由；`features` 负责业务；`components` 负责通用外观；`lib/api` 按策略、回测、验证、数据、标的池、笔记、代码、纸面执行、风控和组合服务拆分。`/paper` 已接入真实纸面订单/账户/持仓/对账接口，`/risk` 已接入服务端风险摘要，`/portfolios` 读取服务端配置与归因快照；因子暴露未实现时只显示明确空状态。浏览器经 `/api/backend` 同源网关访问 FastAPI，`API_BASE_URL` 在 Next.js 服务端运行时读取。SSE 与下载均走同一链路。详细目录及运行约定见 [前端接手说明](frontend-handoff.md)。
+`apps/web/src/app` 负责路由；`features` 负责业务；`components` 负责通用外观；`lib/api` 按策略、回测、验证、数据、标的池、笔记、代码、纸面执行、风控、组合和健康监控服务拆分。`/paper` 已接入真实纸面订单/账户/持仓/对账接口，`/risk` 已接入服务端风险摘要，`/portfolios` 支持服务端校验的组合创建、权重配置和收益提交，`/settings` 展示 API/Worker/Docker/沙箱运行监控；因子暴露未实现时只显示明确空状态。浏览器经 `/api/backend` 同源网关访问 FastAPI，`API_BASE_URL` 在 Next.js 服务端运行时读取。SSE 与下载均走同一链路。详细目录及运行约定见 [前端接手说明](frontend-handoff.md)。
 
 ## Agent 领域
 
@@ -239,6 +239,6 @@ QUEUED ─▶ STARTING ─▶ RUNNING ─▶ COMPLETED
 - `users` 表、`created_by="local"`、`audit_logs.actor="local"` 为**已知空壳**，不假装有意义
 - 一旦有第二个人使用，认证与 `user_id` 贯穿立刻升级为 P0，插在当期工作包之后
 
-**现有隔离**：`--network none` · `--memory 2g` · `--cpus 2` · `--pids-limit 256` · 数据目录只读挂载。
+**现有隔离**：`--network none` · `--memory 2g` · `--cpus 2` · `--pids-limit 256` · 数据目录只读挂载 · `--read-only` · 非 root · `cap-drop ALL` · `no-new-privileges` · `seccomp=default` · 受限 `/tmp`。冷启动和 warm slot 共用同一安全参数；策略源码在 host 侧先做 AST 检查，危险 import/调用 fail-closed。
 
-**待补**（Phase 6 之前）：seccomp profile · 只读根文件系统 · 非 root 用户 · 危险 import 的静态检查
+**运行监控**：`/health` 聚合 PostgreSQL、Redis、Worker 心跳、Docker/LEAN 和沙箱策略；`/metrics` 暴露 Prometheus 指标；设置页运行监控卡片只显示服务端真实状态。Worker 心跳缺失或过期会使整体状态降级。

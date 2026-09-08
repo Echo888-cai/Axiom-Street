@@ -11,7 +11,7 @@ When a rule below conflicts with a feature request, the rule wins. When the visi
 
 ## Current scope
 
-- **Active phase: Phase 9 operator workflows.** P9-1 paper/risk UI is closed; next is P9-2 portfolio write workflows, then security hardening and monitoring. Factor exposure is not implemented; E6-2 is a fail-closed readiness guard and Live remains disabled by default. Full status lives in `docs/PLAN.md`; this block is only a pointer.
+- **Active phase: Phase 9 operator workflows.** P9-1, P9-2, and Phase 9 security/monitoring are closed; next is evaluation-only design for a future Broker. Factor exposure is not implemented; E6-2 is a fail-closed readiness guard and Live remains disabled by default. Full status lives in `docs/PLAN.md`; this block is only a pointer.
 - One work package at a time. Do not start the next package until `docs/PLAN.md` explicitly defines it.
 - `services/agent` owns Agent domain logic; `services/api` owns HTTP/database adapters; `services/worker` owns asynchronous execution and LEAN orchestration.
 - Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
