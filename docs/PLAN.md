@@ -31,7 +31,7 @@ Related documents:
 | E8-2 portfolio attribution UI and factor evidence | Closed | `/portfolios` reads server-owned allocations and Brinson attribution; unavailable factor exposures have an honest empty state | 3 focused frontend tests; full Python/frontend/typecheck/build suite |
 | P9-1 paper/risk operator UI | Closed | `/paper` submits real paper orders and shows account/positions/orders/reconciliation; `/risk` shows server-owned risk summary and blockers | 6 focused Python tests; 6 focused frontend tests; 98 frontend tests; mypy/tsc/build |
 | P9-2 portfolio write workflows | Closed | `/portfolios` creates portfolios, submits server-validated allocation weights, and records single-period returns without client-owned attribution weights | 5 focused frontend tests; 102 frontend tests; typecheck/lint |
-| P9-H security and monitoring | Closed | Hardened LEAN sandbox, strategy AST preflight, Worker heartbeat aggregation, and settings-page operations monitor | 9 sandbox tests; 5 health tests; 105 frontend tests; typecheck/lint |
+| P9-H security and monitoring | Closed | Hardened LEAN sandbox, strategy AST preflight, Worker heartbeat aggregation, settings-page operations monitor, and patched frontend dependency tree | 9 sandbox tests; 5 health tests; 105 frontend tests; mypy/tsc/build; `npm audit --omit=dev` clean |
 
 ## Future work
 
