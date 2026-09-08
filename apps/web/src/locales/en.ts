@@ -11,6 +11,8 @@ import { navigation } from "./en/navigation";
 import { nav } from "./en/nav";
 import { layout } from "./en/layout";
 import { portfolio } from "./en/portfolio";
+import { paper } from "./en/paper";
+import { risk } from "./en/risk";
 
 export const en = {
   common,
@@ -26,6 +28,8 @@ export const en = {
   nav,
   layout,
   portfolio,
+  paper,
+  risk,
 } as const;
 
 export type En = typeof en;

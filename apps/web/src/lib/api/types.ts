@@ -57,6 +57,13 @@ export type Portfolio = S["PortfolioOut"];
 export type PortfolioAllocation = S["PortfolioAllocationOut"];
 export type PortfolioAttribution = S["PortfolioAttributionOut"];
 
+// Paper execution and risk summary contracts (E6-1 / Phase 9 UI).
+export type PaperOrder = S["PaperOrderOut"];
+export type PaperOrderAccepted = S["PaperOrderAccepted"];
+export type PaperPositions = S["PaperPositionsOut"];
+export type PaperReconciliation = S["PaperReconciliationOut"];
+export type RiskSummary = S["RiskSummaryOut"];
+
 // spec kinds are plain strings; the UI narrows to the eight known kinds.
 export type ValidationKind =
   | "walk_forward"

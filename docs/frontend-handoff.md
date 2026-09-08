@@ -28,6 +28,8 @@ apps/web/src/
     research/               研究笔记
     universes/              标的池
     experiments/            实验比较
+    paper/                  纸面订单、账户、持仓、对账操作台
+    risk/                   服务端只读风险摘要与阻断原因
   lib/
     api.ts                  兼容原有调用的公开 facade
     api/
@@ -39,6 +41,8 @@ apps/web/src/
       data.ts               行情、快照、环境接口
       validation.ts         稳健性验证接口
       universes.ts          标的池接口
+      paper.ts              纸面订单、账户、持仓、对账接口
+      risk.ts               服务端风险摘要接口
       research.ts           笔记接口
       code.ts               Python 语法 / 语言服务接口
     chart-tokens.ts          Canvas 的颜色适配

@@ -486,6 +486,21 @@ class LiveActivateIn(BaseModel):
     strategy_id: UUID
 
 
+class RiskSummaryOut(BaseModel):
+    strategy_id: UUID
+    strategy_status: str
+    risk_limits: Optional[Dict[str, Any]] = None
+    risk_config_valid: bool
+    account_available: bool
+    initial_capital: Optional[float] = None
+    cash: Optional[float] = None
+    equity: Optional[float] = None
+    gross_exposure: Optional[float] = None
+    net_exposure: Optional[float] = None
+    reconciliation_status: Optional[str] = None
+    blocking_reasons: list[str] = Field(default_factory=list)
+
+
 class PortfolioCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     base_currency: str = Field(default="USD", min_length=3, max_length=8)

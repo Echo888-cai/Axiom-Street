@@ -3119,10 +3119,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "策略或回测 UUID",
+              "description": "\u7b56\u7565\u6216\u56de\u6d4b UUID",
               "title": "Id"
             },
-            "description": "策略或回测 UUID"
+            "description": "\u7b56\u7565\u6216\u56de\u6d4b UUID"
           }
         ],
         "responses": {
@@ -3355,7 +3355,7 @@
           "copilot"
         ],
         "summary": "Suggestions",
-        "description": "Deterministic actionable cards for a strategy (P5-3).\n\nStateless derivation on every call — the executable source of truth for\nwhat the copilot can recommend. The model (when enabled) only picks within\nthese cards.",
+        "description": "Deterministic actionable cards for a strategy (P5-3).\n\nStateless derivation on every call \u2014 the executable source of truth for\nwhat the copilot can recommend. The model (when enabled) only picks within\nthese cards.",
         "operationId": "suggestions_api_v1_copilot_suggestions_get",
         "parameters": [
           {
@@ -3662,6 +3662,49 @@
                     }
                   ],
                   "title": "Response Get Paper Reconciliation Api V1 Paper Reconciliation Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/risk/summary": {
+      "get": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Get Risk Summary",
+        "operationId": "get_risk_summary_api_v1_risk_summary_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskSummaryOut"
                 }
               }
             }
@@ -7169,6 +7212,120 @@
         "type": "object",
         "title": "ResearchNoteUpdate"
       },
+      "RiskSummaryOut": {
+        "properties": {
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "strategy_status": {
+            "type": "string",
+            "title": "Strategy Status"
+          },
+          "risk_limits": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Limits"
+          },
+          "risk_config_valid": {
+            "type": "boolean",
+            "title": "Risk Config Valid"
+          },
+          "account_available": {
+            "type": "boolean",
+            "title": "Account Available"
+          },
+          "initial_capital": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Capital"
+          },
+          "cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash"
+          },
+          "equity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equity"
+          },
+          "gross_exposure": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Exposure"
+          },
+          "net_exposure": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Exposure"
+          },
+          "reconciliation_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Status"
+          },
+          "blocking_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blocking Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_id",
+          "strategy_status",
+          "risk_config_valid",
+          "account_available"
+        ],
+        "title": "RiskSummaryOut"
+      },
       "RollingWindowOut": {
         "properties": {
           "window_key": {
@@ -8279,7 +8436,7 @@
           "strategy_version_id"
         ],
         "title": "ValidationCreate",
-        "description": "Unified validation creation — params validated against spec registry."
+        "description": "Unified validation creation \u2014 params validated against spec registry."
       },
       "ValidationError": {
         "properties": {

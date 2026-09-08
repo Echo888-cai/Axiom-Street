@@ -25,6 +25,7 @@ from services.api.routers import (
     paper,
     portfolios,
     research,
+    risk,
     strategies,
     universes,
     validation,
@@ -99,6 +100,7 @@ app.include_router(code_router.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")
 app.include_router(copilot.router, prefix="/api/v1")
 app.include_router(paper.router, prefix="/api/v1")
+app.include_router(risk.router, prefix="/api/v1")
 app.include_router(portfolios.router, prefix="/api/v1")
 app.include_router(live.router, prefix="/api/v1")
 

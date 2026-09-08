@@ -1,5 +1,5 @@
-import { PhasePage } from "@/components/phase-page";
+import { PaperDesk } from "@/features/paper/paper-desk";
 
 export default function PaperPage() {
-  return <PhasePage kind="paper" />;
+  return <PaperDesk />;
 }

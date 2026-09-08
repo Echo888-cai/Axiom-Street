@@ -15,9 +15,9 @@ Related documents:
 
 - Product: `apps/web` is the only product frontend.
 - Runtime domains: `services/api`, `services/worker`, `quant`, and `services/agent`.
-- Current phase: Phase 8 Portfolio and attribution.
+- Current phase: Phase 9 operational hardening and operator workflows.
 - Phase 5 is closed through P5-4; Phase 6/7 is closed through E6-2 with paper execution and a fail-closed Live readiness guard.
-- Current portfolio package: E8-2 is closed; portfolio attribution is available in the product UI, while factor exposure remains explicitly unavailable.
+- Current package: the paper/risk operator UI is closed; the next package is portfolio write workflows, followed by Phase 9 security hardening and monitoring. Factor exposure remains explicitly unavailable and Live remains fail-closed.
 
 ## Active work
 
@@ -29,6 +29,7 @@ Related documents:
 | E6-2 live readiness guard | Closed | Explicit readiness evidence and a server-side fail-closed activation guard; no external broker calls | 5 focused tests; 490 Python tests; 89 frontend tests; mypy/tsc/build |
 | E8-1 portfolio attribution substrate | Closed | Portfolio/strategy allocation ledger, single-period Brinson attribution snapshots, and read-only API contract | 7 focused tests; 497 Python tests; 89 frontend tests; mypy/tsc/build |
 | E8-2 portfolio attribution UI and factor evidence | Closed | `/portfolios` reads server-owned allocations and Brinson attribution; unavailable factor exposures have an honest empty state | 3 focused frontend tests; full Python/frontend/typecheck/build suite |
+| P9-1 paper/risk operator UI | Closed | `/paper` submits real paper orders and shows account/positions/orders/reconciliation; `/risk` shows server-owned risk summary and blockers | 6 focused Python tests; 6 focused frontend tests; 98 frontend tests; mypy/tsc/build |
 
 ## Future work
 
@@ -36,7 +37,8 @@ Related documents:
 |---|---|---|
 | Phase 6/7 | Live remains disabled until paper execution and backtest-to-live reconciliation are measurable | E6-1 paper substrate and reconciliation contract closed |
 | Phase 8 | Portfolio and attribution | E6-2 remains closed and Live stays fail-closed |
-| Phase 9 | Operational hardening and live safety review | E8-2 is closed; Live Broker remains absent and cannot be enabled by configuration alone |
+| P9-2 | Portfolio write workflows | P9-1 is closed; use existing server-side validation for create/allocation/attribution writes |
+| Phase 9 hardening | Operational hardening and live safety review | P9-2 is closed; Live Broker remains absent and cannot be enabled by configuration alone |
 
 ## Closed work packages
 
@@ -52,6 +54,7 @@ Related documents:
 | E6-2 | 2026-09-08 | Live readiness evidence and activation guard; Live Broker remains intentionally absent |
 | E8-1 | 2026-09-08 | Portfolio configuration, server-owned allocations, and reproducible single-period attribution snapshots |
 | E8-2 | 2026-09-08 | Portfolio attribution UI, typed API client, navigation entry, and honest factor-exposure empty state |
+| P9-1 | 2026-09-08 | Paper trading operator desk, read-only risk summary API, risk monitor, and real-data empty/error states |
 
 ## Update discipline
 

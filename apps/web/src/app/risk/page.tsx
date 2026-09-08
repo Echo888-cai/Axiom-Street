@@ -1,5 +1,5 @@
-import { PhasePage } from "@/components/phase-page";
+import { RiskDesk } from "@/features/risk/risk-desk";
 
 export default function RiskPage() {
-  return <PhasePage kind="risk" />;
+  return <RiskDesk />;
 }

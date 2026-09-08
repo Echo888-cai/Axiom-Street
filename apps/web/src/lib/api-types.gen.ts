@@ -1101,6 +1101,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/risk/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Risk Summary */
+        get: operations["get_risk_summary_api_v1_risk_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolios": {
         parameters: {
             query?: never;
@@ -2353,6 +2370,38 @@ export interface components {
             conclusion?: string | null;
             /** Failure Modes */
             failure_modes?: string | null;
+        };
+        /** RiskSummaryOut */
+        RiskSummaryOut: {
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /** Strategy Status */
+            strategy_status: string;
+            /** Risk Limits */
+            risk_limits?: {
+                [key: string]: unknown;
+            } | null;
+            /** Risk Config Valid */
+            risk_config_valid: boolean;
+            /** Account Available */
+            account_available: boolean;
+            /** Initial Capital */
+            initial_capital?: number | null;
+            /** Cash */
+            cash?: number | null;
+            /** Equity */
+            equity?: number | null;
+            /** Gross Exposure */
+            gross_exposure?: number | null;
+            /** Net Exposure */
+            net_exposure?: number | null;
+            /** Reconciliation Status */
+            reconciliation_status?: string | null;
+            /** Blocking Reasons */
+            blocking_reasons?: string[];
         };
         /** RollingWindowOut */
         RollingWindowOut: {
@@ -5273,6 +5322,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaperReconciliationOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_risk_summary_api_v1_risk_summary_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskSummaryOut"];
                 };
             };
             /** @description Validation Error */
