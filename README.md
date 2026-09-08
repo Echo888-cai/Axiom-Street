@@ -60,7 +60,7 @@ Axiom Street optimizes for a different outcome: **numbers you are allowed to tru
 
 ```
 apps/web          Next.js research UI
-services/api      FastAPI — sole database write path
+  services/api      FastAPI — HTTP contract and read/query boundary
 services/worker   Celery — owns docker.sock, runs LEAN
 quant/            Pure Python quant core (engine · data · metrics · risk)
 data/             Immutable market snapshots + manifests
@@ -75,6 +75,7 @@ Hard boundaries (non-negotiable):
 - Strategies never know about brokers
 - Risk cannot be bypassed by strategy code or AI
 - Backtests run in workers, never in the API process
+- Paper execution runs in workers through `quant/execution`; Live broker access is not enabled
 
 Details: [`docs/architecture.md`](docs/architecture.md)
 
@@ -98,7 +99,7 @@ Mature components over vanity engineering. We do not rewrite a backtester for sp
 
 | Phase | Status |
 |-------|--------|
-| **当前阶段:Phase 6/7 Paper and Live execution safety（P5-4 已关闭，Live 保持关闭）** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
+| **当前阶段:Phase 6/7 Paper and Live execution safety（E6-1 已关闭，E6-2 进行中，Live 保持关闭）** | 详见 [`docs/PLAN.md`](docs/PLAN.md) |
 
 Backtest numbers are research output, not investment advice.
 

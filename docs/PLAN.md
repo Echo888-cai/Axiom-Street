@@ -25,7 +25,8 @@ Related documents:
 |---|---|---|---|
 | Project organization | Closed | Frontend/backend/Agent ownership, active-plan cleanup, architecture diagram | `make test-all` plus focused Agent boundary tests |
 | P5-4 guided chat | Closed | Bounded research chat with aggregate-only provider input, async ledger, and honest UI states | Agent isolation tests, API/worker tests, 89 frontend tests, typecheck |
-| E6-1 paper execution substrate | In progress | Order/position/fill ledger, risk-gated paper broker seam, idempotency, and reconciliation contract | TDD unit/API/worker tests plus migration and full suite |
+| E6-1 paper execution substrate | Closed | Order/position/fill ledger, risk-gated paper broker seam, idempotency, and reconciliation contract | 15 focused tests; 485 Python tests; 89 frontend tests; mypy/tsc/build |
+| E6-2 live readiness guard | In progress | Keep Live closed by default; add explicit readiness evidence and a server-side activation guard | TDD policy/route tests; no external broker calls |
 
 ## Future work
 
@@ -44,6 +45,7 @@ Related documents:
 | P5-2 | 2026-09-07 | DeepSeek synthesize path with aggregate-only outbound context |
 | P5-3 | 2026-09-07 | Deterministic suggestions and human-confirmed execution |
 | P5-4 | 2026-09-08 | Bounded guided chat, aggregate-only provider context, async message ledger, and frontend polling UI |
+| E6-1 | 2026-09-08 | Risk-gated paper order execution, idempotency, fills, positions, cash, and reconciliation snapshots |
 
 ## Update discipline
 

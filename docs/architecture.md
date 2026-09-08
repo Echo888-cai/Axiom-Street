@@ -8,9 +8,9 @@
 | 路径 | 职责 |
 |------|------|
 | `apps/web` | Next.js 研究工作台 UI（**唯一产品前端**） |
-| `services/api` | FastAPI；唯一的数据库写入路径 |
-| `services/worker` | Celery worker；持有 `docker.sock`，执行 LEAN |
-| `services/agent` | Agent/Copilot 领域层；聚合上下文、Provider、提示词和确定式建议 |
+| `services/api` | FastAPI；HTTP 契约、权限/存在性校验和只读查询适配 |
+| `services/worker` | Celery worker；持有 `docker.sock`，执行 LEAN 和纸面执行副作用 |
+| `services/agent` | Agent/Copilot 领域层；聚合上下文、Provider、提示词、聊天和确定式建议 |
 | `quant/` | 纯 Python 量化核心（不依赖 web framework） |
 | `data/` | 不可变行情快照与 manifest |
 | `tests/` | 单元测试 + Golden Backtest |
@@ -38,6 +38,8 @@ flowchart TB
     API -->|enqueue-only| Worker[services/worker\nCelery 异步执行]
     Worker --> Agent
     Worker -->|唯一持有 docker.sock| Lean[LEAN\n固定版本 Docker]
+    Worker -->|风险闸门后执行| Paper[quant/execution\nPaper Broker]
+    Paper -->|订单/成交/持仓/对账| DB
     API --> DB[(PostgreSQL)]
     Worker --> DB
     Agent -->|仅聚合统计/候选元数据| Provider[DeepSeek Provider\n可关闭、受约束]
@@ -49,7 +51,7 @@ flowchart TB
     classDef backend fill:#eef9f0,stroke:#3a8f5a,color:#173b24;
     classDef agent fill:#fff5e6,stroke:#c4811d,color:#4a2b00;
     class Web frontend;
-    class API,Worker,Quant,Lean,DB backend;
+    class API,Worker,Quant,Lean,Paper,DB backend;
     class Agent,Provider agent;
 ```
 
@@ -63,7 +65,7 @@ flowchart TB
 | API ↛ Docker | 只有 worker 持有 `docker.sock` | API 进程内起容器无法编排、重启即孤儿 |
 | quant/ ↛ web framework | `quant/` 包不 import FastAPI / Celery | 无法在 notebook 或 CLI 中独立使用 |
 
-**当前状态**：`API ↛ Docker` 已在 Phase 1.5 落地（Celery worker 持有 `docker.sock`）。`Risk ⊥ everything` 已实体化第一包（Phase 6 WP-1，2026-09-07）：`quant/risk/` 纯风控引擎（单标的/杠杆/回撤停机/集中度/熔断速率/stop-loss），在 LEAN 回测里经生成 wrapper 子类接管 `OnData`/`SetHoldings` 强制生效，限额读 `StrategyVersion.config["risk_limits"]`（缺省不包装、逐位一致，golden 未动）；旧 `config["risk"]` 块保持惰性展示元数据。执行级（Broker/实盘链 `Strategy → Risk → Execution → Broker`）仍未接入——引擎当前在回测内验证。
+**当前状态**：`API ↛ Docker` 已在 Phase 1.5 落地（Celery worker 持有 `docker.sock`）。`Risk ⊥ everything` 已实体化：`quant/risk/` 纯风控引擎在 LEAN 回测和纸面执行中复用，限额统一读取 `StrategyVersion.config["risk_limits"]`。E6-1 已接入 `quant/execution` 纸面 Broker、订单/成交/持仓/对账台账；Live Broker 尚不存在，Live 仍保持关闭。
 
 ---
 
@@ -152,7 +154,7 @@ PostgreSQL：metrics · equity · trades · monthly_returns · rolling_windows
 
 ### Phase 6–7 新增
 
-`orders` · `positions` · `fills` · `risk_limits` · `reconciliations`（回测–实盘对账，见 `docs/VISION.md` 北极星指标）
+`paper_accounts` · `paper_orders` · `paper_positions` · `paper_fills` · `paper_reconciliations`（E6-1 已落地）；真实 `orders` / `positions` / `fills` 与外部 Broker 对接仍需后续安全评审。
 
 ### Phase 8 新增
 
