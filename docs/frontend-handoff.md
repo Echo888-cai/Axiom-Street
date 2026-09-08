@@ -45,7 +45,7 @@ apps/web/src/
     tearsheet.ts            纯计算与统计变换
 services/api/               routers → services → 数据模型
 services/worker/            Celery 作业与 LEAN 执行
-services/agent/             Copilot 上下文、Provider、提示词与确定式建议
+services/agent/             Copilot 上下文、Provider、提示词、确定式建议与受限聊天
 quant/                      纯 Python 量化领域逻辑
 ```
 

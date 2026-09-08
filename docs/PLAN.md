@@ -15,22 +15,23 @@ Related documents:
 
 - Product: `apps/web` is the only product frontend.
 - Runtime domains: `services/api`, `services/worker`, `quant`, and `services/agent`.
-- Current phase: Phase 5 AI Copilot; P5-1, P5-2, and P5-3 are closed.
-- Next decision: evaluate P5-4 chat shape only after confirming real capability and boundaries.
-- Current organization package: make the frontend, backend, and Agent ownership visible in code and documentation.
+- Current phase: Phase 6/7 Paper and Live execution safety.
+- Phase 5 is closed through P5-4; the bounded research chat is available only from aggregate Copilot facts.
+- Current execution package: build the paper execution ledger, risk gate, broker seam, and reconciliation path before any live switch.
 
 ## Active work
 
 | Work package | Status | Deliverable | Verification |
 |---|---|---|---|
-| Project organization | In progress | Frontend/backend/Agent ownership, active-plan cleanup, architecture diagram | `make test-all` plus focused Agent boundary tests |
-| P5-4 chat shape | Not started | Design decision only; no UI until real capability is approved | Design review and boundary review |
+| Project organization | Closed | Frontend/backend/Agent ownership, active-plan cleanup, architecture diagram | `make test-all` plus focused Agent boundary tests |
+| P5-4 guided chat | Closed | Bounded research chat with aggregate-only provider input, async ledger, and honest UI states | Agent isolation tests, API/worker tests, 89 frontend tests, typecheck |
+| E6-1 paper execution substrate | In progress | Order/position/fill ledger, risk-gated paper broker seam, idempotency, and reconciliation contract | TDD unit/API/worker tests plus migration and full suite |
 
 ## Future work
 
 | Phase | Scope | Entry condition |
 |---|---|---|
-| Phase 6/7 | Paper and Live, including backtest-to-live reconciliation | Project organization closed; execution safety design approved |
+| Phase 6/7 | Live remains disabled until paper execution and backtest-to-live reconciliation are measurable | E6-1 paper substrate and reconciliation contract closed |
 | Phase 8 | Portfolio and attribution | Phase 6/7 reconciliation is measurable |
 
 ## Closed work packages
@@ -42,6 +43,7 @@ Related documents:
 | P5-1 | 2026-09-07 | Copilot context, provider seam, deterministic panel |
 | P5-2 | 2026-09-07 | DeepSeek synthesize path with aggregate-only outbound context |
 | P5-3 | 2026-09-07 | Deterministic suggestions and human-confirmed execution |
+| P5-4 | 2026-09-08 | Bounded guided chat, aggregate-only provider context, async message ledger, and frontend polling UI |
 
 ## Update discipline
 

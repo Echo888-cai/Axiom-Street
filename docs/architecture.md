@@ -26,7 +26,7 @@
 
 ## Agent 领域
 
-`services/agent` 负责 Copilot 上下文组装、Provider 适配、提示词、洞察台账查询和确定式建议推导。API 路由只负责 HTTP 适配与 enqueue；Worker 任务负责异步执行和 Copilot 台账写入。Agent 输入只允许聚合事实或白名单建议元数据，策略源码、参数配置和原始行情序列不能进入 Provider 边界。
+`services/agent` 负责 Copilot 上下文组装、Provider 适配、提示词、洞察/聊天台账查询和确定式建议推导。API 路由只负责 HTTP 适配与 enqueue；Worker 任务负责异步执行和 Copilot 台账写入。Agent 输入只允许聚合事实或白名单建议元数据，策略源码、参数配置和原始行情序列不能进入 Provider 边界。聊天是受限研究问答，不具备工具调用、代码生成、验证执行或风险写入能力。
 
 ## 1. 分层与边界
 

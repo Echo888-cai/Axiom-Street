@@ -11,7 +11,7 @@ When a rule below conflicts with a feature request, the rule wins. When the visi
 
 ## Current scope
 
-- **Active phase: Phase 5 — AI Copilot.** Work packages **P5-1 (底座), P5-2 (模型劝停, DeepSeek) and P5-3 (建议动作人审闭环) are closed (2026-09-07)**; next is **P5-4 聊天框形态 — evaluate only after the P5-2/3 real capabilities are in place (constraint five: no chat UI without real capability)**. Full status lives in `docs/PLAN.md`; this block is only a pointer.
+- **Active phase: Phase 6/7 — Paper and Live execution safety.** P5-1 through P5-4 are closed; P5-4 is a bounded aggregate-facts research chat. Current package is **E6-1 paper execution substrate**; Live remains disabled until paper reconciliation is measurable. Full status lives in `docs/PLAN.md`; this block is only a pointer.
 - One work package at a time. Do not start the next package until the current one closes and `docs/PLAN.md` is synced.
 - `services/agent` owns Agent domain logic; `services/api` owns HTTP/database adapters; `services/worker` owns asynchronous execution and LEAN orchestration.
 - Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
