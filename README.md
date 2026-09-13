@@ -16,9 +16,9 @@
 
 ---
 
-## White Studio · 浅色研究工作室
+## Research Studio · 研究工作室
 
-前端已整理为浅色设计系统与按业务划分的模块。启动、目录职责、同源 API 网关与已验证范围见 [前端接手文档](docs/frontend-handoff.md)，视觉规范见 [White Studio](design-system/axiom-street/MASTER.md)。
+前端采用中性浅灰画布、白色内容面、浅蓝研究摘要与精简导航，按业务划分模块。启动、目录职责、同源 API 网关与已验证范围见 [前端接手文档](docs/frontend-handoff.md)，视觉规范见 [Research Studio](design-system/axiom-street/MASTER.md)。
 
 ```sh
 make up           # 完整 Docker 研究环境
@@ -60,7 +60,7 @@ Axiom Street optimizes for a different outcome: **numbers you are allowed to tru
 
 ```
 apps/web          Next.js research UI
-  services/api      FastAPI — HTTP contract and read/query boundary
+services/api      FastAPI — HTTP contract and read/query boundary
 services/worker   Celery — owns docker.sock, runs LEAN
 quant/            Pure Python quant core (engine · data · metrics · risk)
 data/             Immutable market snapshots + manifests

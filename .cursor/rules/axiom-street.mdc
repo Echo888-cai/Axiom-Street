@@ -66,11 +66,11 @@ This is the highest-priority correctness rule. A wrong number is worse than no n
 
 ## UI
 
-- Follow the **White Studio** design system — single light theme — per `design-system/axiom-street/MASTER.md`. No separate dark theme is promised.
-- Restrained accent, white glass surfaces only within MASTER token budgets. No purple gradients, neon, glow, robot icons, oversized chart walls.
+- Follow the **Research Studio** design system — single light theme — per `design-system/axiom-street/MASTER.md`. No separate dark theme is promised.
+- Warm light reading surfaces, ink research summaries, and restrained teal accents per MASTER. No purple gradients, neon, glow, robot icons, oversized chart walls.
 - Financial figures use `tabular-nums` **and** `--font-mono`. Empty states use honest copy and never fake portfolio P&L.
 - Split components; no 400-line pages.
-- Emphasis color budget < 5% page area.
+- One ink summary per research overview; ordinary data and form surfaces remain light.
 - Deflated Sharpe and overfitting probability rank visually above raw Sharpe.
 
 ## Every PR

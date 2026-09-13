@@ -46,6 +46,6 @@ prune-jobs:
 	$(PYTHON) -m services.api.prune_jobs --keep-recent 20
 
 clean:
-	rm -rf apps/web/.next apps/web/.mypy_cache .venv __pycache__ .pytest_cache .mypy_cache .ruff_cache
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name .mypy_cache -exec rm -rf {} + 2>/dev/null || true
+	rm -rf apps/web/.next apps/web/test-results apps/web/playwright-report .pytest_cache .mypy_cache .ruff_cache
+	rm -f apps/web/tsconfig.tsbuildinfo
+	find quant services tests -type d -name __pycache__ -prune -exec rm -rf {} +
