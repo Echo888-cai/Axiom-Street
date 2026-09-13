@@ -1,11 +1,24 @@
 {
   "corporate_actions": "corporate_actions/SPY.parquet",
   "corporate_actions_verified": true,
-  "created_at": "2026-09-01T03:56:29.467853+00:00",
-  "end": "2026-08-31 04:00:00+00:00",
+  "created_at": "2026-09-08T02:17:01.314742+00:00",
+  "end": "2026-09-04 04:00:00+00:00",
   "exchange_timezone": "America/New_York",
+  "fetch_windows": {
+    "SPY": {
+      "end": null,
+      "start": "2010-01-01"
+    }
+  },
+  "fundamentals": "fundamentals/SPY.parquet",
+  "fundamentals_symbols": [
+    "SPY"
+  ],
+  "inferred_delistings": [],
+  "ingest_mode": "full",
   "market": "US",
   "parquet": "market/equities/US/daily/SPY.parquet",
+  "prior_snapshot_key": "spy-daily-20260831-1209a3",
   "provider_capabilities": {
     "dividends": true,
     "ohlcv": true,
@@ -14,7 +27,7 @@
   },
   "providers": {
     "active": "auto (yfinance \u2192 stooq)",
-    "as_of": "2026-09-01T03:56:29.467851+00:00",
+    "as_of": "2026-09-08T02:17:01.314736+00:00",
     "optional_providers": {
       "alpaca": {
         "env": [
@@ -31,10 +44,12 @@
         "wired": false
       },
       "polygon": {
+        "configured": false,
         "env": [
           "POLYGON_API_KEY"
         ],
-        "wired": false
+        "role": "default primary when POLYGON_API_KEY is set; yfinance is the dual-source reconcile",
+        "wired": true
       },
       "tiingo": {
         "env": [
@@ -43,20 +58,27 @@
         "wired": false
       }
     },
+    "primary": "auto",
+    "reconcile_with": null,
     "requires_api_key": false
   },
   "quality_report": {
-    "end": "2026-08-31T04:00:00+00:00",
+    "end": "2026-09-04T04:00:00+00:00",
     "has_blocking_issues": false,
     "issues": [],
-    "row_count": 4190,
+    "row_count": 4194,
     "start": "2010-01-04T05:00:00+00:00"
   },
+  "reconcile_reports": [],
+  "reconcile_with": null,
   "resolution": "daily",
-  "rows": 4190,
-  "sha256": "1209a349aefe2687dd1217025e7d72d7fc1549742bae267b8e9b4034ecc835b6",
-  "snapshot_key": "spy-daily-20260831-1209a3",
+  "rows": 4194,
+  "sha256": "034e72fff6d3f0eda62bc7b3de13a91d78d82441630d7957ffedd5b2dc987aef",
+  "snapshot_key": "spy-daily-20260904-034e72",
   "source": "yfinance",
   "start": "2010-01-04 05:00:00+00:00",
-  "symbol": "SPY"
+  "symbol": "SPY",
+  "symbols": [
+    "SPY"
+  ]
 }
