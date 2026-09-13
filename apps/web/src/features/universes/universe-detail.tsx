@@ -174,7 +174,7 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
     <div className="space-y-6 as-enter">
       <PageHeader
         crumbs={[
-          { href: "/", label: t("navigation.home") },
+          { href: "/", label: t("nav.home") },
           { href: "/universes", label: t("universe.title") },
         ]}
         title={row.name}

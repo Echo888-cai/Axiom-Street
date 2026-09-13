@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MetricTile } from "@/components/ui/metric-tile";
 
 const PAPER_READY_STATUSES = new Set(["VALIDATED", "PAPER", "APPROVED"]);
 
@@ -214,8 +215,8 @@ export function PaperDesk() {
           <CardHeader title={t("paper.accountTitle")} />
           {account ? (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Metric label={t("paper.initialCapital")} value={money(account.initial_capital)} />
-              <Metric label={t("paper.cash")} value={money(account.cash)} />
+              <MetricTile label={t("paper.initialCapital")} value={money(account.initial_capital)} />
+              <MetricTile label={t("paper.cash")} value={money(account.cash)} />
             </div>
           ) : (
             <EmptyBlock icon={<Wallet className="h-5 w-5 text-as-primary" />} title={t("paper.noAccountTitle")} description={t("paper.noAccountDescription")} />
@@ -279,10 +280,6 @@ function Field({ label, htmlFor, children }: { label: string; htmlFor: string; c
       {children}
     </label>
   );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border border-as-border bg-as-secondary/40 p-4"><p className="text-xs text-as-muted">{label}</p><p className="mt-1 font-mono text-lg font-semibold tabular-nums text-as-text">{value}</p></div>;
 }
 
 function EmptyBlock({ icon, title, description }: { icon: React.ReactNode; title: string; description?: string }) {

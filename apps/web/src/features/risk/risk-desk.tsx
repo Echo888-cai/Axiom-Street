@@ -8,6 +8,7 @@ import { useT } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { MetricTile } from "@/components/ui/metric-tile";
 
 function money(value: number | null | undefined) {
   if (value == null) return "—";
@@ -114,11 +115,11 @@ function RiskContent({ data, t }: { data: RiskSummary; t: (key: string) => strin
         <CardHeader title={t("risk.accountTitle")} />
         {hasAccount ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <Metric label={t("risk.initialCapital")} value={money(data.initial_capital)} />
-            <Metric label={t("risk.cash")} value={money(data.cash)} />
-            <Metric label={t("risk.equity")} value={money(data.equity)} />
-            <Metric label={t("risk.grossExposure")} value={percent(data.gross_exposure)} />
-            <Metric label={t("risk.netExposure")} value={percent(data.net_exposure)} />
+            <MetricTile label={t("risk.initialCapital")} value={money(data.initial_capital)} />
+            <MetricTile label={t("risk.cash")} value={money(data.cash)} />
+            <MetricTile label={t("risk.equity")} value={money(data.equity)} />
+            <MetricTile label={t("risk.grossExposure")} value={percent(data.gross_exposure)} />
+            <MetricTile label={t("risk.netExposure")} value={percent(data.net_exposure)} />
           </div>
         ) : (
           <EmptyState title={t("risk.noAccountTitle")} description={t("risk.noAccountDescription")} />
@@ -137,10 +138,6 @@ function RiskContent({ data, t }: { data: RiskSummary; t: (key: string) => strin
       </Card>
     </>
   );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border border-as-border bg-as-secondary/40 p-3"><p className="text-xs text-as-muted">{label}</p><p className="mt-1 font-mono text-lg font-semibold tabular-nums text-as-text">{value}</p></div>;
 }
 
 function EmptyState({ title, description }: { title: string; description: string }) {

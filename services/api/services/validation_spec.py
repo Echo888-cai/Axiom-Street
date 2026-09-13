@@ -129,23 +129,6 @@ class ValidationSpec(ABC, Generic[T]):
         pass
 
 
-def _normalize_int_grid(values: list[int]) -> list[int]:
-    return sorted({int(v) for v in values})
-
-
-def _normalize_costs(raw: list[float]) -> list[float]:
-    costs: list[float] = []
-    seen: set[float] = set()
-    for item in raw:
-        value = float(item)
-        if value in seen:
-            continue
-        seen.add(value)
-        costs.append(value)
-    costs.sort()
-    return costs
-
-
 # --- Walk-Forward ---
 
 
@@ -644,6 +627,15 @@ def validated_kinds() -> list[ValidationKind]:
     ]
 
 
+def auto_on_backtest_kinds() -> list[ValidationKind]:
+    """Kinds that run automatically after a backtest completes."""
+    return [
+        ValidationKind.DSR,
+        ValidationKind.BOOTSTRAP,
+        ValidationKind.REGIME,
+    ]
+
+
 def engine_kinds() -> list[ValidationKind]:
     """Kinds that require LEAN engine runs."""
     return [
@@ -654,25 +646,6 @@ def engine_kinds() -> list[ValidationKind]:
     ]
 
 
-def auto_on_backtest_kinds() -> list[ValidationKind]:
-    """Kinds that run automatically after a backtest completes."""
-    return [
-        ValidationKind.DSR,
-        ValidationKind.BOOTSTRAP,
-        ValidationKind.REGIME,
-    ]
-
-
 def params_schema_for(kind: ValidationKind) -> type[BaseModel]:
     """Get the Pydantic params schema for a kind."""
     return get_spec(kind).params_schema()
-
-
-def step_count_for(kind: ValidationKind, params: BaseModel) -> int:
-    """Get the progress step count for a kind with given params."""
-    return get_spec(kind).step_count(params)
-
-
-def runner_for(kind: ValidationKind) -> Callable:
-    """Get the runner function for a kind."""
-    return get_spec(kind).runner()

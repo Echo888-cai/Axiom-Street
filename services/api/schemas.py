@@ -651,15 +651,6 @@ class UniversePage(BaseModel):
     offset: int
 
 
-class PBOScanCreate(BaseModel):
-    strategy_version_id: UUID
-    backtest_id: Optional[UUID] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    parameter_key: str = "lookback"
-    values: list[int] = Field(default_factory=lambda: [100, 150, 200, 250])
-
-
 class SensitivityCreate(BaseModel):
     strategy_version_id: UUID
     backtest_id: Optional[UUID] = None
@@ -676,29 +667,6 @@ class CostScanCreate(BaseModel):
     end_date: Optional[date] = None
     costs_bps: list[float] = Field(default_factory=lambda: [0.0, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0])
     realistic_one_way_bps: float = Field(default=5.0, ge=0, le=200)
-
-
-class BootstrapCreate(BaseModel):
-    strategy_version_id: UUID
-    backtest_id: Optional[UUID] = None
-    n_boot: int = Field(default=2000, ge=200, le=5000)
-    confidence_level: float = Field(default=0.95, ge=0.8, lt=1.0)
-    method: str = "stationary"
-    mean_block_length: Optional[float] = Field(default=None, gt=0)
-    seed: Optional[int] = None
-
-
-class RegimeCreate(BaseModel):
-    strategy_version_id: UUID
-    backtest_id: Optional[UUID] = None
-
-
-class SpaCreate(BaseModel):
-    strategy_version_id: UUID
-    backtest_id: Optional[UUID] = None
-    n_boot: int = Field(default=1000, ge=200, le=5000)
-    alpha: float = Field(default=0.05, ge=0.01, le=0.2)
-    seed: Optional[int] = None
 
 
 class WalkForwardCreate(BaseModel):

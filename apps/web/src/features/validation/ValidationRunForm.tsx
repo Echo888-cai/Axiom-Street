@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Disclosure } from "@/components/ui/disclosure";
 import { useT, useI18n } from "@/lib/i18n";
 import { request } from "@/lib/api/http";
-import type { ValidationKind, ValidationSpec, ValidationRun } from "@/lib/api";
+import type { ValidationSpec, ValidationRun } from "@/lib/api";
 
 interface ValidationRunFormProps {
   spec: ValidationSpec;
@@ -251,31 +251,3 @@ export function ValidationRunForm({
   );
 }
 
-export function ValidationRunFormWrapper({
-  kind,
-  strategyVersionId,
-  backtestId,
-  specs,
-}: {
-  kind: ValidationKind;
-  strategyVersionId: string;
-  backtestId?: string;
-  specs: ValidationSpec[];
-}) {
-  const t = useT();
-  const spec = specs.find((s) => s.kind === kind);
-  if (!spec) {
-    return (
-      <div className="p-4 text-center text-muted-foreground">
-        {t("validation.form.specNotFound")}: {kind}
-      </div>
-    );
-  }
-  return (
-    <ValidationRunForm
-      spec={spec}
-      strategyVersionId={strategyVersionId}
-      backtestId={backtestId}
-    />
-  );
-}

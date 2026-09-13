@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import jedi
 
@@ -77,8 +76,3 @@ def hover_python(code: str, line: int, column: int) -> LspHoverOut:
             chunks.append(title)
     contents = "\n\n".join(chunks).strip() or None
     return LspHoverOut(contents=contents)
-
-
-def diagnostics_python(code: str) -> dict[str, Any]:
-    syntax = check_python(code)
-    return {"syntax": syntax.model_dump()}

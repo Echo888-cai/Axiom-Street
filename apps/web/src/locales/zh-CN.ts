@@ -7,7 +7,6 @@ import { tearsheet } from "./zh/tearsheet";
 import { data } from "./zh/data";
 import { universe } from "./zh/universe";
 import { settings } from "./zh/settings";
-import { navigation } from "./zh/navigation";
 import { nav } from "./zh/nav";
 import { layout } from "./zh/layout";
 import { portfolio } from "./zh/portfolio";
@@ -24,7 +23,6 @@ export const zhCN = {
   data,
   universe,
   settings,
-  navigation,
   nav,
   layout,
   portfolio,

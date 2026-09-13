@@ -7,7 +7,6 @@ import { tearsheet } from "./en/tearsheet";
 import { data } from "./en/data";
 import { universe } from "./en/universe";
 import { settings } from "./en/settings";
-import { navigation } from "./en/navigation";
 import { nav } from "./en/nav";
 import { layout } from "./en/layout";
 import { portfolio } from "./en/portfolio";
@@ -24,7 +23,6 @@ export const en = {
   data,
   universe,
   settings,
-  navigation,
   nav,
   layout,
   portfolio,

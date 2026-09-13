@@ -11,19 +11,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-
-function formatPercent(value: number) {
-  return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
-}
+import { MetricTile, metricTone } from "@/components/ui/metric-tile";
+import { formatPct } from "@/lib/utils";
 
 function formatWeight(value: number) {
   return `${(value * 100).toFixed(1)}%`;
-}
-
-function attributionTone(value: number): "green" | "red" | "neutral" {
-  if (value > 0) return "green";
-  if (value < 0) return "red";
-  return "neutral";
 }
 
 function latestAttribution(rows: AttributionRow[] | undefined) {
@@ -98,7 +90,7 @@ export function PortfolioAttribution() {
 
         <Card className="lg:col-span-2">
           <CardHeader title={t("portfolio.attributionTitle")} hint={latest ? <span className="text-xs text-as-muted">{t("portfolio.asOf")} {latest.as_of}</span> : undefined} />
-          {attribution.isLoading ? <div className="h-24 animate-pulse rounded-lg bg-as-secondary" /> : latest ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label={t("portfolio.portfolioReturn")} value={latest.portfolio_return} /><Metric label={t("portfolio.benchmarkReturn")} value={latest.benchmark_return} /><Metric label={t("portfolio.activeReturn")} value={latest.active_return} /><Metric label={t("portfolio.allocationEffect")} value={latest.allocation_effect} /><Metric label={t("portfolio.selectionEffect")} value={latest.selection_effect} /><Metric label={t("portfolio.interactionEffect")} value={latest.interaction_effect} /></div> : <p className="text-sm text-as-muted">{t("portfolio.noAttribution")}</p>}
+          {attribution.isLoading ? <div className="h-24 animate-pulse rounded-lg bg-as-secondary" /> : latest ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><MetricTile label={t("portfolio.portfolioReturn")} value={formatPct(latest.portfolio_return)} tone={metricTone(latest.portfolio_return)} /><MetricTile label={t("portfolio.benchmarkReturn")} value={formatPct(latest.benchmark_return)} tone={metricTone(latest.benchmark_return)} /><MetricTile label={t("portfolio.activeReturn")} value={formatPct(latest.active_return)} tone={metricTone(latest.active_return)} /><MetricTile label={t("portfolio.allocationEffect")} value={formatPct(latest.allocation_effect)} tone={metricTone(latest.allocation_effect)} /><MetricTile label={t("portfolio.selectionEffect")} value={formatPct(latest.selection_effect)} tone={metricTone(latest.selection_effect)} /><MetricTile label={t("portfolio.interactionEffect")} value={formatPct(latest.interaction_effect)} tone={metricTone(latest.interaction_effect)} /></div> : <p className="text-sm text-as-muted">{t("portfolio.noAttribution")}</p>}
           <AttributionForm portfolioId={portfolio.id} allocations={allocations.data ?? []} strategyNames={strategyNames} t={t} queryClient={queryClient} />
         </Card>
       </div>
@@ -139,5 +131,3 @@ function AttributionForm({ portfolioId, allocations, strategyNames, t, queryClie
 }
 
 function InputField({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) { return <label htmlFor={htmlFor} className="block"><span className="mb-1.5 block text-xs font-medium text-as-muted">{label}</span>{children}</label>; }
-
-function Metric({ label, value }: { label: string; value: number }) { return <div className="rounded-lg border border-as-border bg-as-secondary/40 p-3"><p className="text-xs text-as-muted">{label}</p><p className={`mt-1 text-lg font-semibold ${value < 0 ? "text-as-negative" : "text-as-text"}`}><span data-tone={attributionTone(value)}>{formatPercent(value)}</span></p></div>; }

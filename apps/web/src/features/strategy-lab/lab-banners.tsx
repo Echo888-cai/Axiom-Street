@@ -2,13 +2,8 @@
 
 import type { TrialStats } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { formatTemplate } from "@/lib/utils";
 import { Disclosure } from "@/components/ui/disclosure";
-
-function fmt(template: string, vars: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (_, key: string) =>
-    String(vars[key] ?? ""),
-  );
-}
 
 export function LabBanners({
   trials,
@@ -24,12 +19,12 @@ export function LabBanners({
       {trials && trials.total_trials > 0 ? (
         <Disclosure title={`试验记录 · ${trials.total_trials} 次`}>
           {firstSnapshot
-            ? fmt(t("strategy.trialsWithSnapshot"), {
+            ? formatTemplate(t("strategy.trialsWithSnapshot"), {
                 total: trials.total_trials,
                 snapshot: firstSnapshot.snapshot_key || "—",
                 snapshotCount: firstSnapshot.count,
               })
-            : fmt(t("strategy.trialsNoSnapshot"), {
+            : formatTemplate(t("strategy.trialsNoSnapshot"), {
                 total: trials.total_trials,
               })}
         </Disclosure>

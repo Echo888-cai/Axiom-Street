@@ -15,7 +15,6 @@
   --as-warning-rgb: 148 93 0;
   --as-bg: rgb(var(--as-bg-rgb));
   --as-bg-secondary: rgb(var(--as-secondary-rgb));
-  --as-surface-sunken: #f0f1f4;
   --as-border: rgb(var(--as-border-rgb));
   --as-border-subtle: #eff0f3;
   --as-border-strong: #c5c7ce;
@@ -38,7 +37,6 @@
   --as-glass: rgb(255 255 255 / 84%);
   --as-grid: rgb(34 45 61 / 4%);
   --as-chart-benchmark: #9aa4b3;
-  --as-chart-crosshair: rgb(38 94 167 / 25%);
   --background: var(--as-bg);
   --foreground: var(--as-text);
 }
@@ -134,16 +132,6 @@ button:not(:disabled) {
   border-color: rgba(34, 45, 61, 0.2);
   background: #fafbfc;
 }
-.as-rule {
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--as-border) 10%,
-    var(--as-border) 90%,
-    transparent
-  );
-}
 .as-grid-paper {
   background-image:
     linear-gradient(var(--as-grid) 1px, transparent 1px),
@@ -161,14 +149,6 @@ button:not(:disabled) {
     transform: none;
   }
 }
-@keyframes as-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
 @keyframes as-scale-in {
   from {
     opacity: 0;
@@ -181,9 +161,6 @@ button:not(:disabled) {
 }
 .as-enter {
   animation: as-enter 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.as-fade {
-  animation: as-fade 220ms ease both;
 }
 .as-scale-in {
   animation: as-scale-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -306,7 +283,7 @@ main pre { max-width: 100%; overflow: auto; }
   main { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
 }
 
-/* Light Studio: quiet surfaces, generous spacing, focused blue actions. */
+/* Research Studio: quiet surfaces, generous spacing, focused blue actions. */
 .as-sidebar { background: #fcfcfd; }
 .as-nav-active { background: var(--as-primary-soft); color: var(--as-primary); }
 .as-nav-active:hover { background: #e3efff; }

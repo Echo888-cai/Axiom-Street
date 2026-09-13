@@ -36,7 +36,7 @@ export function StrategyLabHeader({
   return (
     <PageHeader
       crumbs={[
-        { href: "/", label: t("navigation.home") },
+        { href: "/", label: t("nav.home") },
         { href: "/strategies", label: t("nav.strategies") },
       ]}
       title={

@@ -43,6 +43,15 @@ export function formatDate(value: string | null | undefined): string {
   return value.slice(0, 10);
 }
 
+export function formatTemplate(
+  template: string,
+  vars: Record<string, string | number>,
+): string {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) =>
+    String(vars[key] ?? ""),
+  );
+}
+
 export function formatRelative(value: string | null | undefined): string {
   if (!value) return "—";
   // The database emits naive UTC; do not interpret it in the browser timezone.

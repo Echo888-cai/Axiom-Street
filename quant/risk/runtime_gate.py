@@ -23,9 +23,9 @@ import json
 from typing import Optional
 
 try:  # container: sibling module written into the algorithm folder
-    from risk_engine import RiskEngine  # type: ignore
+    from risk_engine import RiskEngine  # type: ignore[import-not-found]
 except ImportError:  # host tests import this package normally
-    from quant.risk.engine import RiskEngine  # type: ignore
+    from quant.risk.engine import RiskEngine  # type: ignore[import-not-found]
 
 _EPS = 1e-9
 

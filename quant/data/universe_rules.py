@@ -302,20 +302,3 @@ def evaluate_universe(
         members.extend(evaluate_symbol(frames[symbol], symbol, rules, fund_map.get(symbol)))
     validate_memberships(members)
     return members
-
-
-def rules_summary(rules: UniverseRuleSet | dict[str, Any] | None) -> str:
-    parsed = rules if isinstance(rules, UniverseRuleSet) else parse_rules(rules)
-    parts: list[str] = []
-    if parsed.min_price is not None:
-        parts.append(f"min_price {parsed.min_price:g}")
-    if parsed.min_adv_usd is not None:
-        parts.append(f"min_adv_usd {parsed.min_adv_usd:g}")
-    if parsed.min_market_cap_usd is not None:
-        parts.append(f"min_market_cap_usd {parsed.min_market_cap_usd:g}")
-    if parsed.sectors:
-        parts.append("sectors " + "/".join(parsed.sectors))
-    if parsed.industries:
-        parts.append("industries " + "/".join(parsed.industries))
-    parts.append(f"lookback {parsed.lookback_days}d")
-    return " · ".join(parts)
