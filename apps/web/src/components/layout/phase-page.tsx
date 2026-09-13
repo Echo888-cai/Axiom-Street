@@ -1,7 +1,7 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n";
-import { PhasePlaceholder } from "@/components/phase-placeholder";
+import { PhasePlaceholder } from "@/components/layout/phase-placeholder";
 
 export type PhaseKind = "live" | "paper" | "risk";
 
