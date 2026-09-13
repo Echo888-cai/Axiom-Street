@@ -1,187 +1,110 @@
 <p align="center">
-  <img src="apps/web/public/axiom-mark.svg" alt="Axiom Street" width="96" />
+  <img src="apps/web/public/axiom-mark.svg" alt="Axiom Street" width="88" height="88" />
 </p>
 
 <h1 align="center">Axiom Street</h1>
 
 <p align="center">
-  <strong>Honest quantitative research.</strong><br />
-  Built so you cannot easily fool yourself.
+  <strong>Research, with evidence.</strong><br />
+  从假设出发，让证据说话。
 </p>
 
 <p align="center">
-  A research workbench where statistical validity is a first-class product feature —<br />
-  not an optional appendix at the bottom of a pretty backtest report.
+  为严肃研究而设计的量化工作台。<br />
+  让想法成为规则，让实验留下证据，让每一步决策都有依据。
+</p>
+
+<p align="center">
+  <a href="docs/PLAN.md"><strong>项目总规划</strong></a>
+  &nbsp; · &nbsp;
+  <a href="docs/PLAN.md#3-当前已经完成什么">实现现状</a>
+  &nbsp; · &nbsp;
+  <a href="docs/PLAN.md#4-后续六阶段路线图">建设路线</a>
+  &nbsp; · &nbsp;
+  <a href="docs/PLAN.md#8-需要哪些账户和-key">账户与 Key</a>
+</p>
+
+<p align="center">
+  <sub>STRATEGY RESEARCH &nbsp; / &nbsp; REPRODUCIBLE EXPERIMENTS &nbsp; / &nbsp; STATISTICAL VALIDATION</sub>
 </p>
 
 ---
 
-## Research Studio · 研究工作室
+## 研究应当留下证据
 
-前端采用中性浅灰画布、白色内容面、浅蓝研究摘要与精简导航，按业务划分模块。启动、目录职责、同源 API 网关与已验证范围见 [前端接手文档](docs/frontend-handoff.md)，视觉规范见 [Research Studio](design-system/axiom-street/MASTER.md)。
+一条漂亮的净值曲线，是研究的开始。它来自什么数据、经历过多少次尝试、能否经受样本外与交易成本的检验，决定了它是否值得继续。
 
-```sh
-make up           # 完整 Docker 研究环境
-make web          # 本地 Next.js 前端
-make api          # 本地 FastAPI，优先使用 .venv
+Axiom Street 把这些问题放进工作流程。面向个人研究者，并向小型团队演进，它将策略规则、版本、回测、验证和研究结论组织在同一个工作空间中。
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <strong>01 · 清晰的研究</strong><br /><br />
+      从可读规则进入策略，以版本记录变化。必要信息始终可见，复杂参数按需展开。
+    </td>
+    <td width="33%" valign="top">
+      <strong>02 · 可追溯的证据</strong><br /><br />
+      数据快照、实验台账与结果相互关联。每个结论都应能够回到产生它的输入和过程。
+    </td>
+    <td width="33%" valign="top">
+      <strong>03 · 有边界的决策</strong><br /><br />
+      统计验证审视结果，独立风控约束执行。AI 提供协助，证据决定研究能走多远。
+    </td>
+  </tr>
+</table>
+
+## 一个连贯的工作空间
+
+**提出假设 → 定义规则 → 固定版本与数据 → 运行实验 → 检验证据 → 形成结论**
+
+| 工作区域 | 关注的问题 |
+|---|---|
+| **策略研究** | 交易规则是什么？本次修改改变了什么？ |
+| **回测分析** | 收益、风险与成本如何？相对基准的差异来自哪里？ |
+| **稳健性验证** | 样本外表现如何？是否过拟合？参数和成本有多敏感？ |
+| **研究记录** | 哪些证据支持结论？哪些限制还没有解决？ |
+| **模拟与风控** | 执行是否符合预期？账户、订单和风险是否一致？ |
+
+产品采用明亮、克制的 **Research Studio** 视觉语言：清晰排版、对齐的财务数字、安静的颜色和真实的数据反馈。研究内容始终处于中心。
+
+从持续模拟到受控实盘、从单人研究到团队协作，后续建设以逐阶段验收推进。**各模块的已实现范围、限制和下一步，统一以[项目总规划](docs/PLAN.md)为准。**
+
+## 简洁的架构，明确的职责
+
+```text
+apps/web          研究界面 · Next.js / TypeScript
+services/api      接口与应用服务 · FastAPI / PostgreSQL
+services/worker   异步执行与恢复 · Celery / Redis
+services/agent    研究助手 · 聚合事实与受限建议
+quant             数据 / LEAN 引擎 / 指标 / 验证 / 风控
 ```
 
-浏览器默认使用同源 `/api/backend`；Next.js 通过运行时 `API_BASE_URL` 连接后端。
+浏览器通过同源网关访问后端；长任务交给 Worker；量化计算留在独立领域模块。策略与券商解耦，研究助手与风险写入隔离。
 
-## Why Axiom Street exists
+架构契约、视觉规范、测试要求与阶段验收集中维护在[总规划](docs/PLAN.md)，让接手者从一个入口理解整个工程。
 
-The real failure mode in quant research is not “failing to find a strategy.”  
-It is **finding a strategy that never existed — and believing it**.
+## 开始研究
 
-Any competent programmer can surface a Sharpe 2.5 equity curve on SPY in an afternoon.  
-That curve is usually fake. Not because the data is wrong, and not because the code has a bug —  
-but because **you tried four hundred variants on the same sample and kept the best one**.
+开发基线：**Python 3.11 · Node.js 22 · Docker / Colima**。
 
-Most platforms optimize for faster, prettier backtests.  
-Axiom Street optimizes for a different outcome: **numbers you are allowed to trust**.
+1. 仅在配置文件不存在时，从 `.env.example` 和 `apps/web/.env.example` 创建对应本地配置。
+2. 安装依赖，设置数据库凭据和后端地址；按需要配置行情与研究助手。
+3. 按[启动说明](docs/PLAN.md#10-启动和交接)启动服务。完整回测需要数据库、Redis、Worker 和 LEAN 环境。
 
-> Full product constitution: [`docs/VISION.md`](docs/VISION.md)
+| 操作 | 命令 |
+|---|---|
+| 启动本地前端 | `make web` |
+| 启动本地 API | `make api` |
+| 启动完整开发栈 | `make up` |
+| 执行常规质量检查 | `make test-all` |
 
----
-
-## Principles that ship in the product
-
-| Principle | What it means in practice |
-|-----------|---------------------------|
-| **Fail loud** | Missing corporate actions fail the backtest. Silent fallbacks are bugs. |
-| **Metrics belong to Axiom** | We compute Sharpe / drawdown / etc. from the return series. LEAN stats are cross-checks only. |
-| **Immutable data** | Snapshots are content-addressed. Ingest never overwrites history. |
-| **Trial ledger** | Every backtest is counted. Multiple-testing penalties cannot be reconstructed after the fact. |
-| **Validation before AI** | Phase 3 ships before Copilot. Without validation, AI is an overfitting amplifier. |
-
----
-
-## Architecture at a glance
-
-```
-apps/web          Next.js research UI
-services/api      FastAPI — HTTP contract and read/query boundary
-services/worker   Celery — owns docker.sock, runs LEAN
-quant/            Pure Python quant core (engine · data · metrics · risk)
-data/             Immutable market snapshots + manifests
-docs/             Vision · roadmap · architecture · data contracts
-design-system/    Design tokens (restraint over spectacle)
-brand/            Official mark
-```
-
-Hard boundaries (non-negotiable):
-
-- Controllers never call LEAN internals — only `QuantEngine`
-- Strategies never know about brokers
-- Risk cannot be bypassed by strategy code or AI
-- Backtests run in workers, never in the API process
-- Paper execution runs in workers through `quant/execution`; `/paper`, `/risk`, and `/portfolios` expose operator workflows; `/settings` exposes real API/Worker/Docker/sandbox health; Live broker access is not enabled
-
-Details: [`docs/architecture.md`](docs/architecture.md)
-
----
-
-## Stack
-
-| Layer | Choice |
-|-------|--------|
-| Web | Next.js · TypeScript · Tailwind · Monaco · Lightweight Charts |
-| API | FastAPI · SQLAlchemy · Alembic · PostgreSQL |
-| Jobs | Celery · Redis · SSE |
-| Quant | LEAN (Docker, pinned) · pandas · DuckDB · Parquet |
-| Infra | Docker Compose · Prometheus (/metrics) · Jaeger (OTel traces) |
-
-Mature components over vanity engineering. We do not rewrite a backtester for sport.
-
----
-
-## Current status
-
-| Phase | Status |
-|-------|--------|
-| 当前状态 | 以 [`docs/PLAN.md`](docs/PLAN.md) 为唯一准确信息；Live 保持关闭 |
-
-Backtest numbers are research output, not investment advice.
-
-### Deployment constraints (single-user, no auth)
-
-> **This product is single-user and not exposed to any network.**
->
-> - API and Web bind **only `127.0.0.1`**, never `0.0.0.0`
-> - `POST /api/v1/data/ingest` is an unauthenticated network+disk DoS vector — **accepted risk** because it is unreachable from outside
-> - `users` table, `created_by="local"`, `audit_logs.actor="local"` are **known empty shells**, not pretend-auth
-
-If a second user ever appears, auth + `user_id` threading become P0 immediately.
-
----
-
-## Quick start
-
-```bash
-# Requires Docker Desktop
-docker compose up --build
-```
-
-| Surface | URL |
-|---------|-----|
-| Web | http://localhost:3000 |
-| API health | http://localhost:8000/health |
-| OpenAPI | http://localhost:8000/docs |
-| Prometheus metrics | http://localhost:8000/metrics |
-| Prometheus UI | http://localhost:9090 |
-| Jaeger (OTel traces) | http://localhost:16686 |
-
-> Compose no longer ships default credentials (`street:street`). Copy `.env.example` → `.env`, generate a password (`openssl rand -hex 16`), and keep `POSTGRES_*` / `STREET_DATABASE_URL` in sync. `docker compose up` fails fast if they are missing.
-
-### API only
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-uvicorn services.api.main:app --reload --port 8000
-```
-
-### Ingest market data
-
-```bash
-python -m quant.data.ingest.cli SPY
-python -m quant.data.ingest.cli SPY QQQ --mode incremental
-python -m quant.data.ingest.cli --symbols-file tickers.txt
-```
-
-Configuration uses the `STREET_` env prefix (see `.env.example`).
-
-### Tests
-
-```bash
-pytest tests/unit -q
-pytest -m golden        # requires Docker + pinned LEAN image
-```
-
----
-
-## Documentation
-
-| Document | Purpose |
-|----------|---------|
-| [`docs/VISION.md`](docs/VISION.md) | What we are — and what we refuse to become |
-| [`docs/PLAN.md`](docs/PLAN.md) | **Single execution plan** (replaces ROADMAP.md) |
-| [`docs/validation-gates.md`](docs/validation-gates.md) | 8 validation gate thresholds (only written record) |
-| [`docs/architecture.md`](docs/architecture.md) | Layers, boundaries, reproducibility contract |
-| [`docs/data-sources.md`](docs/data-sources.md) | Providers, capabilities, ingest layout |
-| [`design-system/axiom-street/MASTER.md`](design-system/axiom-street/MASTER.md) | Tokens and anti-patterns |
-| [`.cursor/rules/axiom-street.mdc`](.cursor/rules/axiom-street.mdc) | Engineering discipline for every PR |
-
----
-
-## License & attribution
-
-- QuantConnect LEAN — Apache-2.0
-- TradingView Lightweight Charts — Apache-2.0 (attribution required; see [`NOTICE`](NOTICE))
+> **部署边界** · 当前项目尚无实际用户鉴权，Compose 发布端口也尚未限制到本机地址。启动完整栈前先按总规划处理开发网络边界，不直接作为公网服务部署。真实密钥和研究运行产物留在本地或受控存储中。
 
 ---
 
 <p align="center">
-  <sub>Axiom Street — research discipline, productized.</sub>
+  <strong>少一点噪音，多一点依据。</strong><br />
+  <sub>Axiom Street · A workspace for deliberate quantitative research.</sub>
 </p>
+
+第三方组件包括 QuantConnect LEAN 与 TradingView Lightweight Charts，均采用 Apache-2.0；相关声明与图表署名要求见 [NOTICE](NOTICE)。统计验证与回测结果不构成未来收益承诺。

@@ -1,83 +1,22 @@
 ---
-description: Axiom Street phase discipline, quant correctness, and architecture rules
+description: Axiom Street engineering entry point; the project plan owns product and implementation rules
 alwaysApply: true
 ---
 
-# Axiom Street Rules
+# Axiom Street 工程入口
 
-Product vision: `docs/VISION.md` · Plan: `docs/PLAN.md` · Architecture: `docs/architecture.md` · Gates: `docs/validation-gates.md`
+唯一主文档：`docs/PLAN.md`。
 
-When a rule below conflicts with a feature request, the rule wins. When the vision conflicts with the plan, the vision wins.
+开始工作先阅读对应章节：
 
-## Current scope
+- 当前能力与限制：第 3 节。
+- 阶段、交付、前后端任务与验收：第 4 节；当前执行包：第 11 节。
+- 界面规范：第 5 节；运行时令牌：`apps/web/src/app/globals.css`。
+- 架构、API、异步与数据契约：第 6 节。
+- 统计验证：第 7 节。
+- Key 与授权边界：第 8 节。
+- 工程、测试、文档维护：第 9 节；启动：第 10 节。
 
-- **Active phase: Phase 9 operator workflows.** P9-1, P9-2, Phase 9 security/monitoring, and the design-only Broker evaluation are closed. No real Broker is implemented. Factor exposure is not implemented; E6-2 is a fail-closed readiness guard and Live remains disabled by default. Full status lives in `docs/PLAN.md`; this block is only a pointer.
-- One work package at a time. Do not start the next package until `docs/PLAN.md` explicitly defines it.
-- `services/agent` owns Agent domain logic; `services/api` owns HTTP/database adapters; `services/worker` owns asynchronous execution and LEAN orchestration.
-- Phase order is **deliberately re-sequenced**: `1.5 Trust → 2 Data platform → 3 Validation → 4 Research workbench → 5 AI Copilot → 6 Paper → 7 Live → 8 Portfolio`.
-- **Validation (Phase 3) must ship before AI Copilot (Phase 5).** Without validation, AI is an overfitting amplifier. Do not reverse this.
-- **Mock data is allowed only for UI empty states / Storybook — never as fake backtest results.**
-- **No module that synthesizes backtest data may exist in this repository.** (Synthetic price series, metrics, trades, heatmaps — all prohibited. This rule is `grep`-checkable; the previous "purpose-based" rule was not.)
-- **Single source of truth for phase/status.** "当前阶段" 与 "已交付能力" 在整个仓库只允许声明一处（`docs/PLAN.md`）。其余文档一律指向此处，不得自行复述。
+不在此复制阶段状态、视觉令牌或验收结果。更新项目说明时修改主文档，历史由 Git 保存，不新增交接稿或第二份路线图。
 
-## Fail loud, never degrade silently
-
-This is the highest-priority correctness rule. A wrong number is worse than no number.
-
-- Never substitute an approximation for missing capability. If a data provider lacks corporate actions, **fail the backtest** with an explicit error — do not fall back to unadjusted prices.
-- Never let a parse failure become a default value. Unparseable fees/statistics must raise, not silently become `None` or `0`.
-- Data quality validation is fail-closed: a failing report blocks the backtest.
-- Every `except` that swallows an error needs a written justification, or it is a bug.
-
-## Quant correctness
-
-- All quant calculations need tests, including boundary cases and known-value cases from literature.
-- **Metrics are always computed by Axiom from the return series.** LEAN's own statistics go into `extras` for cross-check only. A reconciliation test must fail when Axiom and LEAN diverge beyond tolerance.
-- Do not name a metric something it is not. Excess return is not alpha; profit factor is not payoff ratio.
-- Engine, data, or metric changes require the Golden Backtest (`tests/golden`) to pass, including `data_snapshot_id` and `engine_version` assertions.
-- **Never widen a golden test tolerance to make it pass.** Investigate why the number moved.
-- Fill convention for SPY 200DMA: signal at close, fill next bar, 5 bps slippage, `$1` flat fee.
-- Results must be reproducible for the same strategy + data snapshot + engine version. Re-running a three-month-old backtest must produce a point-identical equity curve.
-
-## Data discipline
-
-- Data snapshots are **immutable and content-addressed**. Ingest never overwrites a prior snapshot; it writes a new one and sets `superseded_by`.
-- Every backtest records `data_snapshot_id` as a foreign key, not a loose string.
-- Every backtest writes a row to the **trial ledger** (`experiment_trials`). This is the denominator for Deflated Sharpe and PBO, and it cannot be reconstructed after the fact.
-- Multi-symbol universes must be point-in-time correct (`effective_from` / `effective_to`) to avoid survivorship bias.
-
-## Architecture
-
-- Controllers must not call LEAN internals. Use `QuantEngine` / `LeanQuantEngine`.
-- Strategies never know about Alpaca/IBKR. The live path is always `Strategy → Risk → Execution → Broker`.
-- Risk Engine stays independent and cannot be bypassed by strategy code or AI.
-- **Backtests run via Celery, never `threading.Thread` in the API process.** Only the worker gets `docker.sock`.
-- Every external process call needs a timeout. Cancellation must actually kill the container, not just update a DB row.
-- Schema changes require a real Alembic migration. `create_all` is not a migration strategy.
-- Prefer mature components: LEAN, Monaco, Lightweight Charts, Postgres, DuckDB, Celery.
-
-## AI boundaries (applies from Phase 5 onward)
-
-- AI must not modify system risk limits. Isolate the write path at the code level.
-- AI must not change a strategy's validation status. Only the validation pipeline can.
-- AI-generated strategies go through the full validation pipeline. There is no fast path.
-- Every AI-driven trial counts toward the multiple-testing penalty in the trial ledger.
-- No chat UI without real capability behind it.
-
-## UI
-
-- Follow the **Research Studio** design system — single light theme — per `design-system/axiom-street/MASTER.md`. No separate dark theme is promised.
-- Warm light reading surfaces, ink research summaries, and restrained teal accents per MASTER. No purple gradients, neon, glow, robot icons, oversized chart walls.
-- Financial figures use `tabular-nums` **and** `--font-mono`. Empty states use honest copy and never fake portfolio P&L.
-- Split components; no 400-line pages.
-- One ink summary per research overview; ordinary data and form surfaces remain light.
-- Deflated Sharpe and overfitting probability rank visually above raw Sharpe.
-
-## Every PR
-
-- [ ] Quant calculations have tests covering boundaries
-- [ ] `ruff` + `mypy` + `tsc --noEmit` pass
-- [ ] Golden backtest passes (when engine / data / metrics touched)
-- [ ] No new silent-failure path
-- [ ] Alembic migration present for schema changes
-- [ ] Frontend follows design tokens with honest empty and error states
+保留已有用户修改和研究资产。真实密钥不能进入代码、日志或文档。用户当前明确指令优先于项目默认规划；涉及库/API/CLI 用法遵守用户提供的 Context7 查询规则。

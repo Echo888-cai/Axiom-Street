@@ -36,6 +36,9 @@ data/lean/
 data/market/**/*.parquet
 data/corporate_actions/**/*.parquet
 data/snapshots/
+# Generated latest-snapshot pointers (retain targets; do not version local paths)
+/data/corporate_actions
+/data/fundamentals
 !data/market/.gitkeep
 !data/corporate_actions/.gitkeep
 jobs/

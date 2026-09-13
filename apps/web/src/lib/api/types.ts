@@ -7,7 +7,7 @@
 // local read models, keyed to the keys the backend actually writes; the
 // type-level checks at the bottom of this file pin each read model as a
 // structural subtype of its contract counterpart so unmodeled drift stays
-// visible. Governance: docs/PLAN.md §7.2 W3-6.
+// visible. Governance: docs/PLAN.md section 6.2 (API contracts).
 
 import type { components, operations } from "../api-types.gen";
 
