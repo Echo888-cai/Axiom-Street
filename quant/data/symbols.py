@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pandas as pd
+
 _TICKER = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
 
 
@@ -47,6 +49,28 @@ def list_market_symbols(data_root: Path) -> list[str]:
     if not daily.exists():
         return []
     return sorted(path.stem.upper() for path in daily.glob("*.parquet"))
+
+
+def symbol_data_facts(data_root: Path) -> list[dict]:
+    """Real on-disk coverage per ingested symbol: row count and date range.
+
+    Reads each symbol's own parquet rather than trusting an aggregate
+    snapshot total, since one multi-symbol ingest can cover tickers with
+    different actual coverage.
+    """
+    daily = Path(data_root) / "market" / "equities" / "US" / "daily"
+    facts: list[dict] = []
+    for symbol in list_market_symbols(data_root):
+        frame = pd.read_parquet(daily / f"{symbol}.parquet", columns=["timestamp"])
+        facts.append(
+            {
+                "symbol": symbol,
+                "row_count": int(len(frame)),
+                "date_range_start": frame["timestamp"].min().isoformat(),
+                "date_range_end": frame["timestamp"].max().isoformat(),
+            }
+        )
+    return facts
 
 
 def load_symbols_file(path: Path | str) -> list[str]:

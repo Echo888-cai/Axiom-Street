@@ -1361,6 +1361,30 @@
         }
       }
     },
+    "/api/v1/data/symbols": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "List Symbols",
+        "description": "Catalog of symbols with real on-disk data, for symbol pickers.\n\nRow counts and date ranges come from each symbol's own parquet file\n(never from a DataSnapshot aggregate, which can span multiple symbols).\nProvider is the most recently created snapshot that references the\nsymbol, or null if no snapshot row mentions it.",
+        "operationId": "list_symbols_api_v1_data_symbols_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Symbols Api V1 Data Symbols Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/data/ingest": {
       "post": {
         "tags": [

@@ -3,6 +3,8 @@
 `services/agent` owns the server-side Agent domain while preserving the API and
 Worker deployment boundaries.
 
+- `copilot/trial_facts.py` reduces family trial history in SQL before rows enter
+  the Agent domain; raw parameter hashes are never returned.
 - `copilot/` assembles read-only aggregate context, queries the Copilot ledger,
   renders prompts, and adapts the configured provider.
 - `suggestions.py` derives deterministic, whitelist-constrained action cards.
@@ -15,3 +17,5 @@ configuration, and raw market series must not enter Agent context or outbound
 provider requests. Copilot ORM writes are limited to the worker's
 `_record_insight` and `_record_suggestion` helpers, which write only the
 Copilot-owned ledger tables.
+
+Research-workflow rationale and external references: [research workspace](../../docs/design/research-workspace.md).

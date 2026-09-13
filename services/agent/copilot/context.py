@@ -21,10 +21,9 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from services.agent.copilot.trial_facts import trial_facts
 from services.api.models import (
     Backtest,
-    DataSnapshot,
-    ExperimentTrial,
     Strategy,
     StrategyVersion,
     ValidationKind,
@@ -65,60 +64,6 @@ def _latest_version(db: Session, strategy_id: UUID) -> int | None:
     ).scalar()
 
 
-def _trial_grouping(db: Session, trial_rows: list[Any]) -> list[dict[str, Any]]:
-    """Group trial ledger rows by snapshot with duplicate-hash counts.
-
-    Duplicate semantics mirror ``strategies.trial_stats``: one duplicate per
-    repeated non-empty parameter hash (len(hashes) - len(set(hashes))).
-    """
-    grouped: dict[Any, list[str | None]] = {}
-    for snapshot_id, parameter_hash in trial_rows:
-        grouped.setdefault(snapshot_id, []).append(parameter_hash)
-
-    present_ids = [sid for sid in grouped if sid is not None]
-    snap_rows: dict[Any, Any] = {}
-    if present_ids:
-        snap_rows = {
-            s["id"]: s
-            for s in db.execute(
-                select(
-                    DataSnapshot.id, DataSnapshot.snapshot_key, DataSnapshot.superseded_by
-                ).where(DataSnapshot.id.in_(present_ids))
-            ).mappings()
-        }
-    superseded_targets = {
-        s["superseded_by"] for s in snap_rows.values() if s["superseded_by"] is not None
-    }
-    superseding_keys: dict[Any, str] = {}
-    if superseded_targets:
-        superseding_keys = {
-            t["id"]: t["snapshot_key"]
-            for t in db.execute(
-                select(DataSnapshot.id, DataSnapshot.snapshot_key).where(
-                    DataSnapshot.id.in_(superseded_targets)
-                )
-            ).mappings()
-        }
-
-    facts: list[dict[str, Any]] = []
-    for snapshot_id, hashes in grouped.items():
-        non_empty = [h for h in hashes if h]
-        snapshot = snap_rows.get(snapshot_id)
-        facts.append(
-            {
-                "data_snapshot_id": snapshot_id,
-                "snapshot_key": snapshot["snapshot_key"] if snapshot else None,
-                "superseded_by_key": (
-                    superseding_keys.get(snapshot["superseded_by"]) if snapshot else None
-                ),
-                "count": len(hashes),
-                "duplicate_parameter_hashes": len(non_empty) - len(set(non_empty)),
-            }
-        )
-    facts.sort(key=lambda f: (-f["count"], f["snapshot_key"] or ""))
-    return facts
-
-
 def _gate_summary(db: Session, strategy_id: UUID) -> list[dict[str, Any]]:
     rows = db.execute(
         select(
@@ -153,21 +98,14 @@ def _strategy_context(db: Session, strategy_id: UUID) -> dict[str, Any] | None:
     meta = _strategy_meta(db, strategy_id)
     if meta is None:
         return None
-    trial_rows = list(
-        db.execute(
-            select(ExperimentTrial.data_snapshot_id, ExperimentTrial.parameter_hash).where(
-                ExperimentTrial.strategy_family == meta["family_id"]
-            )
-        ).all()
-    )
-    by_snapshot = _trial_grouping(db, trial_rows)
+    by_snapshot = trial_facts(db, meta["family_id"])
     return {
         "strategy_id": meta["id"],
         "strategy_name": meta["name"],
         "strategy_status": meta["status"],
         "family_id": meta["family_id"],
         "latest_version": _latest_version(db, strategy_id),
-        "total_trials": len(trial_rows),
+        "total_trials": sum(row["count"] for row in by_snapshot),
         "by_snapshot": by_snapshot,
         "gates": _gate_summary(db, strategy_id),
     }
@@ -198,6 +136,8 @@ def build_context(db: Session, resource: str, resource_id: UUID) -> dict[str, An
 
     Returns ``None`` when the resource (or its strategy) does not exist.
     """
+    if resource not in {"strategy", "backtest"}:
+        raise ValueError(f"unsupported copilot resource: {resource!r}")
     backtest = None
     if resource == "backtest":
         backtest = _load_backtest(db, resource_id)

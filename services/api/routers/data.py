@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from quant.data.ingest import data_status
-from quant.data.symbols import normalize_symbols
+from quant.data.symbols import normalize_symbols, symbol_data_facts
 from services.api.db import SessionLocal, get_db
 from services.api.health import docker_status
 from services.api.models import DataSnapshot
@@ -104,6 +104,26 @@ def list_snapshots(db: Session = Depends(get_db)) -> dict:
             for row in rows
         ],
     }
+
+
+@router.get("/symbols")
+def list_symbols(db: Session = Depends(get_db)) -> dict:
+    """Catalog of symbols with real on-disk data, for symbol pickers.
+
+    Row counts and date ranges come from each symbol's own parquet file
+    (never from a DataSnapshot aggregate, which can span multiple symbols).
+    Provider is the most recently created snapshot that references the
+    symbol, or null if no snapshot row mentions it.
+    """
+    settings = get_settings()
+    facts = symbol_data_facts(Path(settings.data_root))
+    provider_by_symbol: dict[str, str] = {}
+    rows = db.scalars(select(DataSnapshot).order_by(DataSnapshot.created_at.desc())).all()
+    for row in rows:
+        for symbol in row.symbols or []:
+            provider_by_symbol.setdefault(str(symbol).upper(), row.provider)
+    items = [{**fact, "provider": provider_by_symbol.get(fact["symbol"])} for fact in facts]
+    return {"total": len(items), "items": items}
 
 
 @router.post("/ingest", status_code=status.HTTP_202_ACCEPTED)

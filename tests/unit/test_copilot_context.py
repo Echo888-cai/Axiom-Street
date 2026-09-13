@@ -195,6 +195,40 @@ def test_context_missing_strategy_returns_none(db_session) -> None:
     assert build_context(db_session, "strategy", uuid4()) is None
 
 
+def test_context_rejects_unknown_resource_before_reading_strategy(db_session) -> None:
+    strategy = _seed_strategy(db_session)
+    db_session.commit()
+    with pytest.raises(ValueError, match="resource"):
+        build_context(db_session, "note", strategy.id)
+
+
+def test_context_family_counts_ignore_empty_hashes_and_keep_unknown_snapshots(db_session) -> None:
+    family = uuid4()
+    strategy = _seed_strategy(db_session, family_id=family)
+    sibling = _seed_strategy(db_session, family_id=family)
+    outsider = _seed_strategy(db_session)
+    for owner, value in [
+        (strategy, ""),
+        (strategy, ""),
+        (strategy, "h1"),
+        (sibling, "h1"),
+        (outsider, "h1"),
+    ]:
+        _seed_trial(db_session, owner, None, value)
+    db_session.commit()
+    context = build_context(db_session, "strategy", strategy.id)
+    assert context["total_trials"] == 4
+    assert context["by_snapshot"] == [
+        {
+            "data_snapshot_id": None,
+            "snapshot_key": None,
+            "superseded_by_key": None,
+            "count": 4,
+            "duplicate_parameter_hashes": 1,
+        }
+    ]
+
+
 def test_context_backtest_scope_resolves_strategy(db_session) -> None:
     strategy, _ = _seed_strategy_with_history(db_session)
     version = _seed_version(db_session, strategy, version=2)

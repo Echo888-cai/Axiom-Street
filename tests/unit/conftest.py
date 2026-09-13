@@ -17,13 +17,25 @@ os.environ.pop("STREET_SENTRY_DSN", None)
 os.environ.pop("POLYGON_API_KEY", None)
 os.environ.pop("STREET_RECONCILE_WITH", None)
 # Copilot outbound (P5-2) must stay off under unit tests even with a local key.
-os.environ.pop("STREET_DEEPSEEK_API_KEY", None)
+# An empty override also blocks Settings from reloading a key from .env.
+os.environ["STREET_DEEPSEEK_API_KEY"] = ""
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+
+
+@pytest.fixture(autouse=True)
+def isolated_settings(monkeypatch):
+    """Unit tests own their configuration; local .env files are never inputs."""
+    from services.api.settings import Settings, get_settings
+
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture()

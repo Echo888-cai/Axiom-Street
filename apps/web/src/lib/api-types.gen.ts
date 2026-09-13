@@ -406,6 +406,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/data/symbols": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Symbols
+         * @description Catalog of symbols with real on-disk data, for symbol pickers.
+         *
+         *     Row counts and date ranges come from each symbol's own parquet file
+         *     (never from a DataSnapshot aggregate, which can span multiple symbols).
+         *     Provider is the most recently created snapshot that references the
+         *     symbol, or null if no snapshot row mentions it.
+         */
+        get: operations["list_symbols_api_v1_data_symbols_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/data/ingest": {
         parameters: {
             query?: never;
@@ -3753,6 +3778,28 @@ export interface operations {
         };
     };
     list_snapshots_api_v1_data_snapshots_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_symbols_api_v1_data_symbols_get: {
         parameters: {
             query?: never;
             header?: never;
