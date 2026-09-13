@@ -1,6 +1,6 @@
 # 前端重构与接手说明
 
-## 2026-09-13 Light Studio 更新
+## 2026-09-13 Research Studio 更新
 
 本轮把全局画布改为中性浅灰、内容面保持白色，首页/策略摘要/规则编辑区改为浅色。
 蓝色主按钮、导航图标底座、轻边框图标按钮与 Lucide 1.65 线宽构成统一控件语言；
@@ -14,12 +14,12 @@
 
 新版本地预览端口为 3101，现有 3000/3100 实例可能仍显示此前部署。
 后端版本对齐、完整统计和任务恢复计划见
-[后端可靠性交接计划](superpowers/plans/2026-09-13-backend-readiness.md)。
+[后端可靠性交接计划](backend-readiness.md)。
 没有执行新回测、Paper 下单或后端全量测试；下方历史验证结果仅对应各自旧轮次。
 
 ## 当前实现
 
-Axiom Street 的唯一产品前端是 `apps/web`。本次整理保留 Next.js、React Query、FastAPI 与 Python 量化核心，完成白色 White Studio 视觉系统、研究概览、新建研究、策略集合、回测集合、响应式外壳与服务网关。策略编辑、版本比较、统计验证、标的池和研究笔记继续使用真实业务接口。
+Axiom Street 的唯一产品前端是 `apps/web`。本次整理保留 Next.js、React Query、FastAPI 与 Python 量化核心，完成 Research Studio 视觉系统、研究概览、新建研究、策略集合、回测集合、响应式外壳与服务网关。策略编辑、版本比较、统计验证、标的池和研究笔记继续使用真实业务接口。
 
 原有未提交的后端与数据整理内容保持保留。本轮没有升级 Next.js 主版本，也没有改变量化计算口径、数据快照或验证闸门。
 
@@ -106,7 +106,7 @@ STREET_MARKET_RECONCILE_ENABLED=false \
 .venv/bin/python -m uvicorn services.api.main:app --port 8000
 ```
 
-本次演示预览使用 `/tmp/axiom-white-studio-qa.db`，其中的「界面联调 · 趋势研究」是测试记录。
+本次演示预览使用 `/tmp/axiom-research-studio-qa.db`，其中的「界面联调 · 趋势研究」是测试记录。
 
 此模式适合界面联调和策略/版本/标的池/笔记 CRUD；不会提供可运行的 LEAN 作业环境。正式数据必须使用正常迁移流程，不使用 `STREET_SKIP_MIGRATIONS`。
 
@@ -123,7 +123,7 @@ STREET_MARKET_RECONCILE_ENABLED=false \
 
 ## 验证与边界
 
-本轮验收结果：前端 29 项测试通过；后端 344 项测试通过；ESLint、TypeScript、Ruff、Python 类型检查（78 个源文件）通过；Next.js 生产构建通过。生产浏览器检查覆盖概览、策略、回测、验证、标的池、实验、笔记与设置，未发现横向溢出或应用错误。
+本轮验收结果：前端 121 项测试通过；后端 524 项测试通过（另有 1 项 Golden 回测需 Docker/LEAN 环境，无 Docker 时跳过）；ESLint、TypeScript、Ruff、Python 类型检查（116 个源文件）通过；Next.js 生产构建通过。生产浏览器检查覆盖概览、策略、回测、验证、标的池、实验、笔记与设置，未发现横向溢出或应用错误。
 
 执行：`npm --prefix apps/web test`、`npm --prefix apps/web run lint`、`npm --prefix apps/web run typecheck`、`npm --prefix apps/web run build`、`.venv/bin/python -m pytest tests/unit -q`。
 
@@ -135,4 +135,4 @@ STREET_MARKET_RECONCILE_ENABLED=false \
 - 列表保留现有 API 分页语义；概览统计对应当前加载的数据，不是跨页审计总数。
 - 全量国际化、实盘、硬风控仍是后续产品阶段；本轮没有用无功能按钮伪装这些能力。
 
-视觉规范见 `design-system/axiom-street/MASTER.md`。历史设计被保留在其 archive 目录。
+视觉规范见 `design-system/axiom-street/MASTER.md`，它是唯一的令牌来源。

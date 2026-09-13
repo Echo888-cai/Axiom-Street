@@ -71,7 +71,7 @@ Browser checks covered the strategy collection with real existing records,
 no-match search and clearing, detail navigation, assistant open/close, secondary
 navigation disclosure, and a 390px mobile viewport. The overview rendered its
 existing equity series. Desktop and mobile document widths matched their
-viewports. The local production preview uses port 3100 and the existing API
+viewports. The local production preview uses port 3101 and the existing API
 on port 8000. Backend changes were validated by unit tests; no remote deployment
 or new model-driven experiment was performed by this work package.
 

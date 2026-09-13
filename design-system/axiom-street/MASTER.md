@@ -1,6 +1,6 @@
 # Axiom Street · Research Studio
 
-2026-09-13 更新。按项目所有者最新反馈，采用明亮、简约、轻盈的 Light Studio 主题。
+2026-09-13 更新。按项目所有者最新反馈，采用明亮、简约、轻盈的 Research Studio 主题。
 白色与中性浅灰承载内容，石墨文字与少量蓝色强调建立层次。执行状态见 `docs/PLAN.md`。
 
 ## 视觉语言

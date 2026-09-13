@@ -9,7 +9,7 @@ Related documents:
 - Data sources: [`data-sources.md`](data-sources.md)
 - Validation rules: [`validation-gates.md`](validation-gates.md)
 - Frontend handoff: [`frontend-handoff.md`](frontend-handoff.md)
-- Backend readiness handoff: [`superpowers/plans/2026-09-13-backend-readiness.md`](superpowers/plans/2026-09-13-backend-readiness.md)
+- Backend readiness handoff: [`backend-readiness.md`](backend-readiness.md)
 - Design system: [`../design-system/axiom-street/MASTER.md`](../design-system/axiom-street/MASTER.md)
 
 ## Current state
@@ -24,7 +24,7 @@ Related documents:
 
 | Work package | Status | Deliverable | Verification |
 |---|---|---|---|
-| Light Studio visual refresh | Verified locally | White/neutral-gray surfaces, light-blue briefs, refined Lucide controls, and backend handoff plan | 121 frontend tests; ESLint; production build; desktop/mobile checks. No new backend execution claimed |
+| Research Studio visual refresh | Verified locally | White/neutral-gray surfaces, light-blue briefs, refined Lucide controls, and backend handoff plan | 121 frontend tests; ESLint; production build; desktop/mobile checks. No new backend execution claimed |
 | Backend readiness follow-up | Planned | Runtime version alignment → server-owned overview totals → task recovery evidence; see backend handoff | Not executed in this visual refresh |
 | Research workspace refresh | Closed | Compact navigation, stronger research surfaces, honest metrics, Agent read-model aggregation and safe cleanup; see `design/research-workspace.md` | 523 Python tests; 121 frontend tests; Python/TypeScript type checks, lint and production build; desktop/mobile browser checks; independent read-only review |
 | Project organization | Closed | Frontend/backend/Agent ownership, active-plan cleanup, architecture diagram | `make test-all` plus focused Agent boundary tests |
