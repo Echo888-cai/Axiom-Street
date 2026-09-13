@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/lib/i18n";
+import { Disclosure } from "@/components/ui/disclosure";
 
 function fill(template: string, vars: Record<string, string | number>): string {
   let out = template;
@@ -36,9 +37,9 @@ export function ReconcileReports({
   if (!hasReports && !ready) return null;
   if (!hasReports) {
     return (
-      <p className="mt-3 text-[11px] text-as-muted">
+      <Disclosure title="双源对账 · 尚未核验" className="mt-3">
         {t("common.diagnostics.reconcileEmpty")}
-      </p>
+      </Disclosure>
     );
   }
   const title = source
@@ -87,9 +88,9 @@ export function InferredDelistings({
   if (!ready) return null;
   if (!rows || rows.length === 0) {
     return (
-      <p className="mt-3 text-[11px] text-as-muted">
+      <Disclosure title="退市检测 · 未发现异常" className="mt-3">
         {t("common.diagnostics.delistEmpty")}
-      </p>
+      </Disclosure>
     );
   }
   return (
@@ -161,8 +162,8 @@ export function formatReconcileCadence(
 export function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-as-muted">{label}</dt>
-      <dd className="text-right text-as-text">{value}</dd>
+      <dt className="shrink-0 text-as-muted">{label}</dt>
+      <dd className="min-w-0 break-words text-right text-as-text">{value}</dd>
     </div>
   );
 }

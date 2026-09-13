@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { Disclosure } from "@/components/ui/disclosure";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 import { useT } from "@/lib/i18n";
@@ -216,12 +217,12 @@ export function UniverseDetail({ universeId }: { universeId: string }) {
       />
 
       {isRule ? (
-        <Card>
+        <Disclosure title="筛选规则与计算说明">
           <p className="text-sm text-as-text">{ruleHint}</p>
           <p className="mt-2 text-xs text-as-muted">
             {t("common.universeDetail.ruleExplain")}
           </p>
-        </Card>
+        </Disclosure>
       ) : (
       <Card>
         <form

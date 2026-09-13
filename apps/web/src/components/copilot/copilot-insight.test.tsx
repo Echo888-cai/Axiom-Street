@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -59,7 +60,7 @@ function renderBlock(props: Partial<React.ComponentProps<typeof InsightBlock>> =
 async function clickEvaluate(label: string | RegExp) {
   const button = await screen.findByRole("button", { name: label });
   await waitFor(() => expect(button).toBeEnabled());
-  fireEvent.click(button);
+  await userEvent.click(button);
 }
 
 describe("InsightBlock", () => {

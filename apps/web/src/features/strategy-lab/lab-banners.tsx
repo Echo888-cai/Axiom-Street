@@ -2,6 +2,7 @@
 
 import type { TrialStats } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { Disclosure } from "@/components/ui/disclosure";
 
 function fmt(template: string, vars: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (_, key: string) =>
@@ -21,7 +22,7 @@ export function LabBanners({
   return (
     <>
       {trials && trials.total_trials > 0 ? (
-        <p className="text-xs text-as-muted">
+        <Disclosure title={`试验记录 · ${trials.total_trials} 次`}>
           {firstSnapshot
             ? fmt(t("strategy.trialsWithSnapshot"), {
                 total: trials.total_trials,
@@ -31,7 +32,7 @@ export function LabBanners({
             : fmt(t("strategy.trialsNoSnapshot"), {
                 total: trials.total_trials,
               })}
-        </p>
+        </Disclosure>
       ) : null}
       {legacyCode ? (
         <p className="text-xs text-as-negative">

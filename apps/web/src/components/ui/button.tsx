@@ -14,12 +14,12 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl whitespace-nowrap font-medium outline-none transition-all duration-as",
-        "focus-visible:ring-2 focus-visible:ring-as-primary/30 focus-visible:ring-offset-2",
-        "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl [&>.lucide]:shrink-0 whitespace-nowrap select-none font-medium outline-none transition-all duration-as",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-as-primary/60 focus-visible:ring-offset-2",
+        "enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none",
         size === "sm"
-          ? "min-h-9 px-3.5 py-2 text-xs"
-          : "min-h-11 px-4 py-2.5 text-[13px]",
+          ? "min-h-11 px-3.5 py-2 text-xs"
+          : "min-h-11 px-5 py-2.5 text-[13px]",
         variant === "primary" &&
           "as-button-primary border border-transparent text-white",
         variant === "secondary" &&

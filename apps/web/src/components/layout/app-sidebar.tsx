@@ -3,24 +3,128 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowUpRight,
-  ChevronsUpDown,
+  ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { NAV_ITEMS, type NavKey } from "./nav";
+import { NAV_ITEMS } from "./nav";
 import { AxiomMark } from "@/components/brand/axiom-mark";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
-const SECTIONS: { labelKey: keyof typeof import("@/locales").zhCN.layout; english: string; hrefs: string[] }[] = [
-  { labelKey: "workspace", english: "WORKSPACE", hrefs: ["/", "/strategies", "/backtests", "/validation", "/universes", "/experiments", "/reports", "/portfolios"] },
-  { labelKey: "execution", english: "EXECUTION", hrefs: ["/paper", "/live", "/risk"] },
+const SECTIONS = [
+  {
+    label: "研究工作台",
+    hrefs: ["/", "/strategies", "/backtests", "/validation"],
+    primary: true,
+  },
+  {
+    label: "研究资料",
+    hrefs: ["/universes", "/experiments", "/reports", "/portfolios"],
+    primary: false,
+  },
+  { label: "交易与风险", hrefs: ["/paper", "/risk", "/live"], primary: false },
 ];
+
+function matchesRoute(pathname: string, href: string) {
+  return href === "/"
+    ? pathname === "/"
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavigationSection({
+  section,
+  collapsed,
+  onNavigate,
+}: {
+  section: (typeof SECTIONS)[number];
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const t = useT();
+  const pathname = usePathname();
+  const id = useId();
+  const activeSection = section.hrefs.some((href) =>
+    matchesRoute(pathname, href),
+  );
+  const [expanded, setExpanded] = useState(activeSection);
+  useEffect(() => {
+    if (activeSection) setExpanded(true);
+  }, [activeSection, pathname]);
+  const open = collapsed || section.primary || expanded;
+
+  return (
+    <div
+      className={cn("py-2", !section.primary && "border-t border-as-border/70")}
+    >
+      {!collapsed &&
+        (section.primary ? (
+          <p className="px-3 pb-2 pt-1 text-[11px] font-medium tracking-wide text-as-muted">
+            {section.label}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+            aria-controls={id}
+            className="flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-xs font-medium text-as-muted hover:bg-as-secondary hover:text-as-text"
+          >
+            {section.label}
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 transition-transform",
+                !expanded && "-rotate-90",
+              )}
+              aria-hidden="true"
+            />
+          </button>
+        ))}
+      <div id={id} hidden={!open} className="space-y-1">
+        {section.hrefs.map((href) => {
+          const item = NAV_ITEMS.find((item) => item.href === href)!;
+          const active = matchesRoute(pathname, href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavigate}
+              title={t(`nav.${item.key}`)}
+              aria-label={t(`nav.${item.key}`)}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "as-nav-link flex min-h-12 items-center gap-2.5 rounded-xl px-2.5 text-[13px]",
+                active
+                  ? "as-nav-active font-semibold"
+                  : "text-as-muted hover:bg-as-secondary hover:text-as-text",
+                collapsed && "justify-center px-2",
+              )}
+            >
+              <span className="as-nav-icon">
+                <item.icon className="h-[18px] w-[18px]" aria-hidden="true" />
+              </span>
+              {!collapsed && (
+                <>
+                  <span className="flex-1">{t(`nav.${item.key}`)}</span>
+                  {href === "/live" && (
+                    <span className="text-[10px] opacity-70">
+                      {t("layout.planned")}
+                    </span>
+                  )}
+                </>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function NavigationContent({
   collapsed = false,
@@ -29,14 +133,18 @@ function NavigationContent({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
-  const pathname = usePathname();
   const t = useT();
   const health = useQuery({
     queryKey: ["health"],
     queryFn: api.health,
     refetchInterval: 30_000,
   });
-  const navLabel = (key: NavKey) => t(`nav.${key}`);
+  const connected = !health.isError && health.data?.status === "ok";
+  const status = health.isLoading
+    ? t("layout.connecting")
+    : connected
+      ? t("layout.connected")
+      : t("layout.disconnected");
 
   return (
     <>
@@ -45,156 +153,70 @@ function NavigationContent({
         onClick={onNavigate}
         aria-label={t("layout.homeAria")}
         className={cn(
-          "flex h-[94px] items-center gap-3 px-6",
+          "flex h-[76px] shrink-0 items-center gap-2.5 px-5",
           collapsed && "justify-center px-3",
         )}
       >
-        <AxiomMark className="h-9 w-9 shrink-0 text-as-text" />
+        <AxiomMark className="h-8 w-8 shrink-0 text-as-text" />
         {!collapsed && (
           <div>
-            <div className="text-[16px] font-semibold tracking-[-.04em]">
-              Axiom Street<span className="ml-0.5 text-as-primary">.</span>
+            <div className="text-[15px] font-semibold tracking-[-.04em]">
+              Axiom Street<span className="text-as-primary">.</span>
             </div>
-            <div className="mt-0.5 text-[9px] tracking-[.2em] text-as-muted">
+            <div className="text-[9px] tracking-[.18em] text-as-muted">
               RESEARCH STUDIO
             </div>
           </div>
         )}
       </Link>
-      {!collapsed && (
-        <Link
-          href="/settings"
-          onClick={onNavigate}
-          className="as-button-secondary mx-4 mb-5 flex items-center gap-2.5 rounded-xl border border-as-border p-3"
-        >
-          <span className="as-icon-well h-8 w-8 rounded-lg text-[11px] font-semibold">
-            A
-          </span>
-          <span className="flex-1">
-            <span className="block text-xs font-medium">
-              {t("layout.personalSpace")}
-            </span>
-            <span className="mt-0.5 block text-[10px] text-as-muted">
-              {t("layout.localWorkspace")}
-            </span>
-          </span>
-          <ChevronsUpDown className="h-3.5 w-3.5 text-as-muted" />
-        </Link>
-      )}
       <nav
         aria-label={t("layout.mainNavAria")}
-        className="flex-1 space-y-7 overflow-y-auto px-3"
+        className="min-h-0 flex-1 overflow-y-auto px-3"
       >
         {SECTIONS.map((section) => (
-          <div key={section.labelKey}>
-            {!collapsed && (
-              <div className="mb-2.5 flex items-center justify-between px-3 text-[10px] text-as-muted">
-                <span>{t(`layout.${section.labelKey}`)}</span>
-                <span className="text-[8px] tracking-[.13em] opacity-75">
-                  {section.english}
-                </span>
-              </div>
-            )}
-            <div className="space-y-1">
-              {NAV_ITEMS.filter((item) =>
-                section.hrefs.includes(item.href),
-              ).map((item) => {
-                const active =
-                  item.href === "/"
-                    ? pathname === "/"
-                    : pathname === item.href ||
-                      pathname.startsWith(`${item.href}/`);
-                const planned = ["/paper", "/live", "/risk"].includes(
-                  item.href,
-                );
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    title={navLabel(item.key)}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "group relative flex min-h-11 items-center gap-3 rounded-xl border border-transparent px-3 text-[13px] transition-all duration-200",
-                      active
-                        ? "border-white bg-white font-medium text-as-text shadow-[0_2px_7px_-3px_rgba(30,42,62,.15)]"
-                        : "text-as-muted hover:bg-white/70 hover:text-as-text",
-                      collapsed && "justify-center px-2",
-                    )}
-                  >
-                    <item.icon
-                      className={cn(
-                        "h-[18px] w-[18px] shrink-0",
-                        active && "text-as-primary",
-                      )}
-                      strokeWidth={1.65}
-                    />
-                    {!collapsed && (
-                      <>
-                        <span className="flex-1">{navLabel(item.key)}</span>
-                        {active ? (
-                          <span className="h-1 w-1 rounded-full bg-as-primary" />
-                        ) : planned ? (
-                          <span className="rounded border border-as-border px-1 text-[8px] tracking-wide text-as-muted">
-                            {t("layout.planned")}
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+          <NavigationSection
+            key={section.label}
+            section={section}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
         ))}
       </nav>
-      <div className="mt-6 space-y-4 p-4">
-        {!collapsed && (
-          <div className="as-sidebar-note rounded-2xl border border-white bg-white/45 p-4">
-            <div className="mb-2 text-[11px] font-medium">
-              {t("layout.quietNote")}
-            </div>
-            <p className="text-[10px] leading-relaxed text-as-muted">
-              {t("layout.evidenceNote")}
-            </p>
-            <Link
-              href="/reports"
-              onClick={onNavigate}
-              className="mt-3 inline-flex items-center gap-1 text-[10px] text-as-primary"
-            >
-              {t("layout.openNotes")} <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </div>
-        )}
+      <div className="mx-3 mt-3 shrink-0 border-t border-as-border pt-3">
         <Link
           href="/settings"
           onClick={onNavigate}
-          title={t("layout.workspaceSettings")}
+          aria-label={t("layout.workspaceSettings")}
+          title={`${t("layout.workspaceSettings")} · ${status}`}
           className={cn(
-            "flex min-h-11 items-center gap-2.5 rounded-xl px-2 text-xs text-as-muted hover:bg-white",
+            "flex min-h-12 items-center gap-2.5 rounded-lg px-2 hover:bg-as-secondary",
             collapsed && "justify-center px-0",
           )}
         >
-          <span
-            className={cn(
-              "h-1.5 w-1.5 shrink-0 rounded-full",
-              health.isLoading
-                ? "bg-as-muted"
-                : health.isError
-                  ? "bg-amber-500"
-                  : "bg-as-positive",
-            )}
-          />
+          <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-as-primary/10 text-[11px] font-semibold text-as-primary">
+            A
+            <span
+              className={cn(
+                "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white",
+                health.isLoading
+                  ? "bg-as-muted"
+                  : connected
+                    ? "bg-as-positive"
+                    : "bg-amber-500",
+              )}
+            />
+          </span>
           {!collapsed && (
             <>
-              <span className="flex-1">
-                {health.isLoading
-                  ? t("layout.connecting")
-                  : health.isError
-                    ? t("layout.disconnected")
-                    : t("layout.connected")}
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-medium">
+                  {t("layout.personalSpace")}
+                </span>
+                <span className="mt-0.5 block text-[10px] text-as-muted">
+                  {status}
+                </span>
               </span>
-              <NAV_SETTINGS_ICON />
+              <Settings className="h-4 w-4 text-as-muted" aria-hidden="true" />
             </>
           )}
         </Link>
@@ -203,35 +225,34 @@ function NavigationContent({
   );
 }
 
-function NAV_SETTINGS_ICON() {
-  const Icon = NAV_ITEMS.find((item) => item.href === "/settings")!.icon;
-  return <Icon className="h-4 w-4" strokeWidth={1.6} />;
-}
-
 export function AppSidebar() {
   const t = useT();
   const [collapsed, setCollapsed] = useState(false);
   return (
     <aside
       className={cn(
-        "as-glass sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-white/80 transition-[width] duration-300 md:flex",
-        collapsed ? "w-[76px]" : "w-[232px] xl:w-[248px]",
+        "as-sidebar sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-as-border transition-[width] duration-200 md:flex",
+        collapsed ? "w-[68px]" : "w-[208px]",
       )}
     >
       <NavigationContent collapsed={collapsed} />
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
+        aria-expanded={!collapsed}
         aria-label={
-          collapsed ? t("layout.expandSidebarAria") : t("layout.collapseSidebarAria")
+          collapsed
+            ? t("layout.expandSidebarAria")
+            : t("layout.collapseSidebarAria")
         }
-        className="mx-4 mb-4 flex min-h-9 items-center justify-center gap-2 rounded-lg text-[10px] text-as-muted hover:bg-white/70"
+        className="mx-3 mb-3 mt-1 flex min-h-9 items-center justify-center gap-2 rounded-lg text-[11px] text-as-muted hover:bg-as-secondary"
       >
         {collapsed ? (
           <PanelLeftOpen className="h-4 w-4" />
         ) : (
           <>
-            <PanelLeftClose className="h-3.5 w-3.5" /> {t("layout.collapseSidebarAria")}
+            <PanelLeftClose className="h-3.5 w-3.5" />
+            {t("layout.collapseSidebarAria")}
           </>
         )}
       </button>

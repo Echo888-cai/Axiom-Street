@@ -14,7 +14,7 @@ export function Textarea({
   return (
     <textarea
       className={cn(
-        "w-full rounded-as border border-as-border bg-as-bg p-3 text-as-text placeholder:text-as-muted focus:border-as-primary focus:ring-1 focus:ring-as-primary transition-colors resize-y",
+        "as-field w-full rounded-xl border border-as-border bg-as-bg p-3 text-sm leading-relaxed text-as-text placeholder:text-as-muted focus:border-as-primary focus:ring-1 focus:ring-as-primary transition-colors resize-y",
         className,
       )}
       value={value}

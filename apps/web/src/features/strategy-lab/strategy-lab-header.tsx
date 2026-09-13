@@ -64,9 +64,6 @@ export function StrategyLabHeader({
           </button>
         )
       }
-      description={
-        strategy.description || t("strategy.headerFallbackDescription")
-      }
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Badge tone="neutral">{labelStatus(strategy.status)}</Badge>

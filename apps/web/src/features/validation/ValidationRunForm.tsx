@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
+import { Disclosure } from "@/components/ui/disclosure";
 import { useT, useI18n } from "@/lib/i18n";
 import { request } from "@/lib/api/http";
 import type { ValidationKind, ValidationSpec, ValidationRun } from "@/lib/api";
@@ -77,26 +77,23 @@ export function ValidationRunForm({
   const kindOption = KIND_OPTIONS.find((k) => k.value === spec.kind);
 
   return (
-    <Card className="w-full max-w-3xl">
+    <Card className="w-full border-0 p-0 shadow-none sm:p-0">
       <CardHeader
         title={kindOption?.label || spec.display_name}
         hint={
-          <p className="text-sm text-muted-foreground mt-1">
+          <Disclosure title="方法说明" className="mt-2">
             {kindOption?.description || spec.description}
-          </p>
+          </Disclosure>
         }
       />
       <CardContent>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          <Alert className="border-primary/20 bg-primary/5">
-            <AlertDescription className="text-sm">
+          <Disclosure title="运行须知与数据版本">
+            <p className="mb-4 text-xs">
               {i18n.validation.form.helpText?.[
                 spec.kind as keyof typeof i18n.validation.form.helpText
               ] || ""}
-            </AlertDescription>
-          </Alert>
-
-          <Separator />
+            </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -124,6 +121,7 @@ export function ValidationRunForm({
               </div>
             )}
           </div>
+          </Disclosure>
 
           <div className="space-y-4">
             {Object.entries(

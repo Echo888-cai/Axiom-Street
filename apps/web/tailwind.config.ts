@@ -11,14 +11,15 @@ export default {
     extend: {
       colors: {
         as: {
-          bg: "var(--as-bg)",
-          secondary: "var(--as-bg-secondary)",
-          border: "var(--as-border)",
-          text: "var(--as-text)",
-          muted: "var(--as-text-secondary)",
-          primary: "var(--as-primary)",
-          positive: "var(--as-positive)",
-          negative: "var(--as-negative)",
+          bg: "rgb(var(--as-bg-rgb) / <alpha-value>)",
+          secondary: "rgb(var(--as-secondary-rgb) / <alpha-value>)",
+          border: "rgb(var(--as-border-rgb) / <alpha-value>)",
+          text: "rgb(var(--as-text-rgb) / <alpha-value>)",
+          muted: "rgb(var(--as-muted-rgb) / <alpha-value>)",
+          primary: "rgb(var(--as-primary-rgb) / <alpha-value>)",
+          positive: "rgb(var(--as-positive-rgb) / <alpha-value>)",
+          negative: "rgb(var(--as-negative-rgb) / <alpha-value>)",
+          warning: "rgb(var(--as-warning-rgb) / <alpha-value>)",
         },
       },
       borderRadius: {

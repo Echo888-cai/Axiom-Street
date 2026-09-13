@@ -6,6 +6,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { Disclosure } from "@/components/ui/disclosure";
 
 export type StudioTab =
   | "curve"
@@ -34,7 +35,7 @@ export function StudioTopBar({
 }) {
   const t = useT();
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-3">
       <Tabs
         value={tab}
         onChange={(id) => onTabChange(id as StudioTab)}
@@ -49,7 +50,7 @@ export function StudioTopBar({
           { id: "monthly", label: t("backtest.tabs.monthly") },
         ]}
       />
-      <div className="flex items-center gap-2 text-xs text-as-muted">
+      <Disclosure title="导出报告与版本信息"><div className="flex flex-wrap items-center gap-3 text-xs text-as-muted">
         <button
           type="button"
           className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 hover:bg-as-secondary hover:text-as-text"
@@ -77,7 +78,7 @@ export function StudioTopBar({
             HTML
           </Button>
         </a>
-      </div>
+      </div></Disclosure>
     </div>
   );
 }

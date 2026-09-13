@@ -95,9 +95,7 @@ function RiskContent({ data, t }: { data: RiskSummary; t: (key: string) => strin
             {data.risk_config_valid ? <ShieldCheck className="mt-0.5 h-5 w-5 text-as-positive" /> : <AlertTriangle className="mt-0.5 h-5 w-5 text-as-negative" />}
             <div>
               <p className="font-medium text-as-text">{data.risk_config_valid ? t("risk.configValid") : t("risk.configInvalid")}</p>
-              <p className="mt-1 text-sm text-as-muted">
-                {data.risk_limits ? Object.entries(data.risk_limits).filter(([, value]) => value != null).map(([key, value]) => `${key}: ${String(value)}`).join(" · ") : t("risk.noConfig")}
-              </p>
+              {data.risk_limits ? <dl className="mt-4 grid gap-3 text-xs">{Object.entries(data.risk_limits).filter(([, value]) => value != null).map(([key, value]) => <div key={key} className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-as-border/60 pb-2"><dt className="break-all text-as-muted">{key.replace(/_/g, " ")}</dt><dd className="font-medium tabular text-as-text">{String(value)}</dd></div>)}</dl> : <p className="mt-2 text-xs text-as-muted">{t("risk.noConfig")}</p>}
             </div>
           </div>
         </Card>

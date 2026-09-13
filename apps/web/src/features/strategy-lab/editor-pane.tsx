@@ -29,7 +29,7 @@ export function EditorPane({
 }) {
   const t = useT();
   return (
-    <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-6">
+    <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-9">
       <div className="flex items-center justify-between border-b border-as-border px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="text-sm font-medium">strategy.py</div>
@@ -51,7 +51,7 @@ export function EditorPane({
       {pane === "diff" && comparePair ? (
         <VersionDiff left={comparePair.left} right={comparePair.right} />
       ) : (
-        <div className="min-h-[420px] flex-1">
+        <div className="h-[600px] min-h-[420px] flex-1">
           <Editor
             height="100%"
             defaultLanguage="python"

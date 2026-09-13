@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Hourglass } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { Disclosure } from "@/components/ui/disclosure";
 
 export function PhasePlaceholder({
   title,
@@ -34,14 +35,14 @@ export function PhasePlaceholder({
           </div>
         </div>
         {items?.length ? (
-          <ul className="grid gap-px border-t border-as-border bg-as-secondary/40 sm:grid-cols-3">
+          <Disclosure title="查看规划内容" className="m-5 sm:m-6"><ul className="grid gap-4 sm:grid-cols-3">
             {items.map((item, i) => (
-              <li key={item} className="bg-as-bg px-6 py-5 text-sm text-as-muted">
+              <li key={item} className="text-sm text-as-muted">
                 <span className="mb-2 block text-[11px] text-as-primary">0{i + 1}</span>
                 {item}
               </li>
             ))}
-          </ul>
+          </ul></Disclosure>
         ) : null}
       </Card>
     </div>

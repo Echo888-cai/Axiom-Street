@@ -92,6 +92,16 @@ describe("PortfolioAttribution", () => {
     vi.mocked(api.listStrategies).mockResolvedValue([]);
   });
 
+  it("recovers from a failed request using the retry action", async () => {
+    mocks.listPortfolios.mockRejectedValueOnce(new Error("Unavailable"));
+    renderPage();
+    const retry = await screen.findByRole("button", { name: "重新加载" });
+    expect(screen.getByRole("heading", { level: 1, name: "组合归因" })).toBeInTheDocument();
+    fireEvent.click(retry);
+    expect(await screen.findByText("核心多策略")).toBeInTheDocument();
+    expect(mocks.listPortfolios).toHaveBeenCalledTimes(2);
+  });
+
   it("renders server-owned allocation and attribution evidence", async () => {
     renderPage();
 

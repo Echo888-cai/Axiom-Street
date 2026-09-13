@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { Disclosure } from "@/components/ui/disclosure";
 import { formatPct } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { ValidationLaunch } from "./validation-launch";
@@ -43,10 +44,10 @@ export function ValidationDesk() {
     <div className="space-y-6 as-enter">
       <PageHeader
         title={t("validation.desk.title")}
-        description={t("validation.desk.description")}
+        description="检验策略，是否经得起不同条件。"
       />
 
-      <Card>
+      <Disclosure title="验证标准与可用方法">
         <p className="text-sm text-as-text">
           {gates?.note ||
             (error
@@ -101,7 +102,7 @@ export function ValidationDesk() {
             </dd>
           </div>
         </dl>
-      </Card>
+      </Disclosure>
 
       <Card>
         <CardHeader

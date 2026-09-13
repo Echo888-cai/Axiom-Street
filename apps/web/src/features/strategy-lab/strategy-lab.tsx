@@ -10,9 +10,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { useT } from "@/lib/i18n";
-import { SPY_200DMA_TEMPLATE } from "@/lib/spy-200dma";
+
 import { EQUAL_WEIGHT_CONFIG, EQUAL_WEIGHT_TEMPLATE } from "@/lib/equal-weight";
 import { BuilderPanel } from "./builder-panel";
+import { GuidedBuilder } from "./guided-builder";
+import { compileTrend, validateExperiment } from "./guided-strategy";
+import { Code2, LayoutTemplate, FlaskConical } from "lucide-react";
 import { RunToolbar } from "./run-toolbar";
 import { StrategyLabHeader } from "./strategy-lab-header";
 import { RunDock } from "./run-dock";
@@ -67,6 +70,9 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     queryFn: api.listUniverses,
   });
 
+  const [mode, setMode] = useState<"guided" | "professional">("guided");
+  const [rulesPending, setRulesPending] = useState(false);
+  const [builderRevision, setBuilderRevision] = useState(0);
   const [code, setCode] = useState("");
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [message, setMessage] = useState(t("strategy.defaultCommitMessage"));
@@ -112,13 +118,13 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
   useEffect(() => {
     const onBefore = (e: BeforeUnloadEvent) => {
-      if (!dirty) return;
+      if (!dirty && !rulesPending) return;
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", onBefore);
     return () => window.removeEventListener("beforeunload", onBefore);
-  }, [dirty]);
+  }, [dirty, rulesPending]);
 
   const comparePair: VersionPair | null = useMemo(() => {
     if (compareIds.length !== 2) return null;
@@ -193,6 +199,8 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
 
   const run = useMutation({
     mutationFn: async () => {
+      if (rulesPending) throw new Error("请先应用规则到代码，或撤销规则草稿。");
+      if (!validateExperiment(startDate, endDate, capital)) throw new Error("请检查实验设置：结束日期应晚于开始日期，本金至少为 1,000。");
       const lint = await api.checkSyntax(code);
       applyMarkers(lint);
       if (!lint.ok) {
@@ -217,7 +225,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         start_date: startDate,
         end_date: endDate,
         benchmark: strategy?.benchmark || "SPY",
-        initial_capital: Number(capital) || 100000,
+        initial_capital: Number(capital),
         ...(universeId ? { universe_id: universeId } : {}),
       });
     },
@@ -238,16 +246,16 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        if (dirty) save.mutate();
+        if (dirty && !rulesPending && !save.isPending) save.mutate();
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        if (!run.isPending) run.mutate();
+        if (!run.isPending && !save.isPending) run.mutate();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dirty, save, run]);
+  }, [dirty, rulesPending, save, run]);
 
   if (error)
     return (
@@ -267,6 +275,28 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
   if (isLoading || !strategy) {
     return <Card className="h-[70vh] animate-pulse bg-as-secondary" />;
   }
+
+  const experiment = (<RunToolbar
+        startDate={startDate}
+        endDate={endDate}
+        capital={capital}
+        universeId={universeId}
+        message={message}
+        universes={universes.data || []}
+        onStartDate={setStartDate}
+        onEndDate={setEndDate}
+        onCapital={setCapital}
+        onUniverseId={setUniverseId}
+        onMessage={setMessage}
+        dirty={dirty}
+        savePending={save.isPending}
+        onSave={() => save.mutate()}
+        runPending={run.isPending}
+        blocked={rulesPending}
+        professional={mode === "professional"}
+        onRun={() => run.mutate()}
+        onRestore={(kind) => setConfirmRestore(kind)}
+      />);
 
   return (
     <div className="flex min-h-[calc(100vh-12rem)] flex-col gap-4 as-enter">
@@ -289,25 +319,23 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         onDelete={() => setConfirmDelete(true)}
       />
 
-      <RunToolbar
-        startDate={startDate}
-        endDate={endDate}
-        capital={capital}
-        universeId={universeId}
-        message={message}
-        universes={universes.data || []}
-        onStartDate={setStartDate}
-        onEndDate={setEndDate}
-        onCapital={setCapital}
-        onUniverseId={setUniverseId}
-        onMessage={setMessage}
-        dirty={dirty}
-        savePending={save.isPending}
-        onSave={() => save.mutate()}
-        runPending={run.isPending}
-        onRun={() => run.mutate()}
-        onRestore={(kind) => setConfirmRestore(kind)}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-as-border pb-4">
+        <ol className="flex flex-wrap items-center gap-5 text-sm" aria-label="研究流程">
+          <li className="rounded-lg bg-as-primary/10 px-3 py-2 font-medium text-as-primary">01 构建规则</li><li className="text-as-muted">02 运行实验</li><li className="text-as-muted">03 检验结果</li>
+        </ol>
+        <div className="flex rounded-xl border border-as-border bg-as-bg p-1" aria-label="编辑模式">
+          <Button variant={mode === "guided" ? "secondary" : "ghost"} aria-pressed={mode === "guided"} onClick={() => setMode("guided")}><LayoutTemplate className="h-4 w-4" />规则构建</Button>
+          <Button variant={mode === "professional" ? "secondary" : "ghost"} aria-pressed={mode === "professional"} onClick={() => setMode("professional")}><Code2 className="h-4 w-4" />专业模式</Button>
+        </div>
+      </div>
+      {rulesPending && <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-as-primary/20 bg-as-primary/5 p-4 text-sm">规则草稿尚未应用，运行实验已暂停。<Button variant="secondary" onClick={() => { setBuilderRevision((v) => v + 1); setRulesPending(false); }}>撤销规则草稿</Button></div>}
+      <div className={mode === "guided" ? "grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]" : "hidden"}>
+        <GuidedBuilder key={`${strategy.latest_version?.id}-${builderRevision}`} config={config} code={code} onPending={setRulesPending} onApply={(result) => { setCode(result.code); setConfig(result.config); setMessage("应用均线趋势规则"); }} />
+        <aside className="space-y-4 xl:sticky xl:top-24">
+          {experiment}
+          <details className="rounded-as border border-as-border bg-as-bg p-5"><summary className="flex cursor-pointer items-center gap-2 text-sm font-medium"><FlaskConical className="h-4 w-4 text-as-primary" aria-hidden="true" />如何判断实验有没有价值？</summary><div className="mt-4 space-y-3 text-sm leading-7 text-as-muted"><p>一次只修改一个规则。收益更高，不一定说明策略更可靠。</p><ul className="space-y-2"><li>是否跑赢同一时期的基准？</li><li>最差时亏损多少，持续多久？</li><li>扣除成本后，优势还在吗？</li></ul><p>自由描述暂不生成代码；研究助手用于解释证据。自定义策略、等权模板与版本对比请进入专业模式。</p></div></details>
+        </aside>
+      </div>
 
       {runId ? (
         <RunDock
@@ -326,13 +354,12 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         legacyCode={code.includes("AfterMarketClose")}
       />
 
-      <div className="grid min-h-[520px] flex-1 grid-cols-12 gap-4">
-        <Card className="col-span-12 flex min-h-0 flex-col overflow-hidden p-0 lg:col-span-3">
-          <div className="border-b border-as-border px-4 py-3 text-sm font-medium">
-            {t("strategy.builderTitle")}
-          </div>
+      <div className={mode === "professional" ? "grid min-h-[520px] flex-1 grid-cols-12 gap-4" : "hidden"}>
+        <details className="col-span-12 rounded-as border border-as-border bg-as-bg p-4">
+          <summary className="cursor-pointer text-sm font-medium">研究配置与备注</summary>
+          <p className="px-4 pt-4 text-xs leading-relaxed text-as-muted">专业模式：配置用于研究记录，交易行为以代码为准。要同步生成代码，请使用规则构建。</p>
           <BuilderPanel config={config} onChange={setConfig} />
-        </Card>
+        </details>
 
         <EditorPane
           code={code}
@@ -360,6 +387,8 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
             })
           }
           onSelect={(v) => {
+            setRulesPending(false);
+            setBuilderRevision((r) => r + 1);
             setCode(v.code);
             setConfig(v.config || {});
             setMessage(
@@ -374,18 +403,25 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
         />
       </div>
 
+      {mode === "professional" && experiment}
+
+
       <StrategyDialogs
         restore={confirmRestore}
         deleteOpen={confirmDelete}
         onCloseRestore={() => setConfirmRestore(null)}
         onConfirmRestore={(kind) => {
+          setRulesPending(false);
+          setBuilderRevision((r) => r + 1);
           if (kind === "equal") {
             setCode(EQUAL_WEIGHT_TEMPLATE);
             setConfig(EQUAL_WEIGHT_CONFIG);
             setMessage(t("strategy.equalRestoreMessage"));
             toast(t("strategy.equalTemplateLoadedToast"), "info");
           } else {
-            setCode(SPY_200DMA_TEMPLATE);
+            const restored = compileTrend({ symbol: "SPY", lookback: 200, position: 100, slippage: 5, hypothesis: "SPY 站上长期均线持有，跌破转为现金。" });
+            setCode(restored.code);
+            setConfig(restored.config);
             setMessage(t("strategy.spyRestoreMessage"));
             toast(t("strategy.latestTemplateLoadedToast"), "info");
           }

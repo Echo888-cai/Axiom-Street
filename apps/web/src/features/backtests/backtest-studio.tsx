@@ -181,7 +181,7 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
           { href: "/backtests", label: t("backtest.title") },
         ]}
         title={bt.strategy_name || "Tearsheet"}
-        description={`${bt.start_date} — ${bt.end_date} · ${t("backtest.meta.daily")} · ${t("backtest.meta.benchmark")} ${bt.benchmark}${
+        description={`${bt.start_date} — ${bt.end_date} · ${bt.benchmark}${
           bt.version_number ? ` · v${bt.version_number}` : ""
         }`}
         action={

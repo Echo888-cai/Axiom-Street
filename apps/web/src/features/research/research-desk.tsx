@@ -16,43 +16,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 import { cn, formatRelative } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
-
-const SECTIONS: Array<{
-  key: "hypothesis" | "method" | "conclusion" | "failure_modes";
-  labelKey: string;
-  hintKey: string;
-  placeholderKey: string;
-  rows: number;
-}> = [
-  {
-    key: "hypothesis",
-    labelKey: "common.research.sections.hypothesis.label",
-    hintKey: "common.research.sections.hypothesis.hint",
-    placeholderKey: "common.research.sections.hypothesis.placeholder",
-    rows: 5,
-  },
-  {
-    key: "method",
-    labelKey: "common.research.sections.method.label",
-    hintKey: "common.research.sections.method.hint",
-    placeholderKey: "common.research.sections.method.placeholder",
-    rows: 6,
-  },
-  {
-    key: "conclusion",
-    labelKey: "common.research.sections.conclusion.label",
-    hintKey: "common.research.sections.conclusion.hint",
-    placeholderKey: "common.research.sections.conclusion.placeholder",
-    rows: 5,
-  },
-  {
-    key: "failure_modes",
-    labelKey: "common.research.sections.failure_modes.label",
-    hintKey: "common.research.sections.failure_modes.hint",
-    placeholderKey: "common.research.sections.failure_modes.placeholder",
-    rows: 5,
-  },
-];
+import { NoteFields } from "./note-fields";
 
 export function ResearchDesk() {
   const qc = useQueryClient();
@@ -154,10 +118,10 @@ export function ResearchDesk() {
   const strategyName = (strategies.data || []).find((s) => s.id === strategyId)?.name;
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-4 as-enter">
+    <div className="flex min-h-[calc(100dvh-12rem)] flex-col gap-6 as-enter">
       <PageHeader
         title={t("common.researchNote")}
-        description={t("common.research.pageDescription")}
+        description="记下想法、证据与结论。"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1.5 text-[11px] text-as-muted">
@@ -231,9 +195,7 @@ export function ResearchDesk() {
                     )}
                   >
                     <div className="truncate text-sm font-medium text-as-text">{note.title}</div>
-                    <p className="mt-0.5 truncate text-[11px] text-as-muted">
-                      {note.hypothesis || t("common.research.emptyHypothesis")} · {formatRelative(note.updated_at)}
-                    </p>
+                    <p className="mt-1 text-xs text-as-muted">{formatRelative(note.updated_at)}</p>
                   </button>
                 </li>
               ))}
@@ -259,6 +221,7 @@ export function ResearchDesk() {
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-as-border px-5 py-3">
                   <div className="min-w-0 flex-1">
                     <Input
+                      aria-label="笔记标题"
                       value={draft.title ?? ""}
                       onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
                       className="h-10 border-transparent px-0 text-[18px] font-semibold shadow-none focus:border-as-primary/30"
@@ -296,23 +259,7 @@ export function ResearchDesk() {
                     </Button>
                   </div>
                 </div>
-                <div className="min-h-0 flex-1 space-y-6 overflow-auto px-5 py-5">
-                  {SECTIONS.map((section) => (
-                    <label key={section.key} className="block">
-                      <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                        <span className="text-sm font-medium text-as-text">{t(section.labelKey)}</span>
-                        <span className="text-[11px] text-as-muted">{t(section.hintKey)}</span>
-                      </div>
-                      <textarea
-                        value={String(draft[section.key] ?? "")}
-                        onChange={(e) => setDraft((d) => ({ ...d, [section.key]: e.target.value }))}
-                        rows={section.rows}
-                        placeholder={t(section.placeholderKey)}
-                        className="w-full resize-y rounded-lg border border-as-border bg-as-bg px-3 py-2.5 text-sm leading-relaxed text-as-text outline-none placeholder:text-as-muted focus:border-as-primary/40 focus-visible:ring-2 focus-visible:ring-as-primary/20"
-                      />
-                    </label>
-                  ))}
-                </div>
+                <NoteFields draft={draft} onChange={(key, value) => setDraft((d) => ({ ...d, [key]: value }))} />
               </div>
             )}
           </Card>

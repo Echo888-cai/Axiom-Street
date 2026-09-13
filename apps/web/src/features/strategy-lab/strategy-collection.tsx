@@ -2,14 +2,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowUpRight,
-  FlaskConical,
-  Plus,
-  Search,
-  Layers,
-  Code2,
-} from "lucide-react";
+import { ArrowUpRight, FlaskConical, Plus, Search } from "lucide-react";
+import { Disclosure } from "@/components/ui/disclosure";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/lib/i18n";
 import { labelStatus } from "@/lib/labels";
 import { formatRelative } from "@/lib/utils";
+import { ResearchBrief } from "./research-brief";
 import { CreateStrategyDialog } from "./create-strategy-dialog";
 
 export default function StrategyCollection() {
@@ -44,51 +39,17 @@ export default function StrategyCollection() {
     <div className="space-y-7 as-enter">
       <PageHeader
         title={t("nav.strategies")}
-        description={t("strategy.collectionDescription")}
+        description="你的交易想法，集中于此。"
         action={
           <Button onClick={() => setCreating(true)}>
             <Plus className="h-4 w-4" /> {t("strategy.newResearch")}
           </Button>
         }
       />
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          {
-            n: "01",
-            title: t("strategy.stepWriteTitle"),
-            text: t("strategy.stepWriteText"),
-            icon: FlaskConical,
-          },
-          {
-            n: "02",
-            title: t("strategy.stepBuildTitle"),
-            text: t("strategy.stepBuildText"),
-            icon: Code2,
-          },
-          {
-            n: "03",
-            title: t("strategy.stepIterateTitle"),
-            text: t("strategy.stepIterateText"),
-            icon: Layers,
-          },
-        ].map((step) => (
-          <div
-            key={step.n}
-            className="flex items-center gap-3 rounded-2xl border border-white bg-white/55 p-5"
-          >
-            <span className="as-icon-well h-10 w-10 rounded-xl">
-              <step.icon className="h-4 w-4" strokeWidth={1.5} />
-            </span>
-            <div className="flex-1">
-              <p className="text-xs font-medium">{step.title}</p>
-              <p className="mt-1 text-[11px] text-as-muted">{step.text}</p>
-            </div>
-            <span className="text-[10px] tabular text-as-muted/70">
-              {step.n}
-            </span>
-          </div>
-        ))}
-      </div>
+      <ResearchBrief
+        strategies={data || []}
+        unavailable={isLoading || Boolean(error)}
+      />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           {t("strategy.allStrategies")}{" "}
@@ -132,7 +93,8 @@ export default function StrategyCollection() {
             description={t("strategy.collectionEmptyDesc")}
             action={
               <Button onClick={() => setCreating(true)}>
-                <Plus className="h-3.5 w-3.5" /> {t("strategy.createFirstResearch")}
+                <Plus className="h-3.5 w-3.5" />{" "}
+                {t("strategy.createFirstResearch")}
               </Button>
             }
           />
@@ -151,38 +113,62 @@ export default function StrategyCollection() {
           />
         </Card>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3 as-stagger">
-          {rows.map((s) => (
-            <Link key={s.id} href={`/strategies/${s.id}`} className="group">
-              <Card hover className="flex h-full min-h-[230px] flex-col">
-                <div className="mb-6 flex items-center justify-between">
-                  <span className="as-icon-well h-11 w-11 rounded-2xl">
-                    <FlaskConical
-                      className="h-[18px] w-[18px]"
-                      strokeWidth={1.5}
-                    />
-                  </span>
-                  <Badge>{labelStatus(s.status)}</Badge>
-                </div>
-                <h2 className="text-base font-semibold tracking-tight">
+        <div className="overflow-hidden rounded-2xl border border-as-border/80 bg-white shadow-as">
+          {rows.map((s, index) => (
+            <Link
+              key={s.id}
+              href={`/strategies/${s.id}`}
+              className="group flex min-h-[84px] items-center gap-4 border-b border-as-border/60 px-5 py-4 last:border-0 hover:bg-as-secondary/60 focus-visible:outline-offset-[-4px] sm:gap-5 sm:px-6"
+            >
+              <span className="hidden w-5 text-[11px] tabular text-as-muted sm:block">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="as-icon-well h-10 w-10 rounded-xl">
+                <FlaskConical
+                  className="h-[18px] w-[18px]"
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-[15px] font-semibold tracking-tight">
                   {s.name}
                 </h2>
-                <p className="mb-6 mt-2 line-clamp-2 text-xs leading-6 text-as-muted">
-                  {s.description || t("strategy.cardMissingDescription")}
-                </p>
-                <div className="mt-auto flex items-center gap-2 border-t border-as-border pt-4 text-[10px] text-as-muted">
-                  <Badge tone="blue">{s.benchmark}</Badge>
-                  <span>v{s.latest_version?.version ?? 1}</span>
-                  <span className="ml-auto">
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-as-muted">
+                  <span>{s.benchmark}</span>
+                  <span>版本 {s.latest_version?.version ?? 1}</span>
+                  <span className="hidden sm:inline">
                     {formatRelative(s.updated_at)}
                   </span>
-                  <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </div>
-              </Card>
+              </div>
+              <Badge tone={s.status === "DRAFT" ? "neutral" : "blue"}>
+                {labelStatus(s.status)}
+              </Badge>
+              <ArrowUpRight
+                className="hidden h-4 w-4 text-as-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 sm:block"
+                aria-hidden="true"
+              />
             </Link>
           ))}
         </div>
       )}
+      <Disclosure title="第一次使用？从这里开始">
+        <ol className="grid gap-4 sm:grid-cols-3">
+          <li>
+            <span className="mr-2 text-as-primary">01</span>选择模板
+            <p className="mt-1 text-xs">新建研究，选一个交易思路。</p>
+          </li>
+          <li>
+            <span className="mr-2 text-as-primary">02</span>设定规则
+            <p className="mt-1 text-xs">用表单设置买卖条件，无需编程。</p>
+          </li>
+          <li>
+            <span className="mr-2 text-as-primary">03</span>检验表现
+            <p className="mt-1 text-xs">运行历史回测，再验证结果。</p>
+          </li>
+        </ol>
+      </Disclosure>
       <CreateStrategyDialog
         open={creating}
         onClose={() => setCreating(false)}

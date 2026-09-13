@@ -133,12 +133,12 @@ function ScopedContext({ scope }: { scope: CopilotScope }) {
   );
 }
 
-export function CopilotPanel() {
+export function CopilotPanel({ expanded = false }: { expanded?: boolean }) {
   const pathname = usePathname();
   const scope = parseScope(pathname);
   return (
     <aside
-      className="hidden w-80 shrink-0 overflow-y-auto border-l border-as-border xl:block"
+      className={expanded ? "w-full overflow-y-auto" : "hidden w-80 shrink-0 overflow-y-auto border-l border-as-border xl:block"}
       aria-label="copilot-context"
     >
       <div className="flex min-h-full flex-col px-4 py-5">

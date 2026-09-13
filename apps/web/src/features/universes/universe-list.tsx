@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { Disclosure } from "@/components/ui/disclosure";
 import { toast } from "@/components/ui/toast";
 import { formatRelative } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -86,10 +87,10 @@ export function UniverseList() {
     <div className="space-y-6 as-enter">
       <PageHeader
         title={t("universe.title")}
-        description={t("common.universeList.description")}
+        description="把要研究的标的，整理成一个集合。"
       />
 
-      <Card>
+      <Disclosure title="新建标的池">
         <form
           className="space-y-4"
           onSubmit={(e) => {
@@ -165,7 +166,7 @@ export function UniverseList() {
             </Button>
           </div>
         </form>
-      </Card>
+      </Disclosure>
 
       {isLoading ? (
         <Card className="h-40 animate-pulse bg-as-secondary" />

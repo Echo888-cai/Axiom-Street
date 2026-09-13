@@ -19,6 +19,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { Disclosure } from "@/components/ui/disclosure";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -118,7 +119,7 @@ export default function SettingsPage() {
     <div className="space-y-6 as-enter">
       <PageHeader
         title={t("settings.title")}
-        description={t("common.settings.description")}
+        description="管理数据与研究环境。"
       />
 
       <OperationsHealthCard />
@@ -137,7 +138,7 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 as-stagger">
+      <div className="grid items-start gap-4 md:grid-cols-2 as-stagger">
         <Card>
           <CardHeader title={t("common.settings.runEnvironment")} />
           <dl className="space-y-3 text-sm">
@@ -147,7 +148,7 @@ export default function SettingsPage() {
           </dl>
         </Card>
 
-        <Card>
+        <Card className="md:col-start-2 md:row-span-3">
           <CardHeader
             title={t("common.settings.marketData")}
             action={
@@ -161,17 +162,20 @@ export default function SettingsPage() {
           <dl className="space-y-3 text-sm">
             <Row label={t("data.symbols")} value={symbolsLabel} />
             <Row label={t("data.provider")} value={String(m.source || "—")} />
+            <Row label={t("common.settings.klineCount")} value={String(m.rows ?? "—")} />
+            <Row
+              label={t("common.settings.range")}
+              value={`${m.start ? String(m.start).slice(0, 10) : "—"} → ${m.end ? String(m.end).slice(0, 10) : "—"}`}
+            />
+          </dl>
+          <Disclosure title="数据版本与更新配置" className="mt-4">
+            <dl className="space-y-3 text-xs">
             <Row
               label={t("common.settings.defaultProvider")}
               value={String(
                 (status.data?.providers as { active?: string } | undefined)
                   ?.active || "—",
               )}
-            />
-            <Row label={t("common.settings.klineCount")} value={String(m.rows ?? "—")} />
-            <Row
-              label={t("common.settings.range")}
-              value={`${m.start ? String(m.start).slice(0, 10) : "—"} → ${m.end ? String(m.end).slice(0, 10) : "—"}`}
             />
             <div className="flex items-center justify-between gap-4">
               <dt className="text-as-muted">SHA256</dt>
@@ -180,7 +184,8 @@ export default function SettingsPage() {
                 {m.sha256 ? (
                   <button
                     type="button"
-                    className="cursor-pointer text-as-primary"
+                    aria-label="复制数据指纹"
+                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-as-primary hover:bg-as-primary/10"
                     onClick={() => {
                       navigator.clipboard.writeText(String(m.sha256));
                       toast(t("common.settings.fingerprintCopied"), "ok");
@@ -217,6 +222,7 @@ export default function SettingsPage() {
               value={formatIngestLimits(status.data?.ingest_limits, t)}
             />
           </dl>
+          </Disclosure>
           {status.data?.quality_report?.issues &&
           status.data.quality_report.issues.length > 0 ? (
             <div className="mt-4 rounded-as border border-as-border bg-as-secondary px-3 py-2 text-xs">
@@ -307,9 +313,9 @@ export default function SettingsPage() {
                 )}
               </div>
             ) : (
-              <p className="text-[11px] text-as-muted">
+              <Disclosure title="数据更新说明">
                 {t("common.settings.ingestInfo")}
-              </p>
+              </Disclosure>
             )}
           </div>
         </Card>
@@ -347,13 +353,12 @@ export default function SettingsPage() {
               </dd>
             </div>
           </dl>
-          <p className="mt-4 text-xs leading-relaxed text-as-muted">
+          <Disclosure title="引擎连接说明" className="mt-4">
             {lean?.note || t("common.settings.leanNote")}
-          </p>
+          </Disclosure>
         </Card>
 
-        <Card>
-          <CardHeader title={t("common.settings.apiKeyCard")} />
+        <Disclosure title={t("common.settings.apiKeyCard")} className="self-start">
           <p className="text-sm leading-relaxed text-as-muted">
             {apiKeyExplainParts[0]}
             <code className="text-as-text">POLYGON_API_KEY</code>
@@ -376,7 +381,7 @@ export default function SettingsPage() {
               <span className="text-as-text">TIINGO_API_KEY</span>
             </li>
           </ul>
-        </Card>
+        </Disclosure>
       </div>
     </div>
   );

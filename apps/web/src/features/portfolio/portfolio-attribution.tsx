@@ -8,6 +8,9 @@ import { useT } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { Disclosure } from "@/components/ui/disclosure";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 
 function formatPercent(value: number) {
   return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
@@ -51,7 +54,19 @@ export function PortfolioAttribution() {
 
   if (portfolios.isLoading) return <div className="h-80 animate-pulse rounded-as bg-as-secondary" />;
   if (portfolios.isError) {
-    return <Card><div className="flex items-start gap-3 text-as-negative"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /><div><h2 className="font-semibold">{t("portfolio.loadErrorTitle")}</h2><p className="mt-1 text-sm text-as-muted">{t("portfolio.loadErrorDescription")}</p></div></div></Card>;
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t("portfolio.title")} description={t("portfolio.description")} />
+        <Card>
+          <EmptyState
+            icon={AlertTriangle}
+            title={t("portfolio.loadErrorTitle")}
+            description="暂时无法读取组合，请稍后重试。"
+            action={<Button variant="secondary" disabled={portfolios.isFetching} onClick={() => portfolios.refetch()}>{portfolios.isFetching ? "正在加载…" : "重新加载"}</Button>}
+          />
+        </Card>
+      </div>
+    );
   }
 
   if (!portfolios.data?.length) {
@@ -72,7 +87,7 @@ export function PortfolioAttribution() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("portfolio.title")} description={t("portfolio.description")} action={<label className="flex items-center gap-2 text-sm text-as-muted"><span className="sr-only">{t("portfolio.selectLabel")}</span><select aria-label={t("portfolio.selectLabel")} value={portfolio.id} onChange={(event) => setSelectedId(event.target.value)} className="rounded-lg border border-as-border bg-as-bg px-3 py-2 text-sm text-as-text outline-none focus:border-as-primary">{portfolios.data.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>} />
-      <CreatePortfolioCard t={t} queryClient={queryClient} compact />
+      <Disclosure title="新建另一个组合"><CreatePortfolioCard t={t} queryClient={queryClient} compact /></Disclosure>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
@@ -88,7 +103,7 @@ export function PortfolioAttribution() {
         </Card>
       </div>
 
-      <Card><CardHeader title={t("portfolio.factorTitle")} hint={<Badge tone="amber">{t("portfolio.notAvailableBadge")}</Badge>} /><div className="flex items-start gap-3"><BarChart3 className="mt-0.5 h-5 w-5 shrink-0 text-[var(--as-warning)]" /><p className="text-sm leading-relaxed text-as-muted">{t("portfolio.factorDescription")}</p></div></Card>
+      <Disclosure title={`${t("portfolio.factorTitle")} · ${t("portfolio.notAvailableBadge")}`}><div className="flex items-start gap-3"><BarChart3 className="mt-0.5 h-5 w-5 shrink-0 text-as-warning" /><p className="text-sm leading-relaxed text-as-muted">{t("portfolio.factorDescription")}</p></div></Disclosure>
     </div>
   );
 }

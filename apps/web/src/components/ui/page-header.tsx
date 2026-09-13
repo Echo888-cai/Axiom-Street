@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { Disclosure } from "./disclosure";
 
 export function PageHeader({
   title,
@@ -14,8 +15,8 @@ export function PageHeader({
   crumbs?: { href: string; label: string }[];
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
+    <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+      <div className="min-w-0 flex-1 basis-64">
         {crumbs?.length ? (
           <nav className="mb-2 flex items-center gap-1 text-xs text-as-muted">
             {crumbs.map((c, i) => (
@@ -31,17 +32,15 @@ export function PageHeader({
             ))}
           </nav>
         ) : null}
-        <h1 className="text-[28px] sm:text-[32px] font-semibold tracking-[-0.045em] text-as-text">
+        <h1 className="text-[28px] leading-tight sm:text-[36px] font-semibold tracking-[-0.045em] text-as-text">
           {title}
         </h1>
         {description ? (
-          <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-as-muted">
-            {description}
-          </p>
+          description.length > 45 ? <Disclosure title="关于此页面" className="mt-3 max-w-xl border-0 bg-transparent [&>summary]:min-h-8 [&>summary]:px-0 [&>summary]:py-1">{description}</Disclosure> : <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-as-muted">{description}</p>
         ) : null}
       </div>
       {action ? (
-        <div className="flex flex-wrap items-center gap-2">{action}</div>
+        <div className="flex max-w-full flex-wrap items-center gap-2">{action}</div>
       ) : null}
     </div>
   );

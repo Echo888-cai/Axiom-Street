@@ -78,13 +78,13 @@ export function HomeDashboard({
     label: t(`common.overview.period.${id}`),
   }));
   return (
-    <div className="space-y-7 as-enter">
+    <div className="space-y-8 as-enter">
       <PageHeader
         title={t("common.overview.title")}
-        description={t("common.overview.tagline")}
+        description="研究进展，一目了然。"
         action={
           <>
-            <span className="mr-2 hidden items-center gap-2 text-[11px] text-as-muted xl:flex">
+            <span className="mr-2 hidden items-center gap-2 text-xs text-as-muted xl:flex">
               <CalendarDays className="h-3.5 w-3.5" /> {t("common.overview.workspaceTag")}
             </span>
             <Button
@@ -97,14 +97,14 @@ export function HomeDashboard({
             </Button>
             <Link
               href="/strategies"
-              className="as-button-primary inline-flex min-h-9 items-center gap-2 rounded-xl px-3.5 text-xs font-medium text-white"
+              className="as-button-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-[13px] font-medium text-white"
             >
               <Plus className="h-3.5 w-3.5" /> {t("common.overview.newResearch")}
             </Link>
           </>
         }
       />
-      <ResearchHero />
+      <ResearchHero compact={loading || error || strategies.length > 0} />
       {error && (
         <div
           role="status"
@@ -139,15 +139,15 @@ export function HomeDashboard({
             latest?.max_drawdown ?? metrics.data?.max_drawdown ?? null
           }
           strategyCount={strategies.length}
-          unavailable={error && !strategies.length}
+          unavailable={error}
         />
       )}
-      <div className="grid gap-5 xl:grid-cols-[1.8fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
         <Card className="min-w-0 overflow-hidden">
           <CardHeader
             title={t("common.overview.performance")}
             hint={
-              <p className="mt-1 text-[11px] text-as-muted">
+              <p className="mt-1 text-xs text-as-muted">
                 {latest
                   ? `${latest.strategy_name || t("common.overview.recentBacktestName")} · ${latest.start_date} — ${latest.end_date}`
                   : t("common.overview.latestBacktestHint")}
@@ -161,7 +161,7 @@ export function HomeDashboard({
                   items={[...periodItems]}
                 />
               ) : (
-                <span className="rounded-full border border-as-border px-2.5 py-1 text-[10px] text-as-muted">
+                <span className="rounded-full border border-as-border px-2.5 py-1 text-[11px] text-as-muted">
                   {t("common.overview.waitingBacktest")}
                 </span>
               )
@@ -185,7 +185,7 @@ export function HomeDashboard({
                       ? t("common.overview.equityEmptyForPeriod")
                       : t("common.overview.equityEmpty")}
                 </h3>
-                <p className="mt-2 max-w-xs text-[11px] leading-5 text-as-muted">
+                <p className="mt-2 max-w-xs text-xs leading-5 text-as-muted">
                   {latest
                     ? t("common.overview.switchPeriodHint")
                     : t("common.overview.completeFirstHint")}
@@ -202,7 +202,7 @@ export function HomeDashboard({
                 ) : (
                   <Link
                     href={latest ? `/backtests/${latest.id}` : "/strategies"}
-                    className="mt-4 flex items-center gap-1.5 text-[11px] text-as-primary"
+                    className="mt-4 flex items-center gap-1.5 text-xs text-as-primary"
                   >
                     {latest
                       ? t("common.overview.viewBacktest")
@@ -213,7 +213,7 @@ export function HomeDashboard({
               </div>
             </div>
           )}
-          <div className="mt-4 flex items-start gap-1.5 border-t border-as-border pt-3 text-[10px] leading-4 text-as-muted">
+          <div className="mt-4 flex items-start gap-1.5 border-t border-as-border pt-3 text-[11px] leading-4 text-as-muted">
             <CircleHelp className="mt-0.5 h-3 w-3 shrink-0" />
             {t("common.overview.disclaimer")}
           </div>

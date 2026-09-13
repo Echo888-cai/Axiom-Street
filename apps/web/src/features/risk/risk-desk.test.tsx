@@ -67,7 +67,7 @@ describe("RiskDesk", () => {
     });
     renderDesk();
 
-    expect(await screen.findByText("尚未创建纸面账户")).toBeInTheDocument();
-    expect(screen.getByText("纸面对账尚未匹配")).toBeInTheDocument();
+    expect(await screen.findByText("尚未创建模拟账户")).toBeInTheDocument();
+    expect(screen.getByText("模拟账户对账尚未匹配")).toBeInTheDocument();
   });
 });

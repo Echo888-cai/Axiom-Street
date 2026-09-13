@@ -1,13 +1,15 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CircleCheck, ClipboardList, Wallet } from "lucide-react";
+import { CircleCheck, ClipboardList, Wallet } from "lucide-react";
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { api, type PaperOrder } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const PAPER_READY_STATUSES = new Set(["VALIDATED", "PAPER", "APPROVED"]);
 
@@ -96,13 +98,12 @@ export function PaperDesk() {
       <div className="space-y-6">
         <PageHeader title={t("paper.title")} description={t("paper.description")} />
         <Card>
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-[var(--as-warning)]" />
-            <div>
-              <h2 className="font-semibold text-as-text">{t("paper.noStrategies")}</h2>
-              <p className="mt-1 text-sm text-as-muted">{t("paper.noStrategiesDescription")}</p>
-            </div>
-          </div>
+          <EmptyState
+            icon={Wallet}
+            title={t("paper.noStrategies")}
+            description={t("paper.noStrategiesDescription")}
+            action={<Link href="/validation" className="as-button-primary inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-medium">前往稳健性验证</Link>}
+          />
         </Card>
       </div>
     );
@@ -136,8 +137,8 @@ export function PaperDesk() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-        <Card>
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)]">
+        <Card className="lg:sticky lg:top-24">
           <CardHeader title={t("paper.orderTitle")} />
           <form className="space-y-4" onSubmit={submitOrder}>
             <Field label={t("paper.symbol")} htmlFor="paper-symbol">

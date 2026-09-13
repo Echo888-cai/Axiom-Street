@@ -12,7 +12,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "as-card rounded-as border border-as-border bg-as-bg p-5 sm:p-6 shadow-as",
+        "as-card rounded-as border border-as-border bg-as-bg p-5 sm:p-7 shadow-as",
         hover &&
           "transition-all duration-as hover:-translate-y-px hover:border-as-primary/25 hover:shadow-as-lg",
         className,
@@ -35,10 +35,10 @@ export function CardHeader({
   return (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h3 className="text-[14px] font-semibold tracking-tight text-as-text">
+        <h3 className="text-[15px] font-semibold tracking-tight text-as-text">
           {title}
         </h3>
-        {hint ? <div className="mt-0.5">{hint}</div> : null}
+        {hint ? <div className="mt-1">{hint}</div> : null}
       </div>
       {action}
     </div>
@@ -55,7 +55,7 @@ export function CardTitle({
   return (
     <h3
       className={cn(
-        "text-[14px] font-semibold tracking-tight text-as-text",
+        "text-[15px] font-semibold tracking-tight text-as-text",
         className,
       )}
     >

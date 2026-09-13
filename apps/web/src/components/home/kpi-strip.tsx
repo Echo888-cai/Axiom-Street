@@ -1,7 +1,6 @@
 "use client";
 
 import { Activity, FlaskConical, TrendingDown, TrendingUp } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { formatNumber, formatPct } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -22,14 +21,17 @@ export function KpiStrip({
   unavailable?: boolean;
 }) {
   const t = useT();
+  const available = hasBacktest && !unavailable;
   const items = [
     {
       key: "return",
       label: t("common.kpi.returnLabel"),
       icon: TrendingUp,
-      value: hasBacktest ? formatPct(totalReturn) : "—",
-      hint: hasBacktest ? t("common.kpi.returnHint") : t("common.kpi.pendingHint"),
-      tone: hasBacktest
+      value: available ? formatPct(totalReturn) : "—",
+      hint: available
+        ? t("common.kpi.returnHint")
+        : t("common.kpi.pendingHint"),
+      tone: available
         ? (totalReturn ?? 0) >= 0
           ? "text-as-positive"
           : "text-as-negative"
@@ -39,54 +41,75 @@ export function KpiStrip({
       key: "sharpe",
       label: t("common.kpi.sharpeLabel"),
       icon: Activity,
-      value: hasBacktest ? formatNumber(sharpe) : "—",
-      hint: hasBacktest ? t("common.kpi.sharpeHint") : t("common.kpi.pendingHint"),
+      value: available ? formatNumber(sharpe) : "—",
+      hint: available
+        ? t("common.kpi.sharpeHint")
+        : t("common.kpi.pendingHint"),
       tone: "text-as-text",
     },
     {
       key: "dd",
       label: t("common.kpi.drawdownLabel"),
       icon: TrendingDown,
-      value: hasBacktest ? formatPct(maxDrawdown) : "—",
-      hint: hasBacktest ? t("common.kpi.drawdownHint") : t("common.kpi.pendingHint"),
-      tone: hasBacktest ? "text-as-negative" : "text-as-text",
+      value: available ? formatPct(maxDrawdown) : "—",
+      hint: available
+        ? t("common.kpi.drawdownHint")
+        : t("common.kpi.pendingHint"),
+      tone: available ? "text-as-negative" : "text-as-text",
     },
     {
       key: "strategies",
       label: t("common.kpi.strategiesLabel"),
       icon: FlaskConical,
       value: unavailable ? "—" : String(strategyCount),
-      hint: strategyCount ? t("common.kpi.strategiesHint") : t("common.kpi.noStrategiesHint"),
+      hint: strategyCount
+        ? t("common.kpi.strategiesHint")
+        : t("common.kpi.noStrategiesHint"),
       tone: "text-as-text",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 xl:grid-cols-4 as-stagger">
+    <dl
+      aria-label="研究指标"
+      className="as-metric-strip grid grid-cols-2 lg:grid-cols-4"
+    >
       {items.map((kpi) => {
         const Icon = kpi.icon;
         return (
-          <Card key={kpi.key} className="min-h-[132px]">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-medium text-as-muted">
-                {kpi.label}
+          <div
+            key={kpi.key}
+            className="as-metric-cell"
+            data-tone={
+              kpi.tone === "text-as-negative"
+                ? "negative"
+                : kpi.tone === "text-as-text"
+                  ? "neutral"
+                  : "positive"
+            }
+          >
+            <dt className="flex items-center justify-between gap-2 text-xs font-medium text-as-muted">
+              {kpi.label}
+              <span className="as-metric-icon">
+                <Icon className="h-4 w-4" aria-hidden="true" />
               </span>
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-as-secondary/70 text-as-muted">
-                <Icon className="h-3.5 w-3.5" />
-              </span>
-            </div>
-            <div
-              className={cn(
-                "text-[28px] font-medium tabular tracking-tight",
-                kpi.tone,
-              )}
-            >
-              {kpi.value}
-            </div>
-            <p className="mt-1.5 text-[11px] text-as-muted">{kpi.hint}</p>
-          </Card>
+            </dt>
+            <dd>
+              <div
+                className={cn(
+                  "mt-4 text-[28px] font-medium leading-none tabular tracking-[-.06em] sm:text-[32px]",
+                  kpi.tone,
+                )}
+              >
+                {kpi.value}
+              </div>
+              <p className="mt-3 text-[11px] leading-5 text-as-muted">
+                {unavailable ? "数据暂不可用" : kpi.hint}
+              </p>
+            </dd>
+          </div>
         );
       })}
-    </div>
+    </dl>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Search, Menu, ChevronRight } from "lucide-react";
+import { Bell, Search, Menu, ChevronRight, MessageSquare, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
@@ -13,7 +13,7 @@ import { formatRelative } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
 import { useT } from "@/lib/i18n";
 
-export function TopBar({ onMenu }: { onMenu: () => void }) {
+export function TopBar({ onMenu, onAssistant }: { onMenu: () => void; onAssistant?: () => void }) {
   const t = useT();
   const pathname = usePathname();
   const current = NAV_ITEMS.find((item) =>
@@ -40,13 +40,13 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
   }, []);
   const recent = (backtests.data || []).slice(0, 6);
   return (
-    <header className="as-glass sticky top-0 z-20 flex h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/80 px-5 sm:px-8 lg:px-10 xl:px-12">
+    <header className="as-glass sticky top-0 z-20 flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-as-border/60 px-5 sm:px-8 lg:px-10 xl:px-12">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           onClick={onMenu}
           aria-label={t("layout.openMenuAria")}
-          className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-white md:hidden"
+          className="as-action-icon inline-flex md:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -63,7 +63,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
           type="button"
           aria-label={t("layout.searchAria")}
           onClick={() => setSearchOpen(true)}
-          className="flex h-11 items-center gap-2.5 rounded-xl px-3 text-xs text-as-muted transition-colors hover:bg-white"
+          className="flex h-11 items-center gap-2.5 rounded-xl border border-as-border/60 bg-as-secondary/60 px-3 text-xs text-as-muted hover:bg-white"
         >
           <Search className="h-4 w-4" strokeWidth={1.6} />
           <span className="hidden lg:block">{t("layout.searchPlaceholder")}</span>
@@ -71,13 +71,14 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
             ⌘ K
           </kbd>
         </button>
+        {onAssistant && <button type="button" onClick={onAssistant} aria-label="打开研究助手" title="研究助手与验证" className="as-button-secondary flex h-11 items-center gap-2 rounded-xl border border-as-border px-3 text-xs font-medium"><MessageSquare className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">研究助手</span></button>}
         <div className="relative">
           <button
             type="button"
             aria-label={t("layout.notesAria")}
             aria-expanded={notesOpen}
             onClick={() => setNotesOpen(!notesOpen)}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full text-as-muted hover:bg-white"
+            className="as-action-icon relative inline-flex"
           >
             <Bell className="h-4 w-4" strokeWidth={1.6} />
             {recent.some((b) => b.status === "FAILED") && (
@@ -141,9 +142,9 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         <Link
           href="/settings"
           aria-label={t("layout.settingsAria")}
-          className="as-icon-well h-9 w-9 rounded-full text-[11px] font-semibold"
+          className="as-action-icon hidden sm:inline-flex"
         >
-          A
+          <Settings2 className="h-[18px] w-[18px]" aria-hidden="true" />
         </Link>
       </div>
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />

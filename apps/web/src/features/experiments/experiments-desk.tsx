@@ -138,7 +138,7 @@ export function ExperimentsDesk() {
     <div className="space-y-6 as-enter">
       <PageHeader
         title={t("validation.experiments.title")}
-        description={t("validation.experiments.description")}
+        description="比较参数，识别偶然的好结果。"
       />
 
       <Card>

@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ComparePanel } from "@/features/backtests/compare-panel";
 import type { Backtest, CompareEquityResponse } from "@/lib/api";
 
@@ -15,6 +15,9 @@ vi.mock("@/lib/api", async (importOriginal) => {
     },
   };
 });
+
+// Canvas rendering is verified in the browser; this suite tests the table and selection.
+vi.mock("@/components/charts/equity-curve", () => ({ EquityCurve: () => null }));
 
 // api is a plain object of functions; the mock above replaces its
 // implementation wholesale, so typing through the real module works.
@@ -49,16 +52,8 @@ async function selectSecondBacktest() {
 
 describe("ComparePanel", () => {
   beforeEach(() => {
-    // The chart lib schedules an rAF render loop that throws in jsdom
-    // (no canvas layout); this suite asserts DOM only, so swallow frames.
-    vi.stubGlobal("requestAnimationFrame", () => 0);
-    vi.stubGlobal("cancelAnimationFrame", () => {});
     vi.mocked(api.listBacktests).mockResolvedValue([btA, btB] as Backtest[]);
-    vi.mocked(api.compareEquity).mockReset();
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.mocked(api.compareEquity).mockReset().mockResolvedValue({ series: [] });
   });
 
   it("renders the metrics table from backend series values (RC-W4)", async () => {

@@ -112,7 +112,7 @@ export function CommandPalette({
         group: "notes",
       }));
     return [...nav, ...s, ...b, ...n];
-  }, [query, strategies.data, backtests.data, notes.data]);
+  }, [query, strategies.data, backtests.data, notes.data, t]);
 
   useEffect(() => {
     setActive(0);

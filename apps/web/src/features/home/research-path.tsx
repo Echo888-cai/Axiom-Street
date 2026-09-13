@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
 export function ResearchPath({
@@ -43,11 +44,11 @@ export function ResearchPath({
     },
   ];
   return (
-    <Card className="flex flex-col">
+    <section id="research-path" aria-label="研究操作流程" className="scroll-mt-24"><Card className="h-full flex flex-col">
       <CardHeader
         title={t("common.path.title")}
         hint={
-          <p className="mt-1 text-[11px] text-as-muted">
+          <p className="mt-1 text-xs text-as-muted">
             {t("common.path.hint")}
           </p>
         }
@@ -57,20 +58,20 @@ export function ResearchPath({
           <Link
             key={step.href}
             href={step.href}
-            className="group relative flex items-start gap-3.5 rounded-xl py-4 transition-colors hover:bg-as-secondary/60"
+            className={cn("group relative flex items-start gap-3.5 rounded-xl px-3 py-4 transition-colors hover:bg-as-secondary/80", i === (hasBacktest ? 2 : hasStrategy ? 1 : 0) && "bg-as-primary/5")}
           >
             {i < 2 && (
               <span
                 aria-hidden="true"
-                className="absolute left-[19px] top-[58px] h-5 border-l border-dashed border-as-border"
+                className="absolute left-[31px] top-[58px] h-5 border-l border-dashed border-as-border"
               />
             )}
-            <span className="as-icon-well h-10 w-10 rounded-xl">
+            <span className="as-icon-well h-10 w-10 rounded-[14px]">
               <step.icon className="h-4 w-4" strokeWidth={1.5} />
             </span>
             <span className="flex-1 pt-0.5">
-              <span className="block text-xs font-medium">{step.label}</span>
-              <span className="mt-1.5 block text-[11px] text-as-muted">
+              <span className="block text-sm font-medium">{step.label}{i === (hasBacktest ? 2 : hasStrategy ? 1 : 0) && <span className="ml-2 text-[10px] font-medium text-as-primary">下一步</span>}</span>
+              <span className="mt-1.5 block text-xs text-as-muted">
                 {step.detail}
               </span>
             </span>
@@ -86,11 +87,11 @@ export function ResearchPath({
       </div>
       <Link
         href="/validation"
-        className="mt-3 flex items-center justify-between border-t border-as-border pt-4 text-[11px] text-as-muted hover:text-as-primary"
+        className="mt-3 flex items-center justify-between border-t border-as-border pt-4 text-xs text-as-muted hover:text-as-primary"
       >
         {t("common.path.process")}
         <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
       </Link>
-    </Card>
+    </Card></section>
   );
 }

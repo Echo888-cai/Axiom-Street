@@ -77,7 +77,7 @@ describe("PaperDesk", () => {
   it("shows an honest empty state when no paper account exists", async () => {
     renderDesk();
 
-    expect(await screen.findByText("尚未创建纸面账户")).toBeInTheDocument();
-    expect(screen.getByText(/提交第一笔订单后/)).toBeInTheDocument();
+    expect(await screen.findByText("尚未创建模拟账户")).toBeInTheDocument();
+    expect(screen.getByText(/第一笔订单处理时/)).toBeInTheDocument();
   });
 });

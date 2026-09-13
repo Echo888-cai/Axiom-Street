@@ -10,7 +10,7 @@ export function Select({ className, children, ...props }: SelectProps) {
   return (
     <select
       className={cn(
-        "w-full rounded-as border border-as-border bg-as-bg p-3 text-as-text focus:border-as-primary focus:ring-1 focus:ring-as-primary transition-colors",
+        "as-field as-select min-h-11 w-full min-w-0 rounded-xl border border-as-border bg-as-bg px-3 py-2.5 text-sm text-as-text transition-colors",
         className,
       )}
       {...props}
@@ -33,7 +33,7 @@ export function SelectTrigger({
   return (
     <button
       className={cn(
-        "w-full rounded-as border border-as-border bg-as-bg p-3 text-left text-as-text focus:border-as-primary focus:ring-1 focus:ring-as-primary transition-colors",
+        "as-field min-h-11 w-full rounded-xl border border-as-border bg-as-bg p-3 text-left text-as-text focus:border-as-primary focus:ring-1 focus:ring-as-primary transition-colors",
         className,
       )}
       {...props}

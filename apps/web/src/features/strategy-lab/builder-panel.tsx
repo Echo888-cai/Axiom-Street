@@ -91,7 +91,7 @@ export function BuilderPanel({
         <Input
           type="number"
           min={0}
-          value={Number(execution.slippage_bps || 5)}
+          value={Number(execution.slippage_bps ?? 5)}
           onChange={(e) => patch("execution", "slippage_bps", Number(e.target.value) || 0)}
         />
       </Field>

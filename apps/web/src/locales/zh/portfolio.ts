@@ -1,6 +1,6 @@
 export const portfolio = {
   title: "组合归因",
-  description: "查看组合配置，以及可由服务端输入重建的单期 Brinson 归因结果。",
+  description: "管理策略权重，了解收益来自哪里。",
   selectLabel: "选择组合",
   emptyTitle: "还没有组合",
   emptyDescription: "先创建一个组合并配置策略权重，这里才会显示组合归因。",
