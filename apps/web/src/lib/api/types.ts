@@ -15,6 +15,8 @@ type S = components["schemas"];
 
 // ---------- whole-shape aliases: the contract owns the field set ----------
 
+export type Overview = S["OverviewOut"];
+
 export type Strategy = S["StrategyOut"];
 export type StrategyVersion = S["StrategyVersionOut"];
 export type BacktestMetrics = S["BacktestMetricsOut"];

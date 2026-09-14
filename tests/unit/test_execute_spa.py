@@ -12,6 +12,7 @@ from services.api.models import (
     Backtest,
     BacktestEquity,
     BacktestStatus,
+    DataSnapshot,
     ExperimentTrial,
     Strategy,
     StrategyStatus,
@@ -81,6 +82,11 @@ def _seed(
     n_models: int | None = None,
 ):
     db = Session()
+    snapshot = DataSnapshot(
+        id=uuid4(), snapshot_key="evidence", provider="fixture", content_sha256="a" * 64
+    )
+    db.add(snapshot)
+    db.flush()
     strategy = Strategy(name="spa", status=StrategyStatus.BACKTESTED)
     db.add(strategy)
     db.flush()
@@ -92,6 +98,7 @@ def _seed(
     backtests: list[Backtest] = []
     for i, drift in enumerate(used):
         backtest = Backtest(
+            data_snapshot_id=snapshot.id,
             id=uuid4(),
             strategy_version_id=version.id,
             start_date=date(2018, 1, 1),
@@ -113,6 +120,7 @@ def _seed(
             )
         db.add(
             ExperimentTrial(
+                data_snapshot_id=snapshot.id,
                 backtest_id=backtest.id,
                 strategy_id=strategy.id,
                 strategy_family=strategy.family_id,

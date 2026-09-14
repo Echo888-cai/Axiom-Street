@@ -19,7 +19,7 @@ import { EquityCurve } from "@/components/charts/equity-curve";
 import { Tabs } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, type Backtest, type Strategy } from "@/lib/api";
+import { api, type Backtest, type Strategy, type Overview } from "@/lib/api";
 import { filterEquityByPeriod } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { ResearchHero } from "./research-hero";
@@ -32,11 +32,17 @@ export function HomeDashboard({
   strategies,
   backtests,
   loading,
+  overview,
+  summaryLoading,
+  summaryError,
   error,
   onRetry,
 }: {
   strategies: Strategy[];
   backtests: Backtest[];
+  overview?: Overview;
+  summaryLoading?: boolean;
+  summaryError?: boolean;
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
@@ -44,13 +50,7 @@ export function HomeDashboard({
   const qc = useQueryClient();
   const t = useT();
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>("ALL");
-  const latest = [...backtests]
-    .filter((b) => b.status === "COMPLETED")
-    .sort((a, b) =>
-      (b.finished_at || b.created_at).localeCompare(
-        a.finished_at || a.created_at,
-      ),
-    )[0];
+  const latest = summaryError ? null : overview?.latest_completed_backtest;
   const equity = useQuery({
     queryKey: ["equity", latest?.id],
     queryFn: () => api.getEquity(latest!.id),
@@ -105,7 +105,7 @@ export function HomeDashboard({
         }
       />
       <ResearchHero compact={loading || error || strategies.length > 0} />
-      {error && (
+      {(error || summaryError) && (
         <div
           role="status"
           className="flex flex-wrap items-center gap-3 rounded-xl border border-as-border bg-white/70 px-4 py-3 text-xs"
@@ -122,7 +122,7 @@ export function HomeDashboard({
           </Link>
         </div>
       )}
-      {loading ? (
+      {summaryLoading ? (
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-[132px]" />
@@ -138,8 +138,8 @@ export function HomeDashboard({
           maxDrawdown={
             latest?.max_drawdown ?? metrics.data?.max_drawdown ?? null
           }
-          strategyCount={strategies.length}
-          unavailable={error}
+          strategyCount={overview?.strategy_count ?? 0}
+          unavailable={summaryError || !overview}
         />
       )}
       <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
@@ -167,7 +167,7 @@ export function HomeDashboard({
               )
             }
           />
-          {latest && equityPoints.length > 0 ? (
+          {latest && !equity.isError && equityPoints.length > 0 ? (
             <EquityCurve data={equityPoints} height={258} />
           ) : loading || (latest && equity.isLoading) ? (
             <Skeleton className="h-[278px]" />
@@ -219,7 +219,7 @@ export function HomeDashboard({
           </div>
         </Card>
         <ResearchPath
-          hasStrategy={strategies.length > 0}
+          hasStrategy={!summaryError && (overview?.strategy_count ?? 0) > 0}
           hasBacktest={Boolean(latest)}
         />
       </div>

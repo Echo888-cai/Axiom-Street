@@ -12,6 +12,7 @@ from services.api.db import Base
 from services.api.models import (
     Backtest,
     BacktestStatus,
+    DataSnapshot,
     ExperimentTrial,
     Strategy,
     StrategyStatus,
@@ -108,6 +109,11 @@ def _session(monkeypatch):
 def _seed(Session, *, values: list[int] | None = None):
     values = values or [100, 200]
     db = Session()
+    snapshot = DataSnapshot(
+        id=uuid4(), snapshot_key="evidence", provider="fixture", content_sha256="a" * 64
+    )
+    db.add(snapshot)
+    db.flush()
     strategy = Strategy(name="pbo", status=StrategyStatus.BACKTESTED)
     db.add(strategy)
     db.flush()
@@ -121,6 +127,7 @@ def _seed(Session, *, values: list[int] | None = None):
     db.add(version)
     db.flush()
     backtest = Backtest(
+        data_snapshot_id=snapshot.id,
         id=uuid4(),
         strategy_version_id=version.id,
         start_date=date(2018, 1, 1),

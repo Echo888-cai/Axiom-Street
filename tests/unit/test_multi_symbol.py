@@ -94,7 +94,7 @@ def test_health_prefers_worker_heartbeat(client, monkeypatch):
         lambda: {
             "docker_available": True,
             "image": "quantconnect/lean:16355",
-            "reported_at": "2026-09-01T00:00:00+00:00",
+            "reported_at": datetime.now(timezone.utc).isoformat(),
         },
     )
     res = client.get("/health")

@@ -27,14 +27,14 @@ def worker_health_status(reported: dict[str, Any] | None) -> dict[str, Any]:
         }
     raw_reported_at = reported.get("reported_at")
     try:
-        parsed = datetime.fromisoformat(str(raw_reported_at))
+        parsed = datetime.fromisoformat(str(raw_reported_at).replace("Z", "+00:00"))
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
-        age = max(0.0, (datetime.now(timezone.utc) - parsed).total_seconds())
+        age = (datetime.now(timezone.utc) - parsed).total_seconds()
     except (TypeError, ValueError):
         age = None
     docker_available = bool(reported.get("docker_available"))
-    fresh = age is not None and age <= WORKER_HEALTH_TTL_SECONDS
+    fresh = age is not None and 0 <= age <= WORKER_HEALTH_TTL_SECONDS
     if not docker_available:
         note = "Worker 上报 Docker 不可用。"
     elif age is None:
@@ -109,15 +109,14 @@ def docker_status() -> dict[str, Any]:
     ).health_check()
     reported = read_worker_health()
     if reported is not None:
-        available = bool(reported.get("docker_available"))
+        worker = worker_health_status(reported)
+        available = worker["ok"]
         return {
             "ok": available,
             "image": reported.get("image") or local.get("image"),
             "source": "worker",
             "reported_at": reported.get("reported_at"),
-            "note": None
-            if available
-            else "Worker 上报 Docker 不可用。请确认 Colima/Docker 已启动，然后重启 worker。",
+            "note": worker["note"],
         }
     available = bool(local.get("docker_available"))
     if available:

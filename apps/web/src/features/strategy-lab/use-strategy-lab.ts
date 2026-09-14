@@ -159,6 +159,7 @@ export function useStrategyLab(strategyId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["strategy", strategyId] });
       qc.invalidateQueries({ queryKey: ["strategies"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
       setEditingName(false);
       toast(t("strategy.nameUpdatedToast"), "ok");
     },
@@ -169,6 +170,7 @@ export function useStrategyLab(strategyId: string) {
     mutationFn: () => api.deleteStrategy(strategyId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["strategies"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
       toast(t("strategy.strategyDeletedToast"), "info");
       router.push("/strategies");
     },

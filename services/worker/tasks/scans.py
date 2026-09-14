@@ -33,6 +33,11 @@ def _fail_walk_forward(db, run: ValidationRun, code: str, message: str) -> dict:
     run.progress_step = "Failed"
     run.finished_at = datetime.now(timezone.utc)
     run.error = {"code": code, "message": message}
+    from services.api.services.validation import maybe_apply_validated
+
+    maybe_apply_validated(
+        db, strategy_id=run.strategy_id, strategy_version_id=run.strategy_version_id
+    )
     db.commit()
     return {"status": "FAILED", "error": message}
 

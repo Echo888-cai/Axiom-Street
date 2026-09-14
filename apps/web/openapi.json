@@ -4119,6 +4119,27 @@
         }
       }
     },
+    "/api/v1/overview": {
+      "get": {
+        "tags": [
+          "overview"
+        ],
+        "summary": "Overview",
+        "operationId": "overview_api_v1_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -6351,6 +6372,47 @@
           "return_pct"
         ],
         "title": "MonthlyReturnOut"
+      },
+      "OverviewOut": {
+        "properties": {
+          "strategy_count": {
+            "type": "integer",
+            "title": "Strategy Count"
+          },
+          "strategy_counts_by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/StrategyStatus"
+            },
+            "type": "object",
+            "title": "Strategy Counts By Status"
+          },
+          "latest_completed_backtest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BacktestOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_count",
+          "strategy_counts_by_status",
+          "latest_completed_backtest",
+          "as_of"
+        ],
+        "title": "OverviewOut"
       },
       "PaperAccountOut": {
         "properties": {

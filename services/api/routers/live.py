@@ -16,8 +16,6 @@ from services.api.models import (
     Strategy,
     StrategyVersion,
     ValidationKind,
-    ValidationRun,
-    ValidationRunStatus,
 )
 from services.api.schemas import LiveActivateIn, LiveReadinessOut
 from services.api.settings import get_settings
@@ -37,20 +35,17 @@ def _readiness(db: Session, strategy_id: UUID) -> LiveReadinessOut:
         .limit(1)
     ).first()
     validation_passed = {kind.value: False for kind in ValidationKind}
+    evidence_reasons = {}
+    evidence_backtest_id = None
     if version is not None:
-        rows = db.scalars(
-            select(ValidationRun)
-            .where(
-                ValidationRun.strategy_id == strategy_id,
-                ValidationRun.strategy_version_id == version.id,
-                ValidationRun.status == ValidationRunStatus.COMPLETED,
-            )
-            .order_by(ValidationRun.created_at.desc())
-        ).all()
-        for row in rows:
-            key = row.kind.value
-            if not validation_passed[key]:
-                validation_passed[key] = bool(row.passed and row.error is None)
+        from services.api.services.validation_evidence import collect_validation_evidence
+
+        evidence = collect_validation_evidence(
+            db, strategy_id=strategy_id, strategy_version_id=version.id
+        )
+        validation_passed = {kind.value: passed for kind, passed in evidence.passed.items()}
+        evidence_reasons = evidence.reasons
+        evidence_backtest_id = evidence.backtest_id
 
     risk_config_valid = False
     if version is not None and isinstance(version.config, dict) and "risk_limits" in version.config:
@@ -80,6 +75,8 @@ def _readiness(db: Session, strategy_id: UUID) -> LiveReadinessOut:
         reasons=result.reasons,
         evidence={
             **result.evidence,
+            "validation_reasons": evidence_reasons,
+            "validation_backtest_id": str(evidence_backtest_id) if evidence_backtest_id else None,
             "strategy_id": str(strategy_id),
             "version": version.version if version else None,
         },

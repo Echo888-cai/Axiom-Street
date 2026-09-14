@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import type { Strategy } from "@/lib/api";
+import type { Overview } from "@/lib/api";
 
 const STEPS = [
   {
@@ -24,26 +24,18 @@ const STEPS = [
 ];
 
 export function ResearchBrief({
-  strategies,
+  overview,
   unavailable,
 }: {
-  strategies: Strategy[];
+  overview?: Overview;
   unavailable: boolean;
 }) {
+  const counts = overview?.strategy_counts_by_status;
   const stats = [
-    { label: "全部研究", count: strategies.length },
-    {
-      label: "构思中",
-      count: strategies.filter((s) => s.status === "DRAFT").length,
-    },
-    {
-      label: "已回测",
-      count: strategies.filter((s) => s.status === "BACKTESTED").length,
-    },
-    {
-      label: "已验证",
-      count: strategies.filter((s) => s.status === "VALIDATED").length,
-    },
+    { label: "全部研究", count: overview?.strategy_count },
+    { label: "构思中", count: counts?.DRAFT },
+    { label: "已回测", count: counts?.BACKTESTED },
+    { label: "已验证", count: counts?.VALIDATED },
   ];
   return (
     <section aria-label="研究路径与概况" className="as-research-brief">
@@ -62,7 +54,7 @@ export function ResearchBrief({
             <div key={stat.label}>
               <dt className="as-brief-muted text-[11px]">{stat.label}</dt>
               <dd className="mt-3 text-[28px] tabular tracking-tight sm:text-[34px]">
-                {unavailable ? "—" : String(stat.count).padStart(2, "0")}
+                {unavailable || stat.count == null ? "—" : String(stat.count).padStart(2, "0")}
               </dd>
             </div>
           ))}

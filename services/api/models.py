@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import (
@@ -471,7 +471,11 @@ class ValidationRun(Base):
     result: Mapped[dict] = mapped_column(JSON, default=dict)
     passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     error: Mapped[Optional[dict]] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+    )
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 

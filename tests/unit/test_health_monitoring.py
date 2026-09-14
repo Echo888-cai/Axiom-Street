@@ -47,3 +47,25 @@ def test_security_health_reports_enforced_sandbox_flags():
     assert security["rootfs_read_only"] is True
     assert security["non_root"] is True
     assert security["seccomp"] == "default"
+
+
+def test_stale_worker_cannot_report_usable_docker(monkeypatch):
+    stale = {
+        "reported_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
+        "docker_available": True,
+        "image": "lean:test",
+    }
+    monkeypatch.setattr(health, "read_worker_health", lambda: stale)
+    body = health.docker_status()
+    assert body["source"] == "worker"
+    assert body["ok"] is False
+    assert body["note"]
+
+
+def test_future_worker_timestamp_is_not_a_fresh_heartbeat():
+    future = {
+        "reported_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        "docker_available": True,
+        "image": "lean:test",
+    }
+    assert health.worker_health_status(future)["ok"] is False

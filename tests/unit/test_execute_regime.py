@@ -12,6 +12,7 @@ from services.api.models import (
     Backtest,
     BacktestEquity,
     BacktestStatus,
+    DataSnapshot,
     Strategy,
     StrategyStatus,
     StrategyVersion,
@@ -93,6 +94,11 @@ def _add_gate(db, *, strategy_id, version_id, backtest_id, kind: ValidationKind)
 
 def _seed(Session, *, strategy: str = "robust"):
     db = Session()
+    snapshot = DataSnapshot(
+        id=uuid4(), snapshot_key="evidence", provider="fixture", content_sha256="a" * 64
+    )
+    db.add(snapshot)
+    db.flush()
     row = Strategy(name="regime", status=StrategyStatus.BACKTESTED)
     db.add(row)
     db.flush()
@@ -101,6 +107,7 @@ def _seed(Session, *, strategy: str = "robust"):
     db.add(version)
     db.flush()
     backtest = Backtest(
+        data_snapshot_id=snapshot.id,
         id=uuid4(),
         strategy_version_id=version.id,
         start_date=date(2018, 1, 1),

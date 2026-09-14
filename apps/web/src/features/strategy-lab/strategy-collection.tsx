@@ -15,11 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/lib/i18n";
 import { labelStatus } from "@/lib/labels";
 import { formatRelative } from "@/lib/utils";
+import { useOverview } from "@/features/home/use-overview";
 import { ResearchBrief } from "./research-brief";
 import { CreateStrategyDialog } from "./create-strategy-dialog";
 
 export default function StrategyCollection() {
   const t = useT();
+  const overview = useOverview();
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
   const { data, isLoading, error, refetch } = useQuery({
@@ -47,19 +49,29 @@ export default function StrategyCollection() {
         }
       />
       <ResearchBrief
-        strategies={data || []}
-        unavailable={isLoading || Boolean(error)}
+        overview={overview.data}
+        unavailable={overview.isLoading || overview.isError}
       />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           {t("strategy.allStrategies")}{" "}
-          <Badge>{isLoading || error ? "—" : String(data?.length || 0)}</Badge>
+          <Badge>
+            {overview.isLoading || overview.isError
+              ? "—"
+              : String(overview.data?.strategy_count ?? "—")}
+          </Badge>
+          {!error && data && overview.data && !overview.isError &&
+            overview.data.strategy_count > data.length && (
+              <span className="text-xs font-normal text-as-muted">
+                当前显示 {data.length} 条
+              </span>
+            )}
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="pointer-events-none absolute left-3 top-3.5 h-3.5 w-3.5 text-as-muted" />
           <Input
             aria-label={t("strategy.searchAria")}
-            placeholder={t("strategy.searchPlaceholder")}
+            placeholder="搜索已显示的策略"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9"

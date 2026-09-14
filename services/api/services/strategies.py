@@ -5,10 +5,11 @@ from statistics import mean, pvariance
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from quant.strategy_sdk.spy_200dma import DEFAULT_STRATEGY_CODE, default_builder_config
+from services.api.db import Base
 from services.api.models import (
     AuditLog,
     DataSnapshot,
@@ -132,6 +133,25 @@ def update_strategy(db: Session, strategy_id: UUID, payload: StrategyUpdate) -> 
 
 def delete_strategy(db: Session, strategy_id: UUID) -> None:
     strategy = get_strategy(db, strategy_id)
+    version_ids = select(StrategyVersion.id).where(StrategyVersion.strategy_id == strategy_id)
+    # Only remove unused research drafts. A saved result/ledger must stay auditable.
+    # Inspect declared references so adding a new research ledger remains protected.
+    for table in Base.metadata.tables.values():
+        if table.name == StrategyVersion.__tablename__:
+            continue
+        for foreign_key in table.foreign_keys:
+            target = foreign_key.target_fullname
+            if target == "strategies.id":
+                condition = foreign_key.parent == strategy_id
+            elif target == "strategy_versions.id":
+                condition = foreign_key.parent.in_(version_ids)
+            else:
+                continue
+            if db.scalar(select(func.count()).select_from(table).where(condition)):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="该策略已有研究或执行记录，请归档以保留证据，不能永久删除。",
+                )
     _audit(
         db,
         actor="local",
@@ -140,7 +160,8 @@ def delete_strategy(db: Session, strategy_id: UUID) -> None:
         object_id=str(strategy.id),
         before={"name": strategy.name},
     )
-    db.delete(strategy)
+    db.execute(delete(StrategyVersion).where(StrategyVersion.strategy_id == strategy_id))
+    db.execute(delete(Strategy).where(Strategy.id == strategy_id))
     db.commit()
 
 

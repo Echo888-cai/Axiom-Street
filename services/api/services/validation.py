@@ -387,25 +387,6 @@ def validation_gates() -> dict[str, Any]:
     }
 
 
-def _latest_completed(
-    db: Session,
-    *,
-    strategy_id: UUID,
-    strategy_version_id: UUID,
-    kind: ValidationKind,
-) -> ValidationRun | None:
-    return db.scalars(
-        select(ValidationRun)
-        .where(
-            ValidationRun.strategy_id == strategy_id,
-            ValidationRun.strategy_version_id == strategy_version_id,
-            ValidationRun.kind == kind,
-            ValidationRun.status == ValidationRunStatus.COMPLETED,
-        )
-        .order_by(ValidationRun.created_at.desc())
-    ).first()
-
-
 def maybe_apply_validated(
     db: Session, *, strategy_id: UUID | None, strategy_version_id: UUID | None
 ) -> None:
@@ -418,18 +399,23 @@ def maybe_apply_validated(
     if strategy.status not in {StrategyStatus.BACKTESTED, StrategyStatus.VALIDATED}:
         return
 
-    latest = {
-        kind: _latest_completed(
-            db,
-            strategy_id=strategy_id,
-            strategy_version_id=strategy_version_id,
-            kind=kind,
-        )
-        for kind in _VALIDATED_KINDS
-    }
-    oks = {
-        kind: row is not None and row.passed and row.error is None for kind, row in latest.items()
-    }
+    db.flush()
+    current_version_id = db.scalar(
+        select(StrategyVersion.id)
+        .where(StrategyVersion.strategy_id == strategy_id)
+        .order_by(StrategyVersion.version.desc())
+        .limit(1)
+    )
+    # Late callbacks belong to historical versions and cannot alter the current one.
+    if current_version_id != strategy_version_id:
+        return
+    from services.api.services.validation_evidence import collect_validation_evidence
+
+    evidence = collect_validation_evidence(
+        db, strategy_id=strategy_id, strategy_version_id=strategy_version_id
+    )
+    latest = evidence.latest
+    oks = evidence.passed
     before = strategy.status.value
     if all(oks.values()):
         if strategy.status != StrategyStatus.VALIDATED:
@@ -580,6 +566,7 @@ def create_validation_run(db: Session, payload: ValidationCreate) -> ValidationR
             },
         )
     )
+    maybe_apply_validated(db, strategy_id=version.strategy_id, strategy_version_id=version.id)
     db.commit()
     db.refresh(run)
 

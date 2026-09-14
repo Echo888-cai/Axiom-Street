@@ -105,6 +105,13 @@ class BacktestOut(ORMModel):
     cache_hit: bool = False
 
 
+class OverviewOut(BaseModel):
+    strategy_count: int
+    strategy_counts_by_status: dict[StrategyStatus, int]
+    latest_completed_backtest: BacktestOut | None
+    as_of: datetime
+
+
 class BacktestMetricsOut(ORMModel):
     backtest_id: UUID
     total_return: Optional[float] = None

@@ -1231,6 +1231,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_api_v1_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -2014,6 +2031,21 @@ export interface components {
             month: number;
             /** Return Pct */
             return_pct: number;
+        };
+        /** OverviewOut */
+        OverviewOut: {
+            /** Strategy Count */
+            strategy_count: number;
+            /** Strategy Counts By Status */
+            strategy_counts_by_status: {
+                [key: string]: number;
+            };
+            latest_completed_backtest: components["schemas"]["BacktestOut"] | null;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
         };
         /** PaperAccountOut */
         PaperAccountOut: {
@@ -5669,6 +5701,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_api_v1_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewOut"];
                 };
             };
         };

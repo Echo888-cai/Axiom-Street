@@ -42,6 +42,7 @@ export function CreateStrategyDialog({
       }),
     onSuccess: (strategy) => {
       qc.invalidateQueries({ queryKey: ["strategies"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
       toast(t("strategy.researchCreatedToast"), "ok");
       onClose();
       router.push(`/strategies/${strategy.id}`);

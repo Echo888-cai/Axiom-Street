@@ -76,6 +76,7 @@ export function ValidationLaunch({ kinds = MANUAL_KINDS }: { kinds?: ValidationK
     qc.invalidateQueries({ queryKey: ["validation-runs"] });
     qc.invalidateQueries({ queryKey: ["pbo-runs"] });
     qc.invalidateQueries({ queryKey: ["backtests"] });
+    qc.invalidateQueries({ queryKey: ["overview"] });
   };
 
   if (!specsQuery.data && specsQuery.isLoading) {

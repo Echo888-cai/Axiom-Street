@@ -370,7 +370,18 @@ def execute_backtest(backtest_id: str, *, record_gates: bool = True) -> dict:
             trial.observed_sharpe = metrics.get("sharpe")
 
         strategy = db.get(Strategy, version.strategy_id)
-        if strategy and strategy.status == StrategyStatus.DRAFT:
+        current_version = (
+            db.query(StrategyVersion.id)
+            .filter(StrategyVersion.strategy_id == version.strategy_id)
+            .order_by(StrategyVersion.version.desc())
+            .first()
+        )
+        if (
+            strategy
+            and strategy.status == StrategyStatus.DRAFT
+            and current_version is not None
+            and current_version[0] == version.id
+        ):
             strategy.status = StrategyStatus.BACKTESTED
 
         db.flush()

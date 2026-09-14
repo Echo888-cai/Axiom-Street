@@ -101,7 +101,10 @@ class ValidationSpec(ABC, Generic[T]):
         """Hook to add computed params (e.g., walk-forward folds).
         Called before creating the ValidationRun row.
         """
-        return validated_params.model_dump(mode="json")
+        params = validated_params.model_dump(mode="json")
+        if self.kind in {ValidationKind.PBO, ValidationKind.SENSITIVITY, ValidationKind.COST}:
+            return self._template_context(template, params)
+        return params
 
     def _template_context(self, template: Backtest, params: dict[str, Any]) -> dict[str, Any]:
         """Borrow the template backtest's scope: dates, snapshot, universe, params."""

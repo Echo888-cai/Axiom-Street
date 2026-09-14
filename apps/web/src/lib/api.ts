@@ -13,7 +13,10 @@ import { paperApi } from "./api/paper";
 import { riskApi } from "./api/risk";
 import { healthApi } from "./api/health";
 
+import { overviewApi } from "./api/overview";
+
 export const api = {
+  ...overviewApi,
   ...dataApi,
   ...strategiesApi,
   ...validationApi,

@@ -286,3 +286,17 @@ def test_execute_backtest_empty_universe_fails(monkeypatch):
     assert bt.error["code"] == "universe_missing"
     assert fake.last_request is None
     db.close()
+
+
+def test_old_backtest_completion_keeps_new_version_draft(monkeypatch):
+    Session = _session(monkeypatch)
+    monkeypatch.setattr("services.worker.tasks.LeanQuantEngine", lambda **_k: _FakeEngine())
+    from services.worker.tasks import execute_backtest
+
+    backtest_id, strategy_id = _seed(Session)
+    with Session() as db:
+        db.add(StrategyVersion(strategy_id=strategy_id, version=2, code="new code", config={}))
+        db.commit()
+    assert execute_backtest(backtest_id)["status"] == "COMPLETED"
+    with Session() as db:
+        assert db.get(Strategy, strategy_id).status == StrategyStatus.DRAFT
