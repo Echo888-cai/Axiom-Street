@@ -15,6 +15,7 @@ from services.api.schemas import (
     ValidationSpecOut,
 )
 from services.api.services import validation as validation_service
+from services.api.services import validation_plan as validation_plan_service
 from services.api.services.validation_spec import all_specs, params_schema_for
 
 router = APIRouter(prefix="/validation", tags=["validation"])
@@ -158,6 +159,18 @@ def get_validation_specs() -> list[ValidationSpecOut]:
             )
         )
     return specs
+
+
+@router.get("/plan")
+def validation_plan(
+    strategy_version_id: UUID,
+    backtest_id: UUID | None = None,
+    db: Session = Depends(get_db),
+) -> dict:
+    """P3.3 整组计划：每项闸门的适用条件、样本要求、参数读取、资源估计与冻结区间。"""
+    return validation_plan_service.build_validation_plan(
+        db, strategy_version_id=strategy_version_id, backtest_id=backtest_id
+    )
 
 
 # Static paths must be declared before "/{run_id}" or "specs" is parsed as a

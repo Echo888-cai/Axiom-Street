@@ -9,6 +9,12 @@ import type {
 } from "./types";
 
 export const validationApi = {
+  // P3.3 整组验证计划：适用条件/样本/参数读取/资源估计/冻结区间。
+  validationPlan: (strategyVersionId: string, backtestId?: string) => {
+    const search = new URLSearchParams({ strategy_version_id: strategyVersionId });
+    if (backtestId) search.set("backtest_id", backtestId);
+    return request<Record<string, unknown>>(`/api/v1/validation/plan?${search.toString()}`);
+  },
   // 后端 specs 返回大写 kind（WALK_FORWARD/BOOTSTRAP…），前端域类型用小写
   // （ValidationKind）。在此归一，否则 MANUAL_KINDS 过滤会把全部 spec 滤掉，
   // 验证发起表单不渲染（E2E 隔离栈上实证的契约漂移）。

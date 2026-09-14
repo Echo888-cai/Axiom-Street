@@ -14,6 +14,7 @@ import { formatPct } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { EvidenceStatus } from "./evidence-status";
 import { ValidationLaunch } from "./validation-launch";
+import { ValidationPlanCard } from "./validation-plan-card";
 import { isInflight, conclusion } from "./validation-status";
 import { WalkForwardReport } from "./reports/walk-forward-report";
 import { SensitivityReport } from "./reports/sensitivity-report";
@@ -106,6 +107,8 @@ export function ValidationDesk() {
           </div>
         </dl>
       </Disclosure>
+
+      <ValidationPlanCard strategyId={strategyId} />
 
       <Card>
         <CardHeader

@@ -890,6 +890,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/validation/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Validation Plan
+         * @description P3.3 整组计划：每项闸门的适用条件、样本要求、参数读取、资源估计与冻结区间。
+         */
+        get: operations["validation_plan_api_v1_validation_plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/validation/{run_id}": {
         parameters: {
             query?: never;
@@ -5226,6 +5246,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ValidationSpecOut"][];
+                };
+            };
+        };
+    };
+    validation_plan_api_v1_validation_plan_get: {
+        parameters: {
+            query: {
+                strategy_version_id: string;
+                backtest_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

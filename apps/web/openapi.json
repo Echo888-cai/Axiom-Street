@@ -2809,6 +2809,69 @@
         }
       }
     },
+    "/api/v1/validation/plan": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Validation Plan",
+        "description": "P3.3 整组计划：每项闸门的适用条件、样本要求、参数读取、资源估计与冻结区间。",
+        "operationId": "validation_plan_api_v1_validation_plan_get",
+        "parameters": [
+          {
+            "name": "strategy_version_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Version Id"
+            }
+          },
+          {
+            "name": "backtest_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Backtest Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Validation Plan Api V1 Validation Plan Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/validation/{run_id}": {
       "get": {
         "tags": [
