@@ -378,6 +378,7 @@ class LeanQuantEngine(QuantEngine):
                 env=self._docker_env(),
             )
             deadline = time.monotonic() + timeout
+            cli_hang_recovered = False
             try:
                 while proc.poll() is None:
                     if request.cancel_check and request.cancel_check():
@@ -386,7 +387,27 @@ class LeanQuantEngine(QuantEngine):
                     if time.monotonic() > deadline:
                         self.cancel_backtest(request.backtest_id)
                         raise EngineTimeout(f"LEAN exceeded {timeout}s")
+                    # Machine-verified gap (P1 close, Colima): when the docker
+                    # CLI runs inside the worker against the VM socket it can
+                    # stay blocked in futex_wait indefinitely after the LEAN
+                    # container itself exits (`--rm` already ran, results fully
+                    # written). Relying on proc.poll() alone then stalls until
+                    # the hard deadline and marks a successful run FAILED.
+                    # Treat persisted, parseable results as completion and
+                    # unblock the stuck CLI instead.
+                    if find_result_json(results_dir, algorithm_class=algo_class):
+                        cli_hang_recovered = True
+                        break
                     time.sleep(2)
+                if cli_hang_recovered:
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass
+                    try:
+                        proc.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        pass
                 stdout, stderr = proc.communicate()
                 returncode = proc.returncode or 0
             except (BacktestCancelled, EngineTimeout):
@@ -396,7 +417,7 @@ class LeanQuantEngine(QuantEngine):
 
         (job_dir / "docker_stdout.log").write_text(stdout or "", encoding="utf-8")
         (job_dir / "docker_stderr.log").write_text(stderr or "", encoding="utf-8")
-        if returncode != 0:
+        if returncode != 0 and not cli_hang_recovered:
             raise RuntimeError(
                 f"LEAN docker exited with {returncode}: {(stderr or stdout)[-2000:]}"
             )

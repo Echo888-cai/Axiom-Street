@@ -1,5 +1,6 @@
 .git
 .venv
+.worktrees
 **/__pycache__
 **/.pytest_cache
 **/.mypy_cache
@@ -8,5 +9,7 @@ apps/web/node_modules
 apps/web/.next
 data
 jobs
+data-e2e
+jobs-e2e
 *.log
 .DS_Store

@@ -3,6 +3,7 @@ node_modules/
 .pnpm-store/
 .worktrees/
 .venv/
+.venv311/
 venv/
 __pycache__/
 *.py[cod]
@@ -13,6 +14,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# 隔离 E2E 运行产物（任务目录；data-e2e 本身是固定数据集，需跟踪）
+jobs-e2e/
 
 # Env / secrets
 .env

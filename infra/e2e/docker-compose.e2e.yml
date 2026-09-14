@@ -1,0 +1,130 @@
+# 隔离 E2E 栈（P1 关闭验收用）：独立项目名/端口/卷与 data-e2e、jobs-e2e，
+# 不触碰运行中的 axiom-street 主栈（:3000/:8000/:5432/:6379）。
+#
+# 用法（在仓库根目录执行）：
+#   E2E_ROOT="$PWD" docker-compose -p axiom-e2e \
+#     -f infra/e2e/docker-compose.e2e.yml --env-file .env.example up -d --build
+# 然后：npx --prefix apps/web playwright test --config apps/web/playwright.e2e.config.ts
+#
+# 端口：web 3200、api 8100、postgres 5433、redis 6380（均绑定 127.0.0.1）。
+name: axiom-e2e
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - e2e-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    environment:
+      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      STREET_REDIS_URL: redis://redis:6379/0
+      STREET_CELERY_BROKER_URL: redis://redis:6379/0
+      STREET_CELERY_RESULT_BACKEND: redis://redis:6379/1
+      STREET_DATA_ROOT: /data
+      STREET_JOBS_ROOT: /jobs
+      STREET_LEAN_IMAGE: quantconnect/lean:16355
+      STREET_CORS_ORIGINS: http://localhost:3200
+      STREET_OTEL_ENABLED: "false"
+      STREET_SENTRY_DSN: ${SENTRY_DSN:-}
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      STREET_SYNC_BACKTESTS: "false"
+      STREET_SYNC_INGESTS: "false"
+      STREET_MARKET_RECONCILE_ENABLED: "false"
+      STREET_MAX_INFLIGHT_BACKTESTS: "2"
+      STREET_LEAN_POOL_SIZE: "2"
+      STREET_LEAN_POOL_WARM: "false"
+      STREET_SCAN_PARALLELISM: "2"
+      STREET_DEEPSEEK_API_KEY: ${STREET_DEEPSEEK_API_KEY:-}
+      STREET_BUILD_SHA: ${BUILD_SHA:-e2e}
+    ports:
+      - "127.0.0.1:8100:8000"
+    volumes:
+      - ${E2E_ROOT:?set E2E_ROOT}/data-e2e:/data
+      - ${E2E_ROOT:?set E2E_ROOT}/jobs-e2e:/jobs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    # 仅此 worker 跑 beat；第二个 worker 见 scripts/e2e-worker2.compose.yml（无 beat）。
+    command: celery -A services.worker.celery_app worker --beat --loglevel=INFO --concurrency=2
+    environment:
+      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      STREET_REDIS_URL: redis://redis:6379/0
+      STREET_CELERY_BROKER_URL: redis://redis:6379/0
+      STREET_CELERY_RESULT_BACKEND: redis://redis:6379/1
+      # 宿主绝对路径：worker 内 `docker run -v` 由宿主 daemon 解析。
+      STREET_DATA_ROOT: ${E2E_ROOT:?set E2E_ROOT}/data-e2e
+      STREET_JOBS_ROOT: ${E2E_ROOT:?set E2E_ROOT}/jobs-e2e
+      STREET_LEAN_IMAGE: quantconnect/lean:16355
+      STREET_OTEL_ENABLED: "false"
+      STREET_SENTRY_DSN: ${SENTRY_DSN:-}
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      STREET_LEAN_POOL_SIZE: "2"
+      STREET_LEAN_POOL_WARM: "false"
+      STREET_SCAN_PARALLELISM: "2"
+      STREET_DEEPSEEK_API_KEY: ${STREET_DEEPSEEK_API_KEY:-}
+      STREET_BUILD_SHA: ${BUILD_SHA:-e2e}
+      STREET_LEAN_TIMEOUT_SECONDS: "1800"
+      STREET_SYNC_INGESTS: "false"
+      STREET_MARKET_RECONCILE_ENABLED: "false"
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - ${E2E_ROOT:?set E2E_ROOT}/data-e2e:${E2E_ROOT:?set E2E_ROOT}/data-e2e
+      - ${E2E_ROOT:?set E2E_ROOT}/jobs-e2e:${E2E_ROOT:?set E2E_ROOT}/jobs-e2e
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+    environment:
+      API_BASE_URL: http://api:8000
+    ports:
+      - "127.0.0.1:3200:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  e2e-pgdata:

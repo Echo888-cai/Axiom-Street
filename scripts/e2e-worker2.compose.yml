@@ -1,0 +1,36 @@
+name: axiom-e2e
+
+services:
+  worker2:
+    build:
+      context: /Users/arlan/Vibe Coding/Axiom Street
+      dockerfile: infra/docker/Dockerfile.api
+    command: celery -A services.worker.celery_app worker --loglevel=INFO --concurrency=2 --hostname=worker2@%h
+    environment:
+      STREET_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      STREET_REDIS_URL: redis://redis:6379/0
+      STREET_CELERY_BROKER_URL: redis://redis:6379/0
+      STREET_CELERY_RESULT_BACKEND: redis://redis:6379/1
+      STREET_DATA_ROOT: /Users/arlan/Vibe Coding/Axiom Street/data-e2e
+      STREET_JOBS_ROOT: /Users/arlan/Vibe Coding/Axiom Street/jobs-e2e
+      STREET_LEAN_IMAGE: quantconnect/lean:16355
+      STREET_OTEL_ENABLED: "false"
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      STREET_LEAN_POOL_SIZE: "2"
+      STREET_LEAN_POOL_WARM: "false"
+      STREET_SCAN_PARALLELISM: "2"
+      STREET_DEEPSEEK_API_KEY: ${STREET_DEEPSEEK_API_KEY:-}
+      STREET_BUILD_SHA: ${BUILD_SHA:-e2e}
+      STREET_LEAN_TIMEOUT_SECONDS: "1800"
+      STREET_SYNC_INGESTS: "false"
+      STREET_MARKET_RECONCILE_ENABLED: "false"
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - "/Users/arlan/Vibe Coding/Axiom Street/data-e2e:/Users/arlan/Vibe Coding/Axiom Street/data-e2e"
+      - "/Users/arlan/Vibe Coding/Axiom Street/jobs-e2e:/Users/arlan/Vibe Coding/Axiom Street/jobs-e2e"
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ComparePanel } from "@/features/backtests/compare-panel";
+import { formatUsd } from "@/lib/utils";
 import type { Backtest, CompareEquityResponse } from "@/lib/api";
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -100,7 +101,8 @@ describe("ComparePanel", () => {
     const rows = await screen.findAllByRole("row");
     const alphaRow = rows.find((r) => within(r).queryByText("Alpha v1"));
     expect(alphaRow).toBeTruthy();
-    expect(within(alphaRow!).getByText("$103,000")).toBeInTheDocument();
+    // 货币展示跟随运行时 locale（formatUsd），不能用 en-US 字符串硬编码。
+    expect(within(alphaRow!).getByText(formatUsd(103000))).toBeInTheDocument();
     expect(within(alphaRow!).getByText("+3.00%")).toBeInTheDocument();
     expect(within(alphaRow!).getByText("+2.10%")).toBeInTheDocument();
     expect(within(alphaRow!).getByText("1.05")).toBeInTheDocument();

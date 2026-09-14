@@ -1,0 +1,62 @@
+{
+  "corporate_actions": "corporate_actions/SPY.parquet",
+  "corporate_actions_verified": true,
+  "created_at": "2026-09-01T03:56:29.467853+00:00",
+  "end": "2026-08-31 04:00:00+00:00",
+  "exchange_timezone": "America/New_York",
+  "market": "US",
+  "parquet": "market/equities/US/daily/SPY.parquet",
+  "provider_capabilities": {
+    "dividends": true,
+    "ohlcv": true,
+    "point_in_time": false,
+    "splits": true
+  },
+  "providers": {
+    "active": "auto (yfinance \u2192 stooq)",
+    "as_of": "2026-09-01T03:56:29.467851+00:00",
+    "optional_providers": {
+      "alpaca": {
+        "env": [
+          "ALPACA_API_KEY",
+          "ALPACA_API_SECRET"
+        ],
+        "note": "Also used later for Paper Trading",
+        "wired": false
+      },
+      "alpha_vantage": {
+        "env": [
+          "ALPHA_VANTAGE_API_KEY"
+        ],
+        "wired": false
+      },
+      "polygon": {
+        "env": [
+          "POLYGON_API_KEY"
+        ],
+        "wired": false
+      },
+      "tiingo": {
+        "env": [
+          "TIINGO_API_KEY"
+        ],
+        "wired": false
+      }
+    },
+    "requires_api_key": false
+  },
+  "quality_report": {
+    "end": "2026-08-31T04:00:00+00:00",
+    "has_blocking_issues": false,
+    "issues": [],
+    "row_count": 4190,
+    "start": "2010-01-04T05:00:00+00:00"
+  },
+  "resolution": "daily",
+  "rows": 4190,
+  "sha256": "1209a349aefe2687dd1217025e7d72d7fc1549742bae267b8e9b4034ecc835b6",
+  "snapshot_key": "spy-daily-20260831-1209a3",
+  "source": "yfinance",
+  "start": "2010-01-04 05:00:00+00:00",
+  "symbol": "SPY"
+}

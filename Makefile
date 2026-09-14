@@ -1,12 +1,28 @@
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 
-.PHONY: up down api web lint typecheck test test-all ingest golden migrate prune-snapshots prune-jobs clean
+.PHONY: up down api web lint typecheck test test-all ingest golden migrate prune-snapshots prune-jobs clean e2e-isolated e2e-reset drill-multiworker
 
 up:
 	docker compose up --build
 
 down:
 	docker compose down
+
+# 隔离 E2E 栈（P1 关闭验收）：独立库/端口/数据，不触碰 axiom-street 主栈。
+E2E_COMPOSE := infra/e2e/docker-compose.e2e.yml
+E2E_ARGS := -p axiom-e2e -f $(E2E_COMPOSE) --env-file .env.example
+
+e2e-isolated:
+	docker-compose $(E2E_ARGS) up -d --build
+	cd apps/web && npm run e2e:isolated
+
+e2e-reset:
+	docker-compose $(E2E_ARGS) down
+	-docker volume rm axiom-e2e_e2e-pgdata
+	rm -rf jobs-e2e/* apps/web/test-results
+
+drill-multiworker:
+	bash scripts/multi-worker-drill.sh
 
 api:
 	$(PYTHON) -m uvicorn services.api.main:app --reload --port 8000

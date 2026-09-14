@@ -157,3 +157,103 @@ def test_ensure_dotnet_shim_extracts_once_then_caches(monkeypatch, tmp_path: Pat
     second = ensure_dotnet_shim(image="lean:1", jobs_root=jobs, docker_env={})
     assert second == first
     assert len(calls) == n_calls
+
+
+def test_run_recovers_when_docker_cli_hangs_after_results_written(monkeypatch, tmp_path: Path):
+    """P1-close machine-verified gap (Colima): the docker CLI can stay blocked
+    in futex_wait indefinitely after the LEAN container itself exits (`--rm`
+    already ran, results fully written). The engine must treat persisted,
+    parseable results as completion and unblock the CLI instead of stalling
+    until the hard deadline and marking a successful run FAILED."""
+    import contextlib
+    import shutil
+    from datetime import date
+
+    from quant.engine.base import BacktestRequest
+    from quant.engine.lean import LeanQuantEngine
+
+    fixture = Path(__file__).parent / "fixtures" / "lean_spy_200dma_2018_2020.json"
+    assert fixture.is_file(), "missing result fixture"
+    algo_class = "Spy200DmaAlgorithm"
+    jobs = tmp_path / "jobs"
+
+    collected: dict[str, object] = {}
+
+    class FakeProc:
+        def __init__(self, results_dir: Path):
+            self.results_dir = results_dir
+            self.killed = False
+            self._polls = 0
+
+        def poll(self):
+            # Simulate: results appear (run finished) but the CLI never
+            # observes the container die event and stays alive.
+            self._polls += 1
+            if self._polls == 2:
+                shutil.copy(fixture, self.results_dir / f"{algo_class}.json")
+            return None
+
+        def kill(self):
+            self.killed = True
+
+        def wait(self, **_kwargs):
+            return None
+
+        def communicate(self):
+            return ("docker stdout", "docker stderr")
+
+        @property
+        def returncode(self) -> int:
+            return -9  # killed by us, never exited on its own
+
+    class FakePool:
+        def launcher(self):
+            return None
+
+        def lease(self, _backtest_id):
+            return contextlib.nullcontext()
+
+        def cancel(self, _backtest_id):
+            pass
+
+    def fake_popen(cmd, **_kwargs):
+        results_dir: Path | None = None
+        for i, part in enumerate(cmd[:-1]):
+            mount = cmd[i + 1] if part == "-v" else None
+            if mount and mount.endswith(":/Results"):
+                results_dir = Path(mount.split(":", 1)[0])
+                break
+        assert results_dir is not None, f"no /Results mount in: {cmd}"
+        proc = FakeProc(results_dir)
+        collected["proc"] = proc
+        collected["cmd"] = cmd
+        return proc
+
+    monkeypatch.setattr(
+        "quant.engine.lean.ensure_lean_data", lambda *a, **k: tmp_path / "data" / "lean"
+    )
+    monkeypatch.setattr("quant.engine.lean.load_manifest", lambda *a, **k: {"sha256": "abc123"})
+    monkeypatch.setattr("quant.engine.lean.get_pool", lambda **_k: FakePool())
+    monkeypatch.setattr("quant.engine.lean.ensure_dotnet_shim", lambda **_k: tmp_path / "shim")
+    monkeypatch.setattr("quant.engine.lean.subprocess.Popen", fake_popen)
+
+    request = BacktestRequest(
+        backtest_id="cli-hang",
+        strategy_code="from AlgorithmImports import *\n\nclass Spy200DmaAlgorithm(QCAlgorithm):\n    def Initialize(self):\n        self.SetStartDate(2018, 1, 1)\n        self.SetEndDate(2020, 12, 31)\n        self.SetCash(100000)\n",
+        strategy_class_name=algo_class,
+        start_date=date(2018, 1, 1),
+        end_date=date(2020, 12, 31),
+        benchmark="SPY",
+        initial_capital=100_000,
+        jobs_root=jobs,
+        data_root=tmp_path / "data",
+    )
+
+    result = LeanQuantEngine(data_root=tmp_path / "data", jobs_root=jobs).run_backtest(request)
+
+    proc = collected["proc"]
+    assert isinstance(proc, FakeProc)
+    assert proc.killed, "engine must unblock the hung docker CLI after results land"
+    assert result.statistics is not None
+    # The CLI was unblocked after results landed, not left to the timeout.
+    assert result.raw_path.endswith("Spy200DmaAlgorithm.json")

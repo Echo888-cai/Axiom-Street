@@ -123,14 +123,23 @@
 - 本地现有 `.venv` 是 Python 3.9，测试通过不代表 Python 3.11 运行基线已验收。未改写现有环境或重启用户服务。
 - 未执行真实 LEAN Golden、浏览器端到端、行情摄取、模型付费请求、Paper 下单或部署。真实研究链路仍须独立环境验收。
 
+**P1 关闭验收（2026-09-14 刷新）——三项环境验收证据齐备：**
+
+- **隔离 E2E 通过。** 新增 `infra/e2e/docker-compose.e2e.yml`（项目名 `axiom-e2e`：web :3200 / api :8100 / postgres :5433 / redis :6380，均 `127.0.0.1`；独立卷与 `data-e2e`/`jobs-e2e`，不触碰运行中的 axiom-street 主栈）与 `apps/web/playwright.e2e.config.ts`（`npm run e2e:isolated`）。`npx playwright test --config playwright.e2e.config.ts`：**3/3 通过（19.1s）**——① 建策略→LEAN 真机回测→tearsheet；② 短窗口（<252 交易日）回测→Bootstrap 确定性拒绝（“少于 252 个交易日”证据可见）→策略保持 `BACKTESTED`，客户端 PATCH `VALIDATED` 返回 409 `status_transition_forbidden`；③ 设置页展示隔离数据底座（行情数据已就绪、SPY、快照、分红/拆分已核验）。spec 已按当前 UI 重写（选择器全部来自 zh-CN locale 与组件源码），策略名固定、验收前重置隔离库保证确定性。
+- **多 Worker 真机演练通过。** `scripts/multi-worker-drill.sh`：第二个 worker（无 beat，`scripts/e2e-worker2.compose.yml`）上线后 `celery inspect ping` 2 节点在线；两个回测并发提交均真机 COMPLETED；同一回测重复投递两次均以终态 no-op（0.002s，不重跑引擎/不重写净值）；取消演练终态 `CANCELLED`。
+- **Python 3.11 本地基线通过。** `brew install python@3.11` + `.venv311`（Python 3.11.16）：`pytest tests/unit` **583 项通过**，Ruff/格式（217 文件）与 mypy（119 源文件）全过；默认 `.venv`（3.9）同样 583 项通过。`make test-all` 通过（前端 136 项、tsc、ESLint 零告警、生产构建）。
+- **E2E 暴露并修复的真缺口（均已落回归测试）：** ① worker 容器内 docker CLI 在 LEAN 容器退出（`--rm` 已完成、结果 JSON 已写出）后卡死 `futex_wait` 等 daemon 事件，引擎只轮询 `proc.poll()` 会拖到 30 分钟超时把成功回测判 FAILED——引擎改为“结果 JSON 可解析即判定完成并回收 CLI”（`quant/engine/lean.py` + 单测）；② 验证发起页面 specs 的 `kind` 契约漂移（后端大写 `WALK_FORWARD/BOOTSTRAP…`、前端 `MANUAL_KINDS` 小写）导致发起表单根本不可用——`validationApi.listValidationSpecs` 统一归一为小写；③ Docker 构建上下文把 `.worktrees/…/node_modules` 打进镜像、Colima 磁盘打满——`.dockerignore` 补 `.worktrees`/`data-e2e`/`jobs-e2e` 并回收 4.7GB；④ `compare-panel` 测试硬编码 en-US 货币格式，在 `LANG=zh_CN.UTF-8` 下必挂——改为与 `formatUsd` 一致。
+- 主栈（axiom-street，运行 7 天）全程未触碰；E2E/演练仅作用在 axiom-e2e 独立卷、data-e2e 与 jobs-e2e。E2E 未使用付费 Key（双源用例仍按设计跳过）。
+
 ### 3.3 优先解决的差距
 
 1. **扫描实际执行证据与家族试验代次已落地。** P1.3b 已交付：PBO/敏感性/成本从 `result.backtest_ids` 核对每个子回测的版本、快照、引擎、数据、窗口、基准、资金、标的池，非声明扰动轴变化一律拒绝，缺失子记录判 `scan_execution_missing`；Walk-Forward 每次 fold 留存 `result.execution`（引擎/数据版本、快照、范围、fold 列表），历史缺失判 `walk_forward_execution_missing` 不伪造元数据；SPA 固定 `params.family_id/data_snapshot_id/n_models` 与 `result.models` 试验集合，缺失或跨快照拒绝。P1.3c 已交付试验代次绑定（见下条）。`collect_validation_evidence` 与 Live readiness 共用同一核验，晋级与 readiness 一致。
 2. **家族试验代次已绑定。** P1.3c 已交付：DSR 记录 `trial_set_hash`（试验、Sharpe 对的规范哈希），SPA 记录 `trial_set_hash` 与 `trial_candidate_ids`；证据核验在每次晋级与 readiness 时重算当前台账，不一致判 `dsr_trial_set_changed` / `spa_trial_set_changed` 并撤销 `VALIDATED`，重算后恢复。并发写入的竞争结果同样 fail-closed：后提交的旧代次在下一次核验时被拒绝。DSR 另有 `n_trials` 计数回退（生产行必有该字段）；无任何基线的历史行仅走范围核验，重跑即获得绑定。Live 真实券商开关继续关闭。
 3. **运行版本与环境已可验证，本地 venv 仍是 Python 3.9。** P1.1 已交付：`GET /health` 新增 `build_sha`（`STREET_BUILD_SHA`/`BUILD_SHA` 注入，compose 已为 api/worker 接线）与 `database_revision`（alembic_version 实查，缺失不断言、只报未知），运行监控卡展示版本/构建/迁移三元组；Compose 发布端口保持 `127.0.0.1`。真实 Golden 已在 Colima 上恢复：沿途修了两处被证实的缺口——`seccomp=default` 在此 Docker 上非法（改用内建默认 profile，沙箱其余约束不变）与非 root 用户无法解析 `/root/.dotnet`（垫片提取同字节运行时并显式 entrypoint，镜像与证据指纹不变；storage 加 ephemeral tmpfs）。期望重冻仅轮转快照 pin（数值与容差未动，Sharpe 实测吻合）。运行中的 compose 栈未被触碰。部署镜像本就锁定 Python 3.11-slim / Node 22；本机无 Python 3.11 可执行文件，本地 `.venv`（3.9）未重建，单元回归通过不代表 3.11 本地基线已验收。
 4. **列表操作仍受单页限制，但策略页已分页。** 全库摘要已独立统计，首页最新完成回测也不再从前 50 条推算；策略集合页改为服务端搜索（名称/描述）、状态筛选、20 条分页与 10 秒自动刷新，超过 100 条可逐页访问，分页总量始终来自服务端。其他下拉类列表仍用首批结果，待 P2 任务中心统一。
-5. **恢复机制已有故障演练覆盖。** P1.4a 已交付：回测与全部七种验证执行器采用原子 `QUEUED→执行中` 认领，终态任务重投为无操作（不重跑引擎、不重写净值、不重复试验/闸门），并发重复拾取返回 `deduplicated`；取消在执行前/中终止并以终态结束（扫描取消透传 `cancelled` 错误码）；worker 启动不再无条件把全部 RUNNING 置失败，真正孤儿由 5 分钟 beat 按超时回收。前端取消入口、失败说明与重跑提示已存在。多 Worker 真机、重复投递的集成验收仍需可运行的 Docker/LEAN 环境（本机 daemon 不可用，阻塞中）。
+5. **恢复机制已有故障演练覆盖。** P1.4a 已交付：回测与全部七种验证执行器采用原子 `QUEUED→执行中` 认领，终态任务重投为无操作（不重跑引擎、不重写净值、不重复试验/闸门），并发重复拾取返回 `deduplicated`；取消在执行前/中终止并以终态结束（扫描取消透传 `cancelled` 错误码）；worker 启动不再无条件把全部 RUNNING 置失败，真正孤儿由 5 分钟 beat 按超时回收。前端取消入口、失败说明与重跑提示已存在。多 Worker 真机、重复投递的真机集成已补齐（见 §3.2 P1 关闭验收：双 worker 并发回测真机完成、重复投递 0.002s 终态 no-op、取消终态 CANCELLED）。
 6. **变量存在不等于已接通。** Alpaca、Alpha Vantage、Tiingo 在 provider 状态中均为 `wired=False`；配置 Key 不能补出适配器。
+7. **P1 关闭已完成，机器验证补齐了四个真缺口。** 隔离 E2E、多 Worker 真机集成与 Python 3.11 本地基线三项环境验收证据齐备（详见 §3.2 与 §11 表）。E2E 暴露并修复：① docker CLI 在 LEAN 容器退出后挂起（`futex_wait` 等 daemon 事件）→ 引擎按结果 JSON 判定完成并回收进程，不再拖到 30 分钟超时误判失败；② 验证发起 specs `kind` 前后端大小写契约漂移导致发起表单不可用 → API 客户端归一；③ `.dockerignore` 缺 `.worktrees` 使构建上下文过大撑爆 Colima 磁盘；④ `compare-panel` 测试硬编码 en-US 货币格式在 zh-CN locale 下必挂。未覆盖：真实券商与 Alpaca Paper 仍在 P5/P6；E2E 未使用付费 Key，双源 Golden 仍按设计跳过。
 
 ## 4. 后续六阶段路线图
 
@@ -490,7 +499,7 @@ NOTICE                        第三方署名
 
 ## 10. 启动和交接
 
-本地基线建议 Python 3.11、Node 22、可工作的 Docker/Colima；依赖范围以清单为准。Compose 发布端口已限制为本机，P1 继续负责运行实例与环境验收。
+本地基线建议 Python 3.11、Node 22、可工作的 Docker/Colima；依赖范围以清单为准。`.venv311`（Python 3.11.16，`brew install python@3.11` + `python3.11 -m venv .venv311`）已通过 583 项单测、Ruff 与 mypy 验收；默认本地 `.venv` 仍是 3.9。Compose 发布端口已限制为本机。
 
 1. 仅在不存在时复制 `.env.example` 为 `.env`、`apps/web/.env.example` 为 `apps/web/.env.local`，不覆盖既有配置。
 2. 本地生成数据库密码，对齐 `POSTGRES_*` 和 `STREET_DATABASE_URL`；不粘贴真实值到文档。
@@ -509,6 +518,8 @@ NOTICE                        第三方署名
 | 常规检查 | `make test-all` | Python/Web 开发依赖就绪 |
 | Golden | `make golden` | Docker、固定 LEAN、合法数据；双源另需 Key |
 | 浏览器链路 | `npm --prefix apps/web run e2e` | 按 E2E 配置准备测试环境，不指向正式研究库 |
+| 隔离 E2E | `make e2e-isolated`（up + `npm run e2e:isolated`） | 独立库/端口/卷（infra/e2e/docker-compose.e2e.yml，web :3200/api :8100），用 `data-e2e`/`jobs-e2e`，不碰主栈；验收前 `make e2e-reset` 重置 |
+| 多 Worker 演练 | `make drill-multiworker` | 隔离栈已运行；需要两个 worker（第二个无 beat） |
 | 可重建缓存 | `make clean` | 移除构建/测试缓存，运行中预览期间不调用 |
 
 新 Python 环境：`python3.11 -m venv .venv`，再 `.venv/bin/python -m pip install -e '.[dev]'`。原生环境变量由可信启动环境注入，不打印密钥。`DOCKER_HOST` 示例针对 Colima，其他环境使用正确 socket。
@@ -522,15 +533,15 @@ Web 默认 3000，API 默认 8000；健康 `/health`、API 契约 `/docs` 均为
 | 工作包 | 状态 | 实际交付 / 下一步验收 |
 |---|---|---|
 | 文档与入口 | 完成 | 历史说明归并、README、工程职责与 Key 边界 |
-| P1.1 运行基线 | 已交付代码项，未关闭 | 构建/迁移身份（health + 监控卡 + compose 接线）、沙箱两处真实缺口修复、Colima 真实 Golden 通过；待隔离 E2E、多 Worker 真机集成与 Python 3.11 本地基线（本机无 3.11，部署镜像已锁定 3.11） |
+| P1.1 运行基线 | 已交付 | 构建/迁移身份（health + 监控卡 + compose 接线）、沙箱两处真实缺口修复、Colima 真实 Golden 通过；心跳任务注册修复（`worker.publish_health` 此前只进 beat schedule 未注册，worker 永久“失联”，已补注册 + 回归测试）；Python 3.11 本地基线已验证（`.venv311` 583 项单测 + Ruff + mypy 全过） |
 | P1.2a 可信概览 | 已交付 | 全库总数与分布、最近完成回测、空/错分离；新建/删除/发起验证使摘要失效，5 秒轮询覆盖 Worker 终态，重新聚焦刷新 |
 | P1.2b 完整列表 | 已交付 | `GET /api/v1/strategies` 新增 `q`（名称/描述）与 `status` 服务端筛选，无效状态 422；策略集合页 20 条分页、服务端搜索（300ms 防抖）、状态筛选、翻页器与 10 秒自动刷新；`make test-all` 通过（后端 568 / 前端 131，Ruff/mypy/tsc/ESLint/构建全过，保留既有 LSP 告警为 P1.4b） |
 | P1.3a 最新记录与参考范围 | 已交付 | 共享证据选择、缺失/异范围拒绝、旧失败遮盖修复、旧版本回调隔离、扫描继承输入；已有研究/执行引用的策略不能删除 |
 | P1.3b 实际执行证据 | 已交付 | PBO/敏感性/成本核对全部子回测执行范围（只允许声明扰动轴变化），Walk-Forward 留存 fold 执行证据并拒收历史缺失记录，SPA 固定参试集合；`validation_evidence.py`、`validation.py`（WF execution）、9 个测试文件；`make test-all` 通过（后端 559 / 前端 125，Ruff/mypy/tsc/ESLint/构建全过，保留既有 LSP 告警为 P1.4b） |
 | P1.3c 试验代次 | 已交付 | DSR/SPA 记录试验集合签名，重算台账不一致即撤销证据并在重算后恢复；新增 `GET /api/v1/validation/evidence`（`ValidationEvidenceOut` + 生成类型与收窄断言），验证台新增证据状态卡（八项通过/过期、原因中文解释、参考回测链接）；`make test-all` 通过（后端 567 / 前端 128，Ruff/mypy/tsc/ESLint/构建全过，保留既有 LSP 告警为 P1.4b） |
-| P1.4a 恢复 | 已交付 | 原子认领与终态守卫（回测 + 七种验证执行器）、取消演练（单测引擎可查取消调用）、扫描取消透传、启动保护（不再全量误杀 RUNNING）；`make test-all` 通过（后端 575 / 前端 131，Ruff/mypy/tsc/ESLint/构建全过，保留既有 LSP 告警为 P1.4b）；多 Worker 真机集成仍待 Docker 环境 |
+| P1.4a 恢复 | 已交付 | 原子认领与终态守卫（回测 + 七种验证执行器）、取消演练（单测引擎可查取消调用）、扫描取消透传、启动保护（不再全量误杀 RUNNING）；`make test-all` 通过（后端 575 / 前端 131，Ruff/mypy/tsc/ESLint/构建全过，保留既有 LSP 告警为 P1.4b） |
 | P1.4b 编辑器 | 已交付 | 语言服务改为单例归属（替换/挂载/卸载统一释放，无泄漏、无重复释放、无 lint 屏蔽），`python-lsp.test.ts` 覆盖替换释放、卸载幂等、释放后重建；`make test-all` 通过（后端 575 / 前端 134，Ruff/mypy/tsc/ESLint 零告警/构建全过） |
-| P1 关闭 | 未完成 | 隔离 E2E（独立项目/端口/库，不碰现行研究库）、多 Worker 真机集成、Python 3.11 本地基线三项环境验收完成后关闭，再进入 P2 |
+| P1 关闭 | **已交付** | 三项环境验收齐备：① 隔离 E2E（`infra/e2e/docker-compose.e2e.yml` + `apps/web/playwright.e2e.config.ts`，web :3200/api :8100/独立库/data-e2e+jobs-e2e，不碰主栈）`npx playwright test --config playwright.e2e.config.ts` 3/3 通过：建策略→LEAN 真机回测→tearsheet；<252 日 Bootstrap 确定性失败证据→VALIDATED 不可达（409 `status_transition_forbidden`）；设置页隔离数据底座就绪；② 多 Worker 真机演练（`scripts/multi-worker-drill.sh`）双 worker 在线、并发回测真机完成、重复投递终态 no-op 去重、取消终态 CANCELLED；③ Python 3.11 本地基线（`.venv311`）583 单测 + Ruff + mypy 全过。期间修复 E2E 暴露的真缺口：docker CLI 容器退出后挂起（引擎按结果 JSON 判定完成+回收进程，含回归测试）、验证发起 specs kind 大小写契约漂移（表单本不可用）、`.dockerignore` 补 `.worktrees`（构建上下文撑爆磁盘）、`compare-panel` locale 硬编码测试。`make test-all` 全过（后端 583 / 前端 136）。**下一步：P2.1 策略工作区（版本化规则 schema、草稿/正式版本分离、覆盖冲突检测）** |
 
 **第一包的具体落点与验收（P1.3b/P1.3c 已按此完成，故障演练见上表）：**
 

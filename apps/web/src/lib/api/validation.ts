@@ -9,8 +9,16 @@ import type {
 } from "./types";
 
 export const validationApi = {
-  listValidationSpecs: () =>
-    request<ValidationSpec[]>("/api/v1/validation/specs"),
+  // 后端 specs 返回大写 kind（WALK_FORWARD/BOOTSTRAP…），前端域类型用小写
+  // （ValidationKind）。在此归一，否则 MANUAL_KINDS 过滤会把全部 spec 滤掉，
+  // 验证发起表单不渲染（E2E 隔离栈上实证的契约漂移）。
+  listValidationSpecs: async () => {
+    const specs = await request<ValidationSpec[]>("/api/v1/validation/specs");
+    return specs.map((spec) => ({
+      ...spec,
+      kind: spec.kind.toLowerCase(),
+    }));
+  },
   getTrialStats: (id: string) =>
     request<TrialStats>(`/api/v1/strategies/${id}/trial-stats`),
   listValidation: (params?: { strategy_id?: string; kind?: string }) => {

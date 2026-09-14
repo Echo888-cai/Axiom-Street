@@ -1,116 +1,133 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 
-test.describe("关键路径 E2E", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-  });
+// 隔离 E2E（P1 关闭验收）：web :3200（dockerized；:3100 被遗留 next-server 占用）
+// / api :8100，独立项目/端口/库，使用 data-e2e/jobs-e2e，不触碰现行研究库（axiom-street :3000/:8000）。
+// 运行方式：npx playwright test --config=pw.e2e.tmp.config.ts
 
+// 固定策略名：验收前重置隔离库（确定性），q 搜索取最新一条可容忍历史残留。
+const STRATEGY_NAME = "E2E 趋势策略";
+const API_BASE = "http://localhost:8100";
+// 短窗口回测（<252 交易日），Bootstrap 必然失败，构成确定性闸门拒绝。
+const SHORT_START = "2019-07-01";
+const SHORT_END = "2019-12-31";
+
+async function selectOptionByText(
+  page: import("@playwright/test").Page,
+  id: string,
+  text: string,
+): Promise<void> {
+  // 选项文案可能是「名称 · 状态」「日期 → 日期 · Sharpe」或原始枚举，
+  // 因此按文本定位 option 后取其 value 再 select，避免硬编码完整 label。
+  const option = page.locator(`#${id} option`).filter({ hasText: text }).first();
+  await option.waitFor({ state: "attached", timeout: 10000 });
+  const value = await option.getAttribute("value");
+  expect(value, `#${id} 应有包含 ${text} 的 option`).toBeTruthy();
+  await page.selectOption(`#${id}`, value as string);
+}
+
+async function strategyId(request: APIRequestContext): Promise<string> {
+  // request fixture 的 baseURL 是 web(:3200)，API 断言必须显式指向隔离 API。
+  const res = await request.get(
+    `${API_BASE}/api/v1/strategies?q=${encodeURIComponent(STRATEGY_NAME)}`,
+  );
+  expect(res.ok()).toBeTruthy();
+  const body = (await res.json()) as { items: { id: string }[] };
+  // 取最新一条（列表按更新时间倒序）；验收前已重置隔离库，正常唯一。
+  const hit = body.items[0];
+  expect(hit, `应在隔离库中找到「${STRATEGY_NAME}」`).toBeDefined();
+  return hit.id;
+}
+
+test.describe("关键路径 E2E（隔离栈）", () => {
   test("① 建策略 → 跑回测 → 看 tearsheet", async ({ page }) => {
     // 进入策略实验室
-    await page.click('text="策略"');
-    await expect(page).toHaveURL(/.*strategies/);
+    await page.goto("/strategies");
+    await expect(page.getByRole("link", { name: "策略实验室" })).toBeVisible();
 
-    // 新建策略
-    await page.click('text="新建策略"');
-    await page.fill('input[name="name"]', "E2E Test Strategy");
-    await page.fill('textarea[name="description"]', "E2E test");
-    await page.click('button:has-text("创建")');
+    // 新建研究（趋势模板，默认 SPY 200DMA）
+    await page.getByRole("button", { name: /新建研究/ }).click();
+    await page.locator("#research-name").fill(STRATEGY_NAME);
+    await page.getByRole("button", { name: /创建并开始研究/ }).click();
+    await expect(page).toHaveURL(/\/strategies\/[0-9a-f-]{8,}/);
 
-    // 编辑策略代码
-    await page.waitForSelector(".monaco-editor");
-    // 在 Monaco 编辑器中输入简单的 SPY 200DMA 策略
-    const editor = page.locator(".monaco-editor");
-    await editor.click();
-    await page.keyboard.type("class E2EStrategy:\n    def Initialize(self):\n        self.sma = self.SMA('SPY', 200)\n");
-    await page.keyboard.press("Control+s");
+    // 引导模式默认日期 2018-01-01 → 2020-12-31，直接运行实验
+    await expect(
+      page.getByRole("button", { name: /运行实验/ }),
+    ).toBeEnabled({ timeout: 15000 });
+    await page.getByRole("button", { name: /运行实验/ }).click();
 
-    // 提交版本
-    await page.click('button:has-text("提交版本")');
-    await page.fill('textarea[name="commit_message"]', "Initial version");
-    await page.click('button:has-text("确认")');
+    // 等待回测完成（LEAN 真机执行，含首次环境准备）
+    await expect(page.getByText("回测完成")).toBeVisible({ timeout: 300000 });
 
-    // 运行回测
-    await page.click('text="回测"');
-    await page.click('button:has-text("新建回测")');
-    await page.selectOption('select[name="strategy_version_id"]', { label: "E2E Test Strategy v1" });
-    await page.fill('input[name="start_date"]', "2018-01-01");
-    await page.fill('input[name="end_date"]', "2020-12-31");
-    await page.click('button:has-text("运行")');
-
-    // 等待回测完成
-    await expect(page.locator('text="已完成"')).toBeVisible({ timeout: 120000 });
-
-    // 查看 tearsheet
-    await page.click('text="查看详情"');
-    await expect(page).toHaveURL(/.*backtests\/.*/);
-
-    // 验证 tearsheet 关键元素
-    await expect(page.locator("text=净值曲线")).toBeVisible();
-    await expect(page.locator("text=回撤")).toBeVisible();
-    await expect(page.locator("text=月度收益")).toBeVisible();
-    await expect(page.locator("text=总收益")).toBeVisible();
-    await expect(page.locator("text=夏普比率")).toBeVisible();
-    await expect(page.locator("text=最大回撤")).toBeVisible();
+    // 打开 tearsheet（/backtests/[id]）
+    await page.getByRole("link", { name: /打开 tearsheet/ }).click();
+    await expect(page).toHaveURL(/\/backtests\/[0-9a-f-]{8,}/);
+    await expect(page.getByText("权益曲线")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "回撤" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "诚实指标" }),
+    ).toBeVisible();
+    await expect(page.getByText("原始夏普", { exact: true })).toBeVisible();
+    await expect(page.getByText("年化 CAGR")).toBeVisible();
   });
 
-  test("② 发起验证 → 闸门失败 → VALIDATED 不可达", async ({ page }) => {
-    // 前置：已有完成回测的策略
-    await page.goto("/strategies");
-    await page.click('text="E2E Test Strategy"');
-    await page.click('text="版本历史"');
-    await page.click('text="v1"');
+  test("② 验证闸门：样本不足 → 失败证据可见 → VALIDATED 不可达", async ({
+    page,
+    request,
+  }) => {
+    // 前置：复用 ① 的策略，跑一个 <252 交易日的短窗口回测（2019-07-01 → 2019-12-31）。
+    // 直接经隔离 API 取 ID 进详情页，避免依赖列表渲染（列表本身由 P1.2b 单测覆盖）。
+    const id = await strategyId(request);
+    await page.goto(`/strategies/${id}`);
+    await expect(page).toHaveURL(new RegExp(`/strategies/${id}`));
 
-    // 发起 PBO 验证（使用过拟合参数）
+    const dateInputs = page.locator('input[type="date"]');
+    await expect(dateInputs.first()).toBeVisible({ timeout: 15000 });
+    await dateInputs.first().fill(SHORT_START);
+    await dateInputs.nth(1).fill(SHORT_END);
+    await page.getByRole("button", { name: /运行实验/ }).click();
+    await expect(page.getByText("回测完成")).toBeVisible({ timeout: 300000 });
+
+    // 发起 Bootstrap 验证（该回测不足 252 个交易日，必然“失败”，确定性闸门拒绝）
     await page.goto("/validation");
-    await page.click('button:has-text("发起验证")');
-    await page.selectOption('select[name="kind"]', "pbo");
-    await page.fill('textarea[name="values"]', "[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]");
-    await page.click('button:has-text("发起")');
+    await expect(
+      page.getByRole("heading", { name: "稳健性验证" }),
+    ).toBeVisible();
+    await selectOptionByText(page, "vlaunch-strategy", STRATEGY_NAME);
+    await selectOptionByText(page, "vlaunch-backtest", SHORT_START);
+    await selectOptionByText(page, "vlaunch-kind", "BOOTSTRAP");
+    await page.getByRole("button", { name: /发起验证/ }).click();
 
-    // 等待验证完成
-    await expect(page.locator('text="PBO"')).toBeVisible({ timeout: 120000 });
+    // 失败证据：错误原因“少于 252 个交易日”在验证台可见
+    await expect(page.getByText(/少于 252 个交易日/)).toBeVisible({
+      timeout: 120000,
+    });
 
-    // 验证 PBO > 0.5 (过拟合)
-    const pboRow = page.locator('tr:has-text("PBO")').first();
-    await expect(pboRow.locator('text=/PBO.*>.*0.5/')).toBeVisible();
+    // 结论：策略仍是 BACKTESTED，客户端不能手工置为 VALIDATED（409）
+    const list = await request.get(`${API_BASE}/api/v1/strategies/${id}`);
+    const strategy = (await list.json()) as { status: string };
+    expect(strategy.status).toBe("BACKTESTED");
 
-    // 尝试手动标记为 VALIDATED 应该失败
-    await page.goto("/strategies");
-    await page.click('text="E2E Test Strategy"');
-    // 尝试修改状态为 VALIDATED
-    await page.click('button:has-text("编辑")');
-    await page.selectOption('select[name="status"]', "VALIDATED");
-    await page.click('button:has-text("保存")');
-
-    // 应该返回 409 错误
-    await expect(page.locator("text=409")).toBeVisible();
-    await expect(page.locator("text=客户端不能把策略标成已验证")).toBeVisible();
+    const forbid = await request.patch(`${API_BASE}/api/v1/strategies/${id}`, {
+      data: { status: "VALIDATED" },
+    });
+    expect(forbid.status()).toBe(409);
+    const payload = (await forbid.json()) as { detail?: { code?: string } };
+    expect(payload.detail?.code).toBe("status_transition_forbidden");
   });
 
-  test("③ 摄取数据 → 质量报告可见", async ({ page }) => {
+  test("③ 设置页：隔离数据底座已就绪并可读", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page.locator("text=数据状态")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "设置" })).toBeVisible();
 
-    // 发起增量摄取
-    await page.click('button:has-text("拉取行情")');
-    await page.fill('input[name="symbols"]', "SPY,QQQ");
-    await page.selectOption('select[name="mode"]', "incremental");
-    await page.click('button:has-text("开始")');
+    // 行情数据卡片：就绪 + SPY（来自 data-e2e 快照）
+    await expect(page.getByText("行情数据")).toBeVisible();
+    await expect(page.getByText("已就绪")).toBeVisible();
+    await expect(page.getByText("SPY", { exact: true })).toBeVisible();
 
-    // 等待摄取完成
-    await expect(page.locator('text="已完成"')).toBeVisible({ timeout: 120000 });
-
-    // 查看质量报告
-    await page.click('text="质量报告"');
-    await expect(page.locator("text=质量报告")).toBeVisible();
-
-    // 验证关键指标
-    await expect(page.locator("text=数据行数")).toBeVisible();
-    await expect(page.locator("text=覆盖日期")).toBeVisible();
-    await expect(page.locator("text=分红/拆分已验证")).toBeVisible();
-
-    // 验证双源对账可见
-    await page.click('text="双源对账"');
-    await expect(page.locator("text=可疑 Bar")).toBeVisible();
+    // 展开“数据版本与更新配置”：快照与分红/拆分核验来自隔离数据底座
+    await page.getByText("数据版本与更新配置").click();
+    await expect(page.getByText("快照", { exact: true })).toBeVisible();
+    await expect(page.getByText("已核验")).toBeVisible();
   });
 });
