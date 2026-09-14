@@ -215,6 +215,10 @@ export const common = {
         operationsSandboxReady: "只读根文件系统 · 非 root · seccomp default",
         operationsSandboxUnavailable: "沙箱策略未就绪",
         operationsMetricsHint: "Prometheus 指标：/metrics · 每 30 秒自动刷新",
+        operationsBuild: "构建",
+        operationsBuildUnknown: "未标记",
+        operationsRevision: "数据迁移",
+        operationsRevisionUnknown: "未知",
         operationsStatus: { ok: "运行正常", degraded: "运行降级", down: "服务异常" },
     },
 

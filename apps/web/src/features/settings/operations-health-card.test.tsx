@@ -65,4 +65,24 @@ describe("OperationsHealthCard", () => {
     expect(await screen.findByText("运行监控暂不可用")).toBeInTheDocument();
     expect(screen.getByText("连接失败")).toBeInTheDocument();
   });
+
+  it("shows build and migration identity for version matching", async () => {
+    mocks.health.mockResolvedValue({
+      ...healthy,
+      build_sha: "abc123",
+      database_revision: "0012_y",
+    });
+    renderCard();
+
+    expect(await screen.findByText(/构建 abc123/)).toBeInTheDocument();
+    expect(screen.getByText(/数据迁移 0012_y/)).toBeInTheDocument();
+  });
+
+  it("marks untagged builds and unknown revisions explicitly", async () => {
+    mocks.health.mockResolvedValue({ ...healthy, build_sha: null, database_revision: null });
+    renderCard();
+
+    expect(await screen.findByText(/构建 未标记/)).toBeInTheDocument();
+    expect(screen.getByText(/数据迁移 未知/)).toBeInTheDocument();
+  });
 });

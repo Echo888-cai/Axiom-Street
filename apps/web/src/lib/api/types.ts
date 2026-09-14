@@ -87,6 +87,8 @@ export type HealthStatus = {
   status: "ok" | "degraded" | "down" | string;
   service: string;
   version: string;
+  build_sha?: string | null;
+  database_revision?: string | null;
   checks: {
     postgres?: HealthCheck;
     redis?: HealthCheck;

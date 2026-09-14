@@ -1924,6 +1924,10 @@ export interface components {
             service: string;
             /** Version */
             version: string;
+            /** Build Sha */
+            build_sha?: string | null;
+            /** Database Revision */
+            database_revision?: string | null;
             /** Checks */
             checks?: {
                 [key: string]: unknown;
@@ -3011,6 +3015,8 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                q?: string | null;
+                status?: components["schemas"]["StrategyStatus"] | null;
             };
             header?: never;
             path?: never;

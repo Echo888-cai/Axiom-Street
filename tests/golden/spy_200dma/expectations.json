@@ -10,7 +10,7 @@
   "dd_tol": 0.002,
   "sharpe_tol": 0.02,
   "engine_version": "quantconnect/lean:16355",
-  "data_snapshot_sha256": "1209a349aefe2687dd1217025e7d72d7fc1549742bae267b8e9b4034ecc835b6",
-  "data_snapshot_key": "spy-daily-20260831-1209a3",
-  "notes": "Re-frozen 2026-09-07 on the 20260831 snapshot: the 0901 routine data refresh replaced the 20260827 snapshot (provider retro-adjusted 2018-2020 history: 24->28 round-trips, net +3.98%->+0.09%, same 22.1% max DD). Frozen from Colima + quantconnect/lean:16355. Axiom-computed Sharpe at Rf=0; trade_count is ClosedTrades round-trips. Signal at close, fill next bar, 5 bps slippage."
+  "data_snapshot_sha256": "034e72fff6d3f0eda62bc7b3de13a91d78d82441630d7957ffedd5b2dc987aef",
+  "data_snapshot_key": "spy-daily-20260904-034e72",
+  "notes": "Re-frozen 2026-09-14 on the 20260904 snapshot: the 0913 routine data refresh replaced the 20260831 snapshot. Metrics, tolerances and engine pin untouched; only the snapshot pin rotated. Real Colima + quantconnect/lean:16355 run (P1.1 sandbox fix: implicit seccomp default, non-root dotnet shim, storage tmpfs). Axiom-computed Sharpe at Rf=0; trade_count is ClosedTrades round-trips. Signal at close, fill next bar, 5 bps slippage."
 }

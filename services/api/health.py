@@ -58,6 +58,10 @@ def security_status() -> dict[str, Any]:
     """Expose the actual shared LEAN sandbox posture without secrets."""
     args = docker_security_args()
     user = args[args.index("--user") + 1]
+    explicit_seccomp = next(
+        (item.split("=", 1)[1] for item in args if item.startswith("seccomp=")),
+        "default",
+    )
     return {
         "ok": (
             args[args.index("--network") + 1] == "none"
@@ -65,7 +69,7 @@ def security_status() -> dict[str, Any]:
             and user.split(":", 1)[0] != "0"
             and args[args.index("--cap-drop") + 1] == "ALL"
             and "no-new-privileges=true" in args
-            and "seccomp=default" in args
+            and explicit_seccomp == "default"
             and "--tmpfs" in args
         ),
         "network": args[args.index("--network") + 1],
@@ -73,7 +77,7 @@ def security_status() -> dict[str, Any]:
         "non_root": user.split(":", 1)[0] != "0",
         "capabilities_dropped": args[args.index("--cap-drop") + 1],
         "no_new_privileges": "no-new-privileges=true" in args,
-        "seccomp": "default" if "seccomp=default" in args else "unknown",
+        "seccomp": explicit_seccomp,
         "tmpfs": "/tmp" if "--tmpfs" in args else None,
         "container_user": user,
     }
@@ -86,6 +90,19 @@ def _postgres() -> dict[str, Any]:
         return {"ok": True}
     except Exception as exc:  # noqa: BLE001 - health must never raise
         return {"ok": False, "error": str(exc)}
+
+
+def _database_revision() -> dict[str, Any]:
+    """Alembic head actually applied to this database. Never raises: unknown
+    means the instance cannot prove its schema matches the code."""
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text("SELECT version_num FROM alembic_version")).first()
+    except Exception:  # noqa: BLE001 - health must never raise
+        return {"revision": None, "note": "迁移版本未知（未建 alembic_version 表或不可读）。"}
+    if row is None or not row[0]:
+        return {"revision": None, "note": "迁移版本表为空。"}
+    return {"revision": str(row[0])}
 
 
 def _redis() -> dict[str, Any]:
@@ -155,5 +172,10 @@ def collect_health() -> dict[str, Any]:
         "status": overall,
         "service": "api",
         "version": settings.app_version,
+        # P1.1: build identity the instance was deployed from (empty in dev
+        # checkouts) plus the migration revision actually applied to this
+        # database. Informational only — never flips the status above.
+        "build_sha": settings.build_sha or None,
+        "database_revision": _database_revision().get("revision"),
         "checks": checks,
     }

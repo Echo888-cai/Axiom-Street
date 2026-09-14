@@ -601,6 +601,8 @@ class HealthOut(BaseModel):
     status: str
     service: str
     version: str
+    build_sha: Optional[str] = None
+    database_revision: Optional[str] = None
     checks: Dict[str, Any] = Field(default_factory=dict)
 
 

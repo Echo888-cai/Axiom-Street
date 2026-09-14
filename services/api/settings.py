@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     app_name: str = "Axiom Street"
     app_version: str = "0.1.0"
+    # Build identity baked at image/deploy time (compose/dockerfile). Empty in
+    # dev checkouts; health reports it so a running instance can be matched to
+    # its source without shelling out to git at runtime.
+    build_sha: str = ""
     risk_free_rate: float = 0.0
     lean_timeout_seconds: int = 1800
     sync_backtests: bool = False

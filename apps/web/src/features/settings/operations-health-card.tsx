@@ -89,6 +89,13 @@ export function OperationsHealthCard() {
         />
       </div>
       {worker?.note ? <p className="mt-4 text-xs text-as-muted">{worker.note}</p> : null}
+      <p className="mt-3 text-[11px] text-as-muted">
+        {t("common.settings.operationsBuild")} {data.build_sha || t("common.settings.operationsBuildUnknown")}
+        {" · "}
+        {t("common.settings.operationsRevision")} {data.database_revision || t("common.settings.operationsRevisionUnknown")}
+        {" · v"}
+        {data.version}
+      </p>
       <p className="mt-3 flex items-center gap-1.5 text-[11px] text-as-muted">
         <Activity className="h-3.5 w-3.5" />
         {t("common.settings.operationsMetricsHint")}

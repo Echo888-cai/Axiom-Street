@@ -45,5 +45,8 @@ def test_docker_security_args_are_explicit_and_non_root():
     assert "--cap-drop" in args and args[args.index("--cap-drop") + 1] == "ALL"
     assert "--security-opt" in args
     assert "no-new-privileges=true" in args
-    assert "seccomp=default" in args
+    # No explicit seccomp profile: Docker applies its built-in default, while
+    # seccomp=<name> would be opened as a profile file and fails on daemons
+    # without it (exit 125, proven on Colima/moby).
+    assert not [item for item in args if item.startswith("seccomp=")]
     assert "--tmpfs" in args

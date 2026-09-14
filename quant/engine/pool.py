@@ -160,8 +160,19 @@ class LeanSlotPool:
             raise RuntimeError(pull.stderr.strip() or f"docker pull failed for {self.image}")
 
     def _start_warm(self) -> None:
+        from quant.security.sandbox import (
+            DOTNET_MOUNT_POINT,
+            ensure_dotnet_shim,
+            storage_tmpfs_args,
+        )
+
         self.jobs_root.mkdir(parents=True, exist_ok=True)
         self.data_root.mkdir(parents=True, exist_ok=True)
+        shim_dir = ensure_dotnet_shim(
+            image=self.image, jobs_root=self.jobs_root, docker_env=self._env
+        )
+        launcher = self._launcher or {}
+        workdir = str(launcher.get("workdir") or "/Lean/Launcher/bin/Debug")
         started: list[str] = []
         for index in range(self.size):
             name = f"axiom-lean-slot-{index}"
@@ -177,6 +188,9 @@ class LeanSlotPool:
                 *docker_security_args(),
                 "--entrypoint",
                 "sleep",
+                *storage_tmpfs_args(workdir),
+                "-v",
+                f"{shim_dir.resolve()}:{DOTNET_MOUNT_POINT}:ro",
                 "-v",
                 f"{self.jobs_root.resolve()}:{self.jobs_root.resolve()}",
                 "-v",

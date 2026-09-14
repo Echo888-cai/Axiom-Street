@@ -215,6 +215,10 @@ export const common = {
         operationsSandboxReady: "read-only root · non-root · seccomp default",
         operationsSandboxUnavailable: "Sandbox policy is not ready",
         operationsMetricsHint: "Prometheus metrics: /metrics · refreshes every 30 seconds",
+        operationsBuild: "Build",
+        operationsBuildUnknown: "untagged",
+        operationsRevision: "DB migration",
+        operationsRevisionUnknown: "unknown",
         operationsStatus: { ok: "Healthy", degraded: "Degraded", down: "Service down" },
     },
 

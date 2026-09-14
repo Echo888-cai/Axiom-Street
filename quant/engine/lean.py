@@ -16,7 +16,15 @@ from quant.engine.errors import BacktestCancelled, EngineTimeout
 from quant.engine.pool import build_lean_view, get_pool
 from quant.engine.result_parser import find_result_json, parse_lean_result
 from quant.risk.gate import compose_strategy_code, runtime_files
-from quant.security.sandbox import docker_security_args, validate_strategy_source
+from quant.security.sandbox import (
+    DOTNET_ENTRYPOINT,
+    DOTNET_MOUNT_POINT,
+    default_container_user,
+    docker_security_args,
+    ensure_dotnet_shim,
+    storage_tmpfs_args,
+    validate_strategy_source,
+)
 
 LEAN_CONFIG_TEMPLATE = {
     "environment": "backtesting",
@@ -77,8 +85,27 @@ def build_cold_lean_command(
     lean_data: Path,
     results_dir: Path,
     map_overlay: Path | None = None,
+    dotnet_entrypoint: str = DOTNET_ENTRYPOINT,
+    launcher_dll: str = "QuantConnect.Lean.Launcher.dll",
+    launcher_workdir: str | None = None,
+    shim_dir: Path | None = None,
 ) -> list[str]:
-    """Build the isolated cold-start command used by the LEAN engine."""
+    """Build the isolated cold-start command used by the LEAN engine.
+
+    The pinned image keeps dotnet under root-only ``/root/.dotnet``, so the
+    non-root sandbox cannot resolve it from PATH. Callers mount the extracted
+    runtime (see :func:`ensure_dotnet_shim`) and invoke it explicitly; the
+    launcher assembly itself is unchanged.
+    """
+    volume_args = docker_volume_args(
+        config_path=config_path,
+        algo_dir=algo_dir,
+        lean_data=lean_data,
+        results_dir=results_dir,
+        map_overlay=map_overlay,
+    )
+    if shim_dir is not None:
+        volume_args = [*volume_args, "-v", f"{Path(shim_dir).resolve()}:{DOTNET_MOUNT_POINT}:ro"]
     return [
         "docker",
         "run",
@@ -86,20 +113,49 @@ def build_cold_lean_command(
         "--name",
         container_name,
         *docker_security_args(),
-        *docker_volume_args(
-            config_path=config_path,
-            algo_dir=algo_dir,
-            lean_data=lean_data,
-            results_dir=results_dir,
-            map_overlay=map_overlay,
-        ),
+        "--entrypoint",
+        dotnet_entrypoint,
+        *storage_tmpfs_args(launcher_workdir),
+        *volume_args,
         image,
+        launcher_dll,
         "--data-folder",
         "/Data",
         "--results-destination-folder",
         "/Results",
         "--config",
         "/Lean/Launcher/config.json",
+    ]
+
+
+def build_lean_exec_command(
+    *,
+    user: str,
+    workdir: str,
+    slot: str,
+    dotnet_entrypoint: str = DOTNET_ENTRYPOINT,
+    launcher_dll: str = "QuantConnect.Lean.Launcher.dll",
+    view: Path,
+    results_dir: Path,
+    config_path: Path,
+) -> list[str]:
+    """Warm-slot ``docker exec``: same explicit runtime, same non-root user."""
+    return [
+        "docker",
+        "exec",
+        "--user",
+        user,
+        "-w",
+        workdir,
+        slot,
+        dotnet_entrypoint,
+        launcher_dll,
+        "--data-folder",
+        str(view.resolve()),
+        "--results-destination-folder",
+        str(results_dir.resolve()),
+        "--config",
+        str(config_path.resolve()),
     ]
 
 
@@ -263,6 +319,18 @@ class LeanQuantEngine(QuantEngine):
             docker_env=self._docker_env(),
             warm=self._pool_warm,
         )
+        shim_dir = ensure_dotnet_shim(
+            image=self.lean_image,
+            jobs_root=self.jobs_root,
+            docker_env=self._docker_env(),
+        )
+        launcher_info = pool.launcher() or {}
+        launcher_entry = list(launcher_info.get("entrypoint") or [])
+        launcher_dll = (
+            str(launcher_entry[1]) if len(launcher_entry) > 1 else "QuantConnect.Lean.Launcher.dll"
+        )
+        launcher_workdir = str(launcher_info.get("workdir") or "/Lean/Launcher/bin/Debug")
+        container_user = default_container_user()
         stdout = ""
         stderr = ""
         returncode = 1
@@ -276,20 +344,15 @@ class LeanQuantEngine(QuantEngine):
                 config["data-folder"] = str(view.resolve())
                 config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
                 self._containers[request.backtest_id] = slot
-                cmd = [
-                    "docker",
-                    "exec",
-                    "-w",
-                    str(launcher["workdir"]),
-                    slot,
-                    *list(launcher["entrypoint"]),
-                    "--data-folder",
-                    str(view.resolve()),
-                    "--results-destination-folder",
-                    str(results_dir.resolve()),
-                    "--config",
-                    str(config_path.resolve()),
-                ]
+                cmd = build_lean_exec_command(
+                    user=container_user,
+                    workdir=launcher_workdir,
+                    slot=slot,
+                    launcher_dll=launcher_dll,
+                    view=view,
+                    results_dir=results_dir,
+                    config_path=config_path,
+                )
             else:
                 config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
                 container_name = f"axiom-lean-{request.backtest_id[:8]}"
@@ -302,6 +365,9 @@ class LeanQuantEngine(QuantEngine):
                     lean_data=lean_data,
                     results_dir=results_dir,
                     map_overlay=map_overlay,
+                    launcher_dll=launcher_dll,
+                    launcher_workdir=launcher_workdir,
+                    shim_dir=shim_dir,
                 )
 
             proc = subprocess.Popen(
