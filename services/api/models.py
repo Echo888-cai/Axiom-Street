@@ -824,3 +824,67 @@ class FactorRegressionRecord(Base):
     n_obs: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     exposures: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ResearchRunStatus(str, enum.Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    PAUSED = "PAUSED"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class ResearchStepStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    SKIPPED = "SKIPPED"
+
+
+class ResearchRun(Base):
+    """P4.3 有界研究运行：预算、检查点与幂等步骤，重启从检查点恢复。"""
+
+    __tablename__ = "research_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    goal: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    status: Mapped[ResearchRunStatus] = mapped_column(
+        _enum(ResearchRunStatus, "research_run_status"),
+        default=ResearchRunStatus.QUEUED,
+        nullable=False,
+    )
+    budget: Mapped[dict] = mapped_column(JSON, default=dict)
+    spent: Mapped[dict] = mapped_column(JSON, default=dict)
+    checkpoint: Mapped[dict] = mapped_column(JSON, default=dict)
+    error: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ResearchStep(Base):
+    __tablename__ = "research_steps"
+    __table_args__ = (UniqueConstraint("run_id", "index", name="uq_research_step_index"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("research_runs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    index: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[ResearchStepStatus] = mapped_column(
+        _enum(ResearchStepStatus, "research_step_status"),
+        default=ResearchStepStatus.PENDING,
+        nullable=False,
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    input: Mapped[dict] = mapped_column(JSON, default=dict)
+    output: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

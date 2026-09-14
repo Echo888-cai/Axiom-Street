@@ -4,6 +4,7 @@ from typing import Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from services.agent import copilot as copilot_service
@@ -26,6 +27,70 @@ from services.api.schemas import (
 )
 
 router = APIRouter(prefix="/copilot", tags=["copilot"])
+
+
+class RuleDraftIn(BaseModel):
+    text: str = ""
+
+
+class RuleCompileIn(BaseModel):
+    template: str = "trend"
+    symbol: str = "SPY"
+    lookback: int | None = 200
+    position_pct: float = 100.0
+    slippage_bps: float = 5.0
+    hypothesis: str = ""
+
+
+class RuleReviewIn(BaseModel):
+    current_code: str = ""
+    proposed_code: str = ""
+    unsupported: list[str] = []
+    source_version_id: str | None = None
+    latest_version_id: str | None = None
+
+
+@router.post("/rules/draft")
+def draft_rules(payload: RuleDraftIn) -> dict:
+    """P4.1 意图 → 规则草案（确定性、无模型；不支持的语义显式返回）。"""
+    from services.agent.rules import draft_rules_from_intent
+
+    return draft_rules_from_intent(payload.text).to_dict()
+
+
+@router.post("/rules/compile")
+def compile_rules(payload: RuleCompileIn) -> dict:
+    """P4.1 规则草案 → 确定性代码与配置（不解析任意 Python）。"""
+    from services.agent.rules import RuleDraft, compile_trend_rules
+
+    draft = RuleDraft(
+        template=payload.template,
+        symbol=payload.symbol,
+        lookback=payload.lookback,
+        position_pct=payload.position_pct,
+        slippage_bps=payload.slippage_bps,
+        hypothesis=payload.hypothesis or f"{payload.symbol} 趋势跟随",
+    )
+    try:
+        code, config = compile_trend_rules(draft)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"code": code, "config": config, "unsupported": draft.unsupported}
+
+
+@router.post("/rules/review")
+def review_rules(payload: RuleReviewIn) -> dict:
+    """P4.2 变更审查（只读）：差异、语法、依赖、未来数据、版本冲突与出站范围。"""
+    from services.agent.rule_review import review_rule_change
+
+    return review_rule_change(
+        current_code=payload.current_code,
+        proposed_code=payload.proposed_code,
+        unsupported=payload.unsupported,
+        source_version_id=payload.source_version_id,
+        latest_version_id=payload.latest_version_id,
+    )
+
 
 _DETAIL_BY_RESOURCE = {"strategy": "策略不存在", "backtest": "回测不存在"}
 
@@ -185,3 +250,20 @@ def suggest(
 
     run_suggest_task.delay(payload.resource, str(payload.id))
     return CopilotSuggestAccepted(status="queued")
+
+
+@router.get("/eval")
+def copilot_eval() -> dict:
+    """P4.4 固定评测集：缺证据/注入/幻觉/过期数据；只报告，不改变已发布能力。"""
+    from services.agent.copilot.eval import run_eval
+
+    return run_eval()
+
+
+@router.get("/eval/citations")
+def citation_check(text: str = "", allowed_ids: str = "") -> dict:
+    """P4.4 引用校验：模型引用的结果 ID 必须来自既有台账，否则判虚构。"""
+    from services.agent.copilot.eval import validate_citations
+
+    ids = [item.strip() for item in allowed_ids.split(",") if item.strip()]
+    return validate_citations(text, ids).to_dict()

@@ -3519,6 +3519,138 @@
         }
       }
     },
+    "/api/v1/copilot/rules/draft": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Draft Rules",
+        "description": "P4.1 意图 → 规则草案（确定性、无模型；不支持的语义显式返回）。",
+        "operationId": "draft_rules_api_v1_copilot_rules_draft_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleDraftIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Draft Rules Api V1 Copilot Rules Draft Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/copilot/rules/compile": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Compile Rules",
+        "description": "P4.1 规则草案 → 确定性代码与配置（不解析任意 Python）。",
+        "operationId": "compile_rules_api_v1_copilot_rules_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleCompileIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Compile Rules Api V1 Copilot Rules Compile Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/copilot/rules/review": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Review Rules",
+        "description": "P4.2 变更审查（只读）：差异、语法、依赖、未来数据、版本冲突与出站范围。",
+        "operationId": "review_rules_api_v1_copilot_rules_review_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Review Rules Api V1 Copilot Rules Review Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/copilot/context": {
       "get": {
         "tags": [
@@ -3898,6 +4030,86 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CopilotSuggestAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/copilot/eval": {
+      "get": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Copilot Eval",
+        "description": "P4.4 固定评测集：缺证据/注入/幻觉/过期数据；只报告，不改变已发布能力。",
+        "operationId": "copilot_eval_api_v1_copilot_eval_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Copilot Eval Api V1 Copilot Eval Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/copilot/eval/citations": {
+      "get": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Citation Check",
+        "description": "P4.4 引用校验：模型引用的结果 ID 必须来自既有台账，否则判虚构。",
+        "operationId": "citation_check_api_v1_copilot_eval_citations_get",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Text"
+            }
+          },
+          {
+            "name": "allowed_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Allowed Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Citation Check Api V1 Copilot Eval Citations Get"
                 }
               }
             }
@@ -4819,6 +5031,274 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research-runs": {
+      "post": {
+        "tags": [
+          "research-runs"
+        ],
+        "summary": "Create Run",
+        "operationId": "create_run_api_v1_research_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchRunIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Run Api V1 Research Runs Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research-runs/{run_id}": {
+      "get": {
+        "tags": [
+          "research-runs"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_api_v1_research_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Run Api V1 Research Runs  Run Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research-runs/{run_id}/step": {
+      "post": {
+        "tags": [
+          "research-runs"
+        ],
+        "summary": "Advance",
+        "operationId": "advance_api_v1_research_runs__run_id__step_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Advance Api V1 Research Runs  Run Id  Step Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research-runs/{run_id}/pause": {
+      "post": {
+        "tags": [
+          "research-runs"
+        ],
+        "summary": "Pause",
+        "operationId": "pause_api_v1_research_runs__run_id__pause_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Pause Api V1 Research Runs  Run Id  Pause Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research-runs/{run_id}/resume": {
+      "post": {
+        "tags": [
+          "research-runs"
+        ],
+        "summary": "Resume",
+        "operationId": "resume_api_v1_research_runs__run_id__resume_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Resume Api V1 Research Runs  Run Id  Resume Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research-runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "research-runs"
+        ],
+        "summary": "Cancel",
+        "operationId": "cancel_api_v1_research_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Cancel Api V1 Research Runs  Run Id  Cancel Post"
                 }
               }
             }
@@ -8449,6 +8929,34 @@
         "type": "object",
         "title": "ResearchNoteUpdate"
       },
+      "ResearchRunIn": {
+        "properties": {
+          "goal": {
+            "type": "string",
+            "title": "Goal",
+            "default": ""
+          },
+          "strategy_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Id"
+          },
+          "budget": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Budget"
+          }
+        },
+        "type": "object",
+        "title": "ResearchRunIn"
+      },
       "RiskSummaryOut": {
         "properties": {
           "strategy_id": {
@@ -8636,6 +9144,106 @@
           "window_key"
         ],
         "title": "RollingWindowOut"
+      },
+      "RuleCompileIn": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "title": "Template",
+            "default": "trend"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol",
+            "default": "SPY"
+          },
+          "lookback": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lookback",
+            "default": 200
+          },
+          "position_pct": {
+            "type": "number",
+            "title": "Position Pct",
+            "default": 100.0
+          },
+          "slippage_bps": {
+            "type": "number",
+            "title": "Slippage Bps",
+            "default": 5.0
+          },
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "RuleCompileIn"
+      },
+      "RuleDraftIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "RuleDraftIn"
+      },
+      "RuleReviewIn": {
+        "properties": {
+          "current_code": {
+            "type": "string",
+            "title": "Current Code",
+            "default": ""
+          },
+          "proposed_code": {
+            "type": "string",
+            "title": "Proposed Code",
+            "default": ""
+          },
+          "unsupported": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unsupported",
+            "default": []
+          },
+          "source_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Version Id"
+          },
+          "latest_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Version Id"
+          }
+        },
+        "type": "object",
+        "title": "RuleReviewIn"
       },
       "StrategyCreate": {
         "properties": {
