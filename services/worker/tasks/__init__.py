@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from quant.engine.lean import LeanQuantEngine
 from services.api.db import SessionLocal
+from services.worker.health import publish_health_task, publish_worker_health
 
 from . import backtests, copilot, data, paper, validation, validation_post
 from ._common import cancel_key, flag_cancel, is_cancel_flagged, log
@@ -100,4 +101,6 @@ __all__ = [
     "run_suggest_task",
     "execute_paper_order",
     "run_paper_order_task",
+    "publish_health_task",
+    "publish_worker_health",
 ]

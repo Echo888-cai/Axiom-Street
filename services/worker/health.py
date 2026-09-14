@@ -51,3 +51,15 @@ def read_worker_health() -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return data if isinstance(data, dict) else None
+
+
+# Beat delivers ``worker.publish_health`` every 15s; without a registered
+# task each delivery raises KeyError and no heartbeat is ever published
+# (worker permanently "失联"). Imported for its side effect by the worker
+# task package, which Celery loads via ``include``.
+from services.worker.celery_app import celery_app  # noqa: E402  (task registration)
+
+
+@celery_app.task(name="worker.publish_health")
+def publish_health_task() -> dict[str, Any]:
+    return publish_worker_health()

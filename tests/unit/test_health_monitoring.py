@@ -129,3 +129,19 @@ def test_health_endpoint_exposes_build_and_revision(client):
     assert body["version"] == "0.1.0"
     assert "build_sha" in body
     assert "database_revision" in body
+
+
+def test_beat_schedule_tasks_are_registered():
+    """Every periodic beat delivery must resolve to a registered task.
+
+    Regression pin: worker.publish_health was scheduled but never
+    registered, so heartbeats never published and every delivery raised
+    KeyError on the worker."""
+    from services.worker import tasks as _tasks  # noqa: F401  (import registers tasks)
+    from services.worker.celery_app import _beat_schedule, celery_app
+
+    assert _beat_schedule, "beat schedule must not be empty"
+    missing = [
+        entry["task"] for entry in _beat_schedule.values() if entry["task"] not in celery_app.tasks
+    ]
+    assert missing == []
