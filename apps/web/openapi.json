@@ -5488,6 +5488,18 @@
             ],
             "title": "Version Number"
           },
+          "universe_validity": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Universe Validity"
+          },
           "total_return": {
             "anyOf": [
               {

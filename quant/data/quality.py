@@ -120,6 +120,21 @@ def validate_ohlcv(
             )
         )
 
+    # P3.2 成交时点正确性：bar 落在周末说明交易日历错误，执行时点不可信。
+    weekend_mask = df["timestamp"].dt.weekday >= 5
+    weekend_n = int(weekend_mask.sum())
+    if weekend_n:
+        examples = df.loc[weekend_mask, "timestamp"].astype(str).head(5).tolist()
+        issues.append(
+            QualityIssue(
+                "non_trading_day_bars",
+                "blocking",
+                "Bars fall on weekends; the trading calendar is wrong, so execution timing cannot be trusted",
+                weekend_n,
+                examples,
+            )
+        )
+
     as_of = as_of or datetime.now(timezone.utc)
     if expected_end is None:
         age = as_of - end if end.tzinfo else as_of.replace(tzinfo=None) - end

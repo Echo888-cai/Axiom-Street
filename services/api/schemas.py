@@ -97,6 +97,7 @@ class BacktestOut(ORMModel):
     strategy_id: Optional[UUID] = None
     strategy_name: Optional[str] = None
     version_number: Optional[int] = None
+    universe_validity: Optional[Dict[str, Any]] = None
     total_return: Optional[float] = None
     sharpe: Optional[float] = None
     max_drawdown: Optional[float] = None

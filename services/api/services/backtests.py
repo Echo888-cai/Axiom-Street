@@ -77,6 +77,23 @@ def get_backtest(db: Session, backtest_id: UUID) -> Backtest:
     return backtest
 
 
+def _universe_validity(backtest: Backtest) -> dict:
+    """P3.2：显式标记标的池有效期（时点已知 / 有效期未知）。"""
+    from quant.data.universe import Membership
+    from quant.data.validity import classify_universe_validity
+
+    raw = backtest.universe_snapshot or []
+    memberships = []
+    for item in raw:
+        try:
+            memberships.append(Membership.from_dict(item))
+        except (KeyError, ValueError):
+            continue
+    symbols = [m.symbol for m in memberships]
+    source = "snapshot" if not memberships else "point_in_time"
+    return classify_universe_validity(memberships, symbols, source=source)
+
+
 def to_out(db: Session, backtest: Backtest) -> BacktestOut:
     version = db.get(StrategyVersion, backtest.strategy_version_id)
     strategy = db.get(Strategy, version.strategy_id) if version else None
@@ -84,6 +101,7 @@ def to_out(db: Session, backtest: Backtest) -> BacktestOut:
     payload = BacktestOut.model_validate(backtest)
     return payload.model_copy(
         update={
+            "universe_validity": _universe_validity(backtest),
             "strategy_id": strategy.id if strategy else None,
             "strategy_name": strategy.name if strategy else None,
             "version_number": version.version if version else None,

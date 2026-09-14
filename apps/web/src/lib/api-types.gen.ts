@@ -1729,6 +1729,10 @@ export interface components {
             strategy_name?: string | null;
             /** Version Number */
             version_number?: number | null;
+            /** Universe Validity */
+            universe_validity?: {
+                [key: string]: unknown;
+            } | null;
             /** Total Return */
             total_return?: number | null;
             /** Sharpe */

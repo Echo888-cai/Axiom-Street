@@ -168,6 +168,17 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
     toast(t("backtest.toast.exported"), "ok");
   }
 
+  const validity = bt.universe_validity as
+    | {
+        known?: boolean;
+        effective_from?: string | null;
+        effective_to?: string | null;
+        symbols?: string[];
+        note?: string;
+      }
+    | null
+    | undefined;
+
   const noteHref =
     bt.strategy_id != null
       ? `/reports?strategy_id=${bt.strategy_id}&backtest_id=${bt.id}`
@@ -223,6 +234,29 @@ export function BacktestStudio({ backtestId }: { backtestId: string }) {
           </div>
         }
       />
+
+      {validity ? (
+        <div
+          className={
+            "flex flex-wrap items-center gap-2 rounded-xl border px-4 py-2.5 text-xs " +
+            (validity.known
+              ? "border-as-positive/30 bg-as-positive/5 text-as-positive"
+              : "border-amber-300 bg-amber-50 text-amber-700")
+          }
+        >
+          <Badge tone={validity.known ? "green" : "amber"}>
+            {validity.known ? "标的池时点已知" : "标的池有效期未知"}
+          </Badge>
+          {validity.known && validity.effective_from ? (
+            <span>
+              {validity.effective_from} → {validity.effective_to ?? "至今"} ·{" "}
+              {(validity.symbols ?? []).join(", ")}
+            </span>
+          ) : (
+            <span>{validity.note}</span>
+          )}
+        </div>
+      ) : null}
 
       {!ready ? (
         <Card className="min-h-[320px]">
