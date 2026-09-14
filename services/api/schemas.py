@@ -885,3 +885,38 @@ class CompareEligibilityOut(BaseModel):
     same_cost: bool
     comparable: bool
     warnings: list[str]
+
+
+class FactorRegressionIn(BaseModel):
+    """P3.4 因子回归记录：输入必须带模型/来源/频率与完整窗口，禁止无数据虚构暴露。"""
+
+    model: str = "OLS"
+    source: str = "computed"
+    frequency: str = "monthly"
+    window_start: Optional[date] = None
+    window_end: Optional[date] = None
+    n_obs: int = Field(default=0, ge=0)
+    alpha: float = 0.0
+    r2: float = Field(default=0.0, ge=0.0, le=1.0)
+    exposures: Dict[str, float] = Field(default_factory=dict)
+
+
+class FactorRegressionOut(ORMModel):
+    id: UUID
+    portfolio_id: UUID
+    window_start: Optional[date] = None
+    window_end: Optional[date] = None
+    model: str
+    source: str
+    frequency: str
+    alpha: float
+    r2: float
+    n_obs: int
+    exposures: Dict[str, float] = Field(default_factory=dict)
+    created_at: datetime
+
+
+class MultiPeriodAttributionIn(BaseModel):
+    """P3.4 多期归因：各期的组合/基准收益与单期效应，链接为复合口径。"""
+
+    periods: Dict[str, Any] = Field(default_factory=dict)

@@ -4446,6 +4446,162 @@
         }
       }
     },
+    "/api/v1/portfolios/{portfolio_id}/factor-regressions": {
+      "post": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "Create Factor Regression",
+        "description": "P3.4 记录一次因子回归（模型/来源/频率/窗口齐全）。无因子数据时列表为空，不虚构暴露。",
+        "operationId": "create_factor_regression_api_v1_portfolios__portfolio_id__factor_regressions_post",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactorRegressionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorRegressionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "List Factor Regressions",
+        "description": "P3.4 因子暴露只展示有记录的回归；无数据返回空列表。",
+        "operationId": "list_factor_regressions_api_v1_portfolios__portfolio_id__factor_regressions_get",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FactorRegressionOut"
+                  },
+                  "title": "Response List Factor Regressions Api V1 Portfolios  Portfolio Id  Factor Regressions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/{portfolio_id}/attribution/link": {
+      "post": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "Link Multi Period Attribution",
+        "description": "P3.4 多期归因：把已入库的单期快照按一致估值时点链接为复合口径。",
+        "operationId": "link_multi_period_attribution_api_v1_portfolios__portfolio_id__attribution_link_post",
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/_MultiPeriodPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Link Multi Period Attribution Api V1 Portfolios  Portfolio Id  Attribution Link Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/live/readiness": {
       "get": {
         "tags": [
@@ -6672,6 +6828,164 @@
           "strategy_value"
         ],
         "title": "EquityPoint"
+      },
+      "FactorRegressionIn": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "OLS"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "computed"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency",
+            "default": "monthly"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          },
+          "n_obs": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "N Obs",
+            "default": 0
+          },
+          "alpha": {
+            "type": "number",
+            "title": "Alpha",
+            "default": 0.0
+          },
+          "r2": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "R2",
+            "default": 0.0
+          },
+          "exposures": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Exposures"
+          }
+        },
+        "type": "object",
+        "title": "FactorRegressionIn",
+        "description": "P3.4 因子回归记录：输入必须带模型/来源/频率与完整窗口，禁止无数据虚构暴露。"
+      },
+      "FactorRegressionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "portfolio_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Portfolio Id"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency"
+          },
+          "alpha": {
+            "type": "number",
+            "title": "Alpha"
+          },
+          "r2": {
+            "type": "number",
+            "title": "R2"
+          },
+          "n_obs": {
+            "type": "integer",
+            "title": "N Obs"
+          },
+          "exposures": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Exposures"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "portfolio_id",
+          "model",
+          "source",
+          "frequency",
+          "alpha",
+          "r2",
+          "n_obs",
+          "created_at"
+        ],
+        "title": "FactorRegressionOut"
       },
       "HTTPValidationError": {
         "properties": {
@@ -9742,6 +10056,23 @@
           "params_schema"
         ],
         "title": "ValidationSpecOut"
+      },
+      "_MultiPeriodPayload": {
+        "properties": {
+          "periods": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Periods"
+          }
+        },
+        "type": "object",
+        "required": [
+          "periods"
+        ],
+        "title": "_MultiPeriodPayload"
       }
     }
   }

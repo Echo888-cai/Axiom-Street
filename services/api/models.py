@@ -803,3 +803,24 @@ class PortfolioAttribution(Base):
     active_return: Mapped[float] = mapped_column(Float, nullable=False)
     inputs: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class FactorRegressionRecord(Base):
+    """P3.4 因子回归台账：每次记录带模型/来源/频率与窗口，禁止虚构暴露。"""
+
+    __tablename__ = "factor_regressions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    portfolio_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    window_start: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    window_end: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    model: Mapped[str] = mapped_column(String(32), default="OLS", nullable=False)
+    source: Mapped[str] = mapped_column(String(64), default="computed", nullable=False)
+    frequency: Mapped[str] = mapped_column(String(32), default="monthly", nullable=False)
+    alpha: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    r2: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    n_obs: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    exposures: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

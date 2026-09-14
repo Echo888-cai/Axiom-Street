@@ -2,21 +2,26 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quant.portfolio.attribution import AttributionObservation, compute_brinson_attribution
 from services.api.db import get_db
 from services.api.models import (
+    FactorRegressionRecord,
     Portfolio,
     PortfolioAllocation,
     PortfolioAttribution,
     Strategy,
 )
 from services.api.schemas import (
+    FactorRegressionIn,
+    FactorRegressionOut,
     PortfolioAllocationIn,
     PortfolioAllocationOut,
     PortfolioAttributionIn,
@@ -26,6 +31,10 @@ from services.api.schemas import (
 )
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
+
+
+class _MultiPeriodPayload(BaseModel):
+    periods: list[dict[str, Any]]
 
 
 def _portfolio(db: Session, portfolio_id: UUID):
@@ -183,3 +192,97 @@ def list_attribution(
         .limit(limit)
     ).all()
     return [PortfolioAttributionOut.model_validate(row) for row in rows]
+
+
+@router.post(
+    "/{portfolio_id}/factor-regressions", response_model=FactorRegressionOut, status_code=201
+)
+def create_factor_regression(
+    portfolio_id: UUID,
+    payload: FactorRegressionIn,
+    db: Session = Depends(get_db),
+) -> FactorRegressionOut:
+    """P3.4 记录一次因子回归（模型/来源/频率/窗口齐全）。无因子数据时列表为空，不虚构暴露。"""
+    _portfolio(db, portfolio_id)
+    if not payload.exposures:
+        raise HTTPException(status_code=422, detail="没有暴露数据：因子回归不能为空记录。")
+    if payload.n_obs < 2:
+        raise HTTPException(status_code=422, detail="n_obs 至少为 2，否则估计只是噪声。")
+    row = FactorRegressionRecord(
+        portfolio_id=portfolio_id,
+        window_start=payload.window_start,
+        window_end=payload.window_end,
+        model=payload.model,
+        source=payload.source,
+        frequency=payload.frequency,
+        alpha=payload.alpha,
+        r2=payload.r2,
+        n_obs=payload.n_obs,
+        exposures=dict(payload.exposures),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return FactorRegressionOut.model_validate(row)
+
+
+@router.get("/{portfolio_id}/factor-regressions", response_model=list[FactorRegressionOut])
+def list_factor_regressions(
+    portfolio_id: UUID,
+    db: Session = Depends(get_db),
+) -> list[FactorRegressionOut]:
+    """P3.4 因子暴露只展示有记录的回归；无数据返回空列表。"""
+    _portfolio(db, portfolio_id)
+    rows = list(
+        db.scalars(
+            select(FactorRegressionRecord)
+            .where(FactorRegressionRecord.portfolio_id == portfolio_id)
+            .order_by(FactorRegressionRecord.created_at.desc())
+        ).all()
+    )
+    return [FactorRegressionOut.model_validate(row) for row in rows]
+
+
+@router.post("/{portfolio_id}/attribution/link")
+def link_multi_period_attribution(
+    portfolio_id: UUID,
+    payload: _MultiPeriodPayload,
+    db: Session = Depends(get_db),
+) -> dict:
+    """P3.4 多期归因：把已入库的单期快照按一致估值时点链接为复合口径。"""
+    _portfolio(db, portfolio_id)
+    from quant.portfolio.attribution import AttributionObservation
+    from quant.portfolio.linking import PeriodEffects, PeriodResult, link_periods
+
+    periods = []
+    for item in payload.periods:
+        period = str(item["period"])
+        obs = [
+            AttributionObservation(
+                strategy_id=row["strategy_id"],
+                weight=row["weight"],
+                strategy_return=row["strategy_return"],
+                benchmark_return=row["benchmark_return"],
+            )
+            for row in item["observations"]
+        ]
+        from quant.portfolio.attribution import compute_brinson_attribution
+
+        result = compute_brinson_attribution(obs)
+        effects = {
+            str(row.strategy_id): PeriodEffects(
+                allocation=row.allocation_effect,
+                selection=row.selection_effect,
+                interaction=row.interaction_effect,
+            )
+            for row in result.contributions
+        }
+        periods.append(
+            PeriodResult(
+                period=period,
+                portfolio_return=result.portfolio_return,
+                benchmark_return=result.benchmark_return,
+                effects=effects,
+            )
+        )
+    return link_periods(periods).to_dict()

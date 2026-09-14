@@ -1359,6 +1359,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portfolios/{portfolio_id}/factor-regressions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Factor Regressions
+         * @description P3.4 因子暴露只展示有记录的回归；无数据返回空列表。
+         */
+        get: operations["list_factor_regressions_api_v1_portfolios__portfolio_id__factor_regressions_get"];
+        put?: never;
+        /**
+         * Create Factor Regression
+         * @description P3.4 记录一次因子回归（模型/来源/频率/窗口齐全）。无因子数据时列表为空，不虚构暴露。
+         */
+        post: operations["create_factor_regression_api_v1_portfolios__portfolio_id__factor_regressions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolios/{portfolio_id}/attribution/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link Multi Period Attribution
+         * @description P3.4 多期归因：把已入库的单期快照按一致估值时点链接为复合口径。
+         */
+        post: operations["link_multi_period_attribution_api_v1_portfolios__portfolio_id__attribution_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/live/readiness": {
         parameters: {
             query?: never;
@@ -2182,6 +2226,88 @@ export interface components {
             benchmark_value?: number | null;
             /** Drawdown */
             drawdown?: number | null;
+        };
+        /**
+         * FactorRegressionIn
+         * @description P3.4 因子回归记录：输入必须带模型/来源/频率与完整窗口，禁止无数据虚构暴露。
+         */
+        FactorRegressionIn: {
+            /**
+             * Model
+             * @default OLS
+             */
+            model: string;
+            /**
+             * Source
+             * @default computed
+             */
+            source: string;
+            /**
+             * Frequency
+             * @default monthly
+             */
+            frequency: string;
+            /** Window Start */
+            window_start?: string | null;
+            /** Window End */
+            window_end?: string | null;
+            /**
+             * N Obs
+             * @default 0
+             */
+            n_obs: number;
+            /**
+             * Alpha
+             * @default 0
+             */
+            alpha: number;
+            /**
+             * R2
+             * @default 0
+             */
+            r2: number;
+            /** Exposures */
+            exposures?: {
+                [key: string]: number;
+            };
+        };
+        /** FactorRegressionOut */
+        FactorRegressionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Portfolio Id
+             * Format: uuid
+             */
+            portfolio_id: string;
+            /** Window Start */
+            window_start?: string | null;
+            /** Window End */
+            window_end?: string | null;
+            /** Model */
+            model: string;
+            /** Source */
+            source: string;
+            /** Frequency */
+            frequency: string;
+            /** Alpha */
+            alpha: number;
+            /** R2 */
+            r2: number;
+            /** N Obs */
+            n_obs: number;
+            /** Exposures */
+            exposures?: {
+                [key: string]: number;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -3367,6 +3493,13 @@ export interface components {
             params_schema: {
                 [key: string]: unknown;
             };
+        };
+        /** _MultiPeriodPayload */
+        _MultiPeriodPayload: {
+            /** Periods */
+            periods: {
+                [key: string]: unknown;
+            }[];
         };
     };
     responses: never;
@@ -6306,6 +6439,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioAttributionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_factor_regressions_api_v1_portfolios__portfolio_id__factor_regressions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FactorRegressionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_factor_regression_api_v1_portfolios__portfolio_id__factor_regressions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FactorRegressionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FactorRegressionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_multi_period_attribution_api_v1_portfolios__portfolio_id__attribution_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                portfolio_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["_MultiPeriodPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
