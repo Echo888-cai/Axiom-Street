@@ -1,5 +1,6 @@
 "use client";
 
+import { DataCatalogCard } from "./data-catalog";
 import {
   ReconcileReports,
   InferredDelistings,
@@ -123,6 +124,8 @@ export default function SettingsPage() {
       />
 
       <OperationsHealthCard />
+
+      <DataCatalogCard />
 
       {status.isError && (
         <Card>

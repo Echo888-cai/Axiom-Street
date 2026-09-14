@@ -1420,6 +1420,74 @@
         }
       }
     },
+    "/api/v1/data/catalog": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Get Data Catalog",
+        "description": "P3.1 数据目录：当前快照 + 全部留存快照的来源/覆盖/频率/时区/复权/缺口/能力。",
+        "operationId": "get_data_catalog_api_v1_data_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Data Catalog Api V1 Data Catalog Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data/capabilities/probe": {
+      "post": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Probe Provider Capabilities",
+        "description": "P3.1 权限探测：价格/分红/拆分别探测，失败给出可行动原因。",
+        "operationId": "probe_provider_capabilities_api_v1_data_capabilities_probe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapabilityProbeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Probe Provider Capabilities Api V1 Data Capabilities Probe Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/data/snapshots": {
       "get": {
         "tags": [
@@ -5593,6 +5661,33 @@
           "CANCELLED"
         ],
         "title": "BacktestStatus"
+      },
+      "CapabilityProbeRequest": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "auto | polygon | yfinance | stooq",
+            "default": "auto"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol",
+            "default": "SPY"
+          },
+          "start": {
+            "type": "string",
+            "title": "Start",
+            "default": "2024-01-01"
+          },
+          "end": {
+            "type": "string",
+            "title": "End",
+            "default": "2024-03-01"
+          }
+        },
+        "type": "object",
+        "title": "CapabilityProbeRequest"
       },
       "CompareEligibilityOut": {
         "properties": {

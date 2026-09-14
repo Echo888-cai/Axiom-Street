@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
+from quant.data.catalog import build_data_catalog, probe_capabilities
 from quant.data.ingest import data_status
 from quant.data.symbols import normalize_symbols, symbol_data_facts
 from services.api.db import SessionLocal, get_db
@@ -82,6 +83,48 @@ def get_data_status(db: Session = Depends(get_db)) -> dict:
         ingest_job_service.serialize_job(latest) if latest is not None else None
     )
     return status_payload
+
+
+@router.get("/catalog")
+def get_data_catalog(db: Session = Depends(get_db)) -> dict:
+    """P3.1 数据目录：当前快照 + 全部留存快照的来源/覆盖/频率/时区/复权/缺口/能力。"""
+    settings = get_settings()
+    catalog = build_data_catalog(Path(settings.data_root))
+    rows = list(db.scalars(select(DataSnapshot).order_by(DataSnapshot.created_at.desc())).all())
+    ledger = {
+        row.snapshot_key: {
+            "superseded_by": str(row.superseded_by) if row.superseded_by else None,
+            "content_sha256": row.content_sha256,
+            "row_count": row.row_count,
+            "provider_capabilities": row.provider_capabilities,
+        }
+        for row in rows
+    }
+    catalog["ledger"] = ledger
+    return catalog
+
+
+class CapabilityProbeRequest(BaseModel):
+    provider: str = Field(default="auto", description="auto | polygon | yfinance | stooq")
+    symbol: str = "SPY"
+    start: str = "2024-01-01"
+    end: str = "2024-03-01"
+
+
+@router.post("/capabilities/probe")
+def probe_provider_capabilities(payload: CapabilityProbeRequest) -> dict:
+    """P3.1 权限探测：价格/分红/拆分别探测，失败给出可行动原因。"""
+    settings = get_settings()
+    provider = payload.provider
+    if provider == "auto":
+        # 主源由摄取配置决定；探测器不猜测，回落到 Polygon（企业行动能力最全）。
+        provider = settings.market_reconcile_provider or "polygon"
+    return probe_capabilities(
+        provider=provider,
+        symbol=payload.symbol,
+        start=payload.start,
+        end=payload.end,
+    )
 
 
 @router.get("/snapshots")

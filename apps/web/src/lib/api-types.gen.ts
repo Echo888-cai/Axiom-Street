@@ -410,6 +410,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/data/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Data Catalog
+         * @description P3.1 数据目录：当前快照 + 全部留存快照的来源/覆盖/频率/时区/复权/缺口/能力。
+         */
+        get: operations["get_data_catalog_api_v1_data_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data/capabilities/probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Probe Provider Capabilities
+         * @description P3.1 权限探测：价格/分红/拆分别探测，失败给出可行动原因。
+         */
+        post: operations["probe_provider_capabilities_api_v1_data_capabilities_probe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/data/snapshots": {
         parameters: {
             query?: never;
@@ -1731,6 +1771,30 @@ export interface components {
          * @enum {string}
          */
         BacktestStatus: "QUEUED" | "STARTING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+        /** CapabilityProbeRequest */
+        CapabilityProbeRequest: {
+            /**
+             * Provider
+             * @description auto | polygon | yfinance | stooq
+             * @default auto
+             */
+            provider: string;
+            /**
+             * Symbol
+             * @default SPY
+             */
+            symbol: string;
+            /**
+             * Start
+             * @default 2024-01-01
+             */
+            start: string;
+            /**
+             * End
+             * @default 2024-03-01
+             */
+            end: string;
+        };
         /** CompareEligibilityOut */
         CompareEligibilityOut: {
             /** Rows */
@@ -4175,6 +4239,63 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    get_data_catalog_api_v1_data_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    probe_provider_capabilities_api_v1_data_capabilities_probe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CapabilityProbeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

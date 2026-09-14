@@ -1,8 +1,40 @@
 import { request, API_URL } from "./http";
 import type { IngestJob, DataSnapshot, DataStatus } from "./types";
 
+export type CapabilityProbeReason = { code: string; message: string; detail?: string };
+export type CapabilityProbe = {
+  provider: string;
+  symbol: string;
+  capabilities: Record<"price" | "dividends" | "splits", CapabilityProbeReason>;
+};
+export type DataCatalog = {
+  data_root: string;
+  declared_capabilities: Record<string, boolean> | null;
+  snapshot_count: number;
+  snapshots: Array<{
+    snapshot_key: string;
+    created_at: string | null;
+    symbols: string[];
+    frequency: string;
+    timezone: string;
+    adjustment: string;
+    range: { start: string | null; end: string | null };
+    row_count: number | null;
+    corporate_actions_verified: boolean;
+    gaps: Array<{ rule: string; severity: string; message?: string }>;
+    prior_snapshot_key: string | null;
+  }>;
+};
+
 export const dataApi = {
   dataStatus: () => request<DataStatus>("/api/v1/data/status"),
+  // P3.1 数据目录与权限探测
+  dataCatalog: () => request<DataCatalog>("/api/v1/data/catalog"),
+  probeCapabilities: (body: { provider?: string; symbol?: string }) =>
+    request<CapabilityProbe>("/api/v1/data/capabilities/probe", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   reconcileMarket: (force = false) =>
     request<{
       ok: boolean;
