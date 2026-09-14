@@ -55,6 +55,11 @@ class BacktestStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
+# P6A: 默认工作区固定 UUID——新建策略在未显式指定工作区时归属它，
+# 迁移也据此回填历史行（隔离语义不变：只有该 UUID 的策略属于默认工作区）。
+DEFAULT_WORKSPACE_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -68,6 +73,13 @@ class Strategy(Base):
     __tablename__ = "strategies"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        default=DEFAULT_WORKSPACE_ID,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[StrategyStatus] = mapped_column(
@@ -394,7 +406,7 @@ class Universe(Base):
     __tablename__ = "universes"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
-    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
     kind: Mapped[UniverseKind] = mapped_column(
         _enum(UniverseKind, "universe_kind"), default=UniverseKind.STATIC, nullable=False
@@ -993,3 +1005,37 @@ class PaperDayObservation(Base):
     deviation: Mapped[dict] = mapped_column(JSON, default=dict)
     notes: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WorkspaceRole(str, enum.Enum):
+    ADMIN = "ADMIN"
+    OPERATOR = "OPERATOR"
+    REVIEWER = "REVIEWER"
+    RESEARCHER = "RESEARCHER"
+
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    slug: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WorkspaceMember(Base):
+    __tablename__ = "workspace_members"
+    __table_args__ = (UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member_user"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role: Mapped[WorkspaceRole] = mapped_column(
+        _enum(WorkspaceRole, "workspace_role"),
+        default=WorkspaceRole.RESEARCHER,
+        nullable=False,
+    )

@@ -68,6 +68,22 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "X-Workspace-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
           }
         ],
         "responses": {
@@ -99,6 +115,24 @@
         ],
         "summary": "Create Strategy",
         "operationId": "create_strategy_api_v1_strategies_post",
+        "parameters": [
+          {
+            "name": "X-Workspace-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -150,6 +184,22 @@
               "format": "uuid",
               "title": "Strategy Id"
             }
+          },
+          {
+            "name": "X-Workspace-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
           }
         ],
         "responses": {
@@ -190,6 +240,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Strategy Id"
+            }
+          },
+          {
+            "name": "X-Workspace-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
             }
           }
         ],
@@ -242,6 +308,22 @@
               "format": "uuid",
               "title": "Strategy Id"
             }
+          },
+          {
+            "name": "X-Workspace-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
           }
         ],
         "responses": {
@@ -277,6 +359,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Strategy Id"
+            }
+          },
+          {
+            "name": "X-Workspace-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
             }
           }
         ],
@@ -320,6 +418,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Strategy Id"
+            }
+          },
+          {
+            "name": "X-Workspace-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
             }
           }
         ],
@@ -4863,6 +4977,7 @@
           "live"
         ],
         "summary": "Activate Live",
+        "description": "P6B/C 实盘激活守卫：授权令牌 → 资金上限 → readiness（券商/证据），\n全部在网络调用之前判定；未授权一律拒绝，绝不冒充通过。",
         "operationId": "activate_live_api_v1_live_activate_post",
         "requestBody": {
           "content": {
@@ -4884,6 +4999,30 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live/emergency-stop": {
+      "post": {
+        "tags": [
+          "live"
+        ],
+        "summary": "Emergency Stop",
+        "description": "P6C 独立紧急停止：与策略/会话状态解耦，幂等。",
+        "operationId": "emergency_stop_api_v1_live_emergency_stop_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Emergency Stop Api V1 Live Emergency Stop Post"
                 }
               }
             }
@@ -8012,6 +8151,22 @@
             "type": "string",
             "format": "uuid",
             "title": "Strategy Id"
+          },
+          "authorization": {
+            "type": "string",
+            "title": "Authorization",
+            "default": ""
+          },
+          "capital_cap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capital Cap"
           }
         },
         "type": "object",

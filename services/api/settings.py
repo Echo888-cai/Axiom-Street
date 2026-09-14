@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     copilot_model: str = "deepseek-v4-flash"  # override via STREET_COPILOT_MODEL
     # Live execution stays fail-closed; this flag is only one readiness input.
     live_enabled: bool = False
+    # P6B/C：实盘必须单独授权（令牌由可信环境注入）+ 明确资金上限，缺一不可。
+    live_authorization_token: str = ""
+    live_capital_cap: float = 0.0  # 0 = 未配置 → 禁止激活
 
     @property
     def cors_origin_list(self) -> list[str]:

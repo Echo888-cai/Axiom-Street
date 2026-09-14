@@ -127,7 +127,7 @@ test.describe("关键路径 E2E（隔离栈）", () => {
 
     // 展开“数据版本与更新配置”：快照与分红/拆分核验来自隔离数据底座
     await page.getByText("数据版本与更新配置").click();
-    await expect(page.getByText("快照", { exact: true })).toBeVisible();
-    await expect(page.getByText("已核验")).toBeVisible();
+    await expect(page.locator("dt").filter({ hasText: "快照" }).first()).toBeVisible();
+    await expect(page.locator("dd").filter({ hasText: "已核验" }).first()).toBeVisible();
   });
 });

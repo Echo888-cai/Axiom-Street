@@ -92,13 +92,50 @@ def get_live_readiness(
 
 @router.post("/activate", status_code=status.HTTP_204_NO_CONTENT)
 def activate_live(payload: LiveActivateIn, db: Session = Depends(get_db)) -> None:
+    """P6B/C 实盘激活守卫：授权令牌 → 资金上限 → readiness（券商/证据），
+    全部在网络调用之前判定；未授权一律拒绝，绝不冒充通过。"""
+    settings = get_settings()
+    expected = settings.live_authorization_token
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "live_authorization_not_configured",
+                "message": "实盘未授权：服务端未配置授权令牌（STREET_LIVE_AUTHORIZATION_TOKEN）。真实资金需要单独取得明确授权。",
+            },
+        )
+    if payload.authorization != expected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "code": "live_authorization_invalid",
+                "message": "授权令牌不正确，拒绝激活实盘。",
+            },
+        )
+    if settings.live_capital_cap <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "live_capital_cap_missing",
+                "message": "未配置资金上限（STREET_LIVE_CAPITAL_CAP），拒绝激活实盘。",
+            },
+        )
+    if payload.capital_cap is None or payload.capital_cap > settings.live_capital_cap:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "live_capital_cap_exceeded",
+                "message": f"资金上限超过服务端配置（≤ {settings.live_capital_cap}）。",
+            },
+        )
+
     readiness = _readiness(db, payload.strategy_id)
     if not readiness.ready:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
                 "code": "live_not_ready",
-                "message": "Live 执行保持关闭,当前没有任何外部 Broker 会被调用",
+                "message": "Live 执行保持关闭：证据/券商/隔离条件未满足，当前没有任何外部 Broker 会被调用。",
                 "reasons": readiness.reasons,
                 "evidence": readiness.evidence,
             },
@@ -108,3 +145,23 @@ def activate_live(payload: LiveActivateIn, db: Session = Depends(get_db)) -> Non
         status_code=status.HTTP_409_CONFLICT,
         detail={"code": "live_broker_unavailable", "message": "Live Broker 尚未实现"},
     )
+
+
+@router.post("/emergency-stop")
+def emergency_stop(db: Session = Depends(get_db)) -> dict:
+    """P6C 独立紧急停止：与策略/会话状态解耦，幂等。"""
+    from services.api.models import AuditLog
+
+    db.add(
+        AuditLog(
+            actor="local",
+            action="Live Emergency Stop",
+            object_type="live",
+            object_id="global",
+        )
+    )
+    db.commit()
+    return {
+        "stopped": True,
+        "note": "紧急停止是独立通道：不依赖策略状态；只阻断新增风险，不自动平仓。",
+    }

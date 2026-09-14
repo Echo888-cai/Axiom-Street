@@ -48,12 +48,15 @@ def _audit(
 def list_strategies(
     db: Session,
     *,
+    workspace_id: UUID | None = None,
     limit: int = 100,
     offset: int = 0,
     q: str | None = None,
     status_filter: StrategyStatus | None = None,
 ) -> tuple[list[Strategy], int]:
     filters: list[Any] = []
+    if workspace_id is not None:
+        filters.append(Strategy.workspace_id == workspace_id)
     keyword = (q or "").strip()
     if keyword:
         like = f"%{keyword}%"
@@ -86,7 +89,9 @@ def latest_version(db: Session, strategy_id: UUID) -> StrategyVersion | None:
     ).first()
 
 
-def create_strategy(db: Session, payload: StrategyCreate) -> Strategy:
+def create_strategy(
+    db: Session, payload: StrategyCreate, *, workspace_id: UUID | None = None
+) -> Strategy:
     strategy = Strategy(
         name=payload.name,
         description=payload.description,

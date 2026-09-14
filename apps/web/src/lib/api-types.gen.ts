@@ -1529,8 +1529,32 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Activate Live */
+        /**
+         * Activate Live
+         * @description P6B/C 实盘激活守卫：授权令牌 → 资金上限 → readiness（券商/证据），
+         *     全部在网络调用之前判定；未授权一律拒绝，绝不冒充通过。
+         */
         post: operations["activate_live_api_v1_live_activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/live/emergency-stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Emergency Stop
+         * @description P6C 独立紧急停止：与策略/会话状态解耦，幂等。
+         */
+        post: operations["emergency_stop_api_v1_live_emergency_stop_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2726,6 +2750,13 @@ export interface components {
              * Format: uuid
              */
             strategy_id: string;
+            /**
+             * Authorization
+             * @default
+             */
+            authorization: string;
+            /** Capital Cap */
+            capital_cap?: number | null;
         };
         /** LiveReadinessOut */
         LiveReadinessOut: {
@@ -4001,7 +4032,9 @@ export interface operations {
                 q?: string | null;
                 status?: components["schemas"]["StrategyStatus"] | null;
             };
-            header?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4030,7 +4063,9 @@ export interface operations {
     create_strategy_api_v1_strategies_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4063,7 +4098,9 @@ export interface operations {
     get_strategy_api_v1_strategies__strategy_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+            };
             path: {
                 strategy_id: string;
             };
@@ -4094,7 +4131,9 @@ export interface operations {
     delete_strategy_api_v1_strategies__strategy_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+            };
             path: {
                 strategy_id: string;
             };
@@ -4123,7 +4162,9 @@ export interface operations {
     update_strategy_api_v1_strategies__strategy_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+            };
             path: {
                 strategy_id: string;
             };
@@ -4158,7 +4199,9 @@ export interface operations {
     get_trial_stats_api_v1_strategies__strategy_id__trial_stats_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+            };
             path: {
                 strategy_id: string;
             };
@@ -4189,7 +4232,9 @@ export interface operations {
     list_versions_api_v1_strategies__strategy_id__versions_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+            };
             path: {
                 strategy_id: string;
             };
@@ -7257,6 +7302,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    emergency_stop_api_v1_live_emergency_stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

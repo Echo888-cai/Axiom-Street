@@ -496,6 +496,8 @@ class LiveReadinessOut(BaseModel):
 
 class LiveActivateIn(BaseModel):
     strategy_id: UUID
+    authorization: str = ""
+    capital_cap: Optional[float] = None
 
 
 class RiskSummaryOut(BaseModel):
