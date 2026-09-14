@@ -788,21 +788,28 @@ class ResearchNoteCreate(BaseModel):
     strategy_id: UUID
     strategy_version_id: Optional[UUID] = None
     backtest_id: Optional[UUID] = None
+    validation_run_id: Optional[UUID] = None
     title: Optional[str] = None
     hypothesis: Optional[str] = None
     method: Optional[str] = None
     conclusion: Optional[str] = None
     failure_modes: Optional[str] = None
+    # P2.4：证据清单（服务端可再解析）与段落起草来源（human/ai）
+    evidence: Dict[str, Any] = Field(default_factory=dict)
+    drafted_by: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ResearchNoteUpdate(BaseModel):
     strategy_version_id: Optional[UUID] = None
     backtest_id: Optional[UUID] = None
+    validation_run_id: Optional[UUID] = None
     title: Optional[str] = None
     hypothesis: Optional[str] = None
     method: Optional[str] = None
     conclusion: Optional[str] = None
     failure_modes: Optional[str] = None
+    evidence: Optional[Dict[str, Any]] = None
+    drafted_by: Optional[Dict[str, Any]] = None
 
 
 class ResearchNoteOut(ORMModel):
@@ -810,13 +817,25 @@ class ResearchNoteOut(ORMModel):
     strategy_id: UUID
     strategy_version_id: Optional[UUID] = None
     backtest_id: Optional[UUID] = None
+    validation_run_id: Optional[UUID] = None
     title: str
     hypothesis: str
     method: str
     conclusion: str
     failure_modes: str
+    evidence: Dict[str, Any] = Field(default_factory=dict)
+    drafted_by: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
+
+
+class ResearchExportOut(BaseModel):
+    """P2.4 冻结导出：payload 是导出时刻的快照，之后编辑不会改写旧导出。"""
+
+    id: UUID
+    note_id: UUID
+    created_at: datetime
+    payload: Dict[str, Any]
 
 
 class ResearchNotePage(BaseModel):

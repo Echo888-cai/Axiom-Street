@@ -27,6 +27,7 @@ export type LspCompletion = S["LspCompletion"];
 export type MonthlyReturn = S["MonthlyReturnOut"];
 export type MaeMfePoint = S["MaeMfePoint"];
 export type ResearchNote = S["ResearchNoteOut"];
+export type ResearchExport = S["ResearchExportOut"];
 export type UniverseMember = S["UniverseMemberOut"];
 export type ValidationSpec = S["ValidationSpecOut"];
 

@@ -18,3 +18,22 @@ it("keeps each chapter's draft when switching the visible editing section", () =
   fireEvent.click(screen.getByRole("button", { name: "检验方法" }));
   expect(screen.getByRole("textbox", { name: "检验方法" })).toHaveValue("样本外验证");
 });
+
+it("marks an AI-drafted section and surfaces the badge for review (P2.4)", () => {
+  function Editor() {
+    const [draftedBy, setDraftedBy] = useState<Record<string, string>>({});
+    return (
+      <NoteFields
+        draft={{ hypothesis: "想法" }}
+        onChange={() => undefined}
+        draftedBy={draftedBy}
+        onDraftedBy={(key, source) => setDraftedBy((d) => ({ ...d, [key]: source }))}
+      />
+    );
+  }
+  render(<Editor />);
+  fireEvent.click(screen.getByRole("button", { name: /AI 起草/ }));
+  expect(screen.getByText(/AI 起草段落已标记/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /人工撰写/ }));
+  expect(screen.queryByText(/AI 起草段落已标记/)).not.toBeInTheDocument();
+});

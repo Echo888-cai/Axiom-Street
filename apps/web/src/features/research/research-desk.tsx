@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FileBarChart2 } from "lucide-react";
-import { api, type ResearchNote, type Strategy } from "@/lib/api";
+import { api, type ResearchExport, type ResearchNote, type Strategy } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -60,7 +60,8 @@ export function ResearchDesk() {
       (draft.hypothesis ?? "") !== selected.hypothesis ||
       (draft.method ?? "") !== selected.method ||
       (draft.conclusion ?? "") !== selected.conclusion ||
-      (draft.failure_modes ?? "") !== selected.failure_modes
+      (draft.failure_modes ?? "") !== selected.failure_modes ||
+      JSON.stringify(draft.drafted_by ?? {}) !== JSON.stringify(selected.drafted_by ?? {})
     );
   }, [draft, selected]);
 
@@ -86,6 +87,8 @@ export function ResearchDesk() {
         method: draft.method,
         conclusion: draft.conclusion,
         failure_modes: draft.failure_modes,
+        drafted_by: draft.drafted_by as Record<string, string> | undefined,
+        evidence: draft.evidence as Record<string, unknown> | undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["research-notes"] });
@@ -100,6 +103,26 @@ export function ResearchDesk() {
       setActiveId(null);
       qc.invalidateQueries({ queryKey: ["research-notes"] });
       toast(t("common.research.deletedToast"), "info");
+    },
+    onError: (err: Error) => toast(err.message, "err"),
+  });
+
+  // P2.4 证据清单（服务端解析）与冻结导出（不可变快照）
+  const evidence = useQuery({
+    queryKey: ["research-evidence", selected?.id],
+    queryFn: () => api.getResearchEvidence(selected!.id),
+    enabled: Boolean(selected?.id),
+  });
+  const exportsList = useQuery({
+    queryKey: ["research-exports", selected?.id],
+    queryFn: () => api.listResearchExports(selected!.id),
+    enabled: Boolean(selected?.id),
+  });
+  const exportNote = useMutation({
+    mutationFn: () => api.exportResearchNote(selected!.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["research-exports", selected?.id] });
+      toast("导出已冻结：此后编辑不会改写这份导出。", "ok");
     },
     onError: (err: Error) => toast(err.message, "err"),
   });
@@ -259,7 +282,28 @@ export function ResearchDesk() {
                     </Button>
                   </div>
                 </div>
-                <NoteFields draft={draft} onChange={(key, value) => setDraft((d) => ({ ...d, [key]: value }))} />
+                <NoteFields
+                  draft={draft}
+                  onChange={(key, value) => setDraft((d) => ({ ...d, [key]: value }))}
+                  draftedBy={(draft.drafted_by as Record<string, string> | undefined) ?? {}}
+                  onDraftedBy={(key, source) =>
+                    setDraft((d) => ({
+                      ...d,
+                      drafted_by: {
+                        ...((d.drafted_by as Record<string, string> | undefined) ?? {}),
+                        [key]: source,
+                      },
+                    }))
+                  }
+                />
+                <EvidencePanel
+                  noteId={selected.id}
+                  items={(evidence.data?.items ?? []) as EvidenceItem[]}
+                  loading={evidence.isLoading}
+                  exporting={exportNote.isPending}
+                  exports={(exportsList.data ?? []) as ResearchExport[]}
+                  onExport={() => exportNote.mutate()}
+                />
               </div>
             )}
           </Card>
@@ -275,6 +319,75 @@ export function ResearchDesk() {
         onConfirm={() => remove.mutate()}
         onClose={() => setConfirmDelete(false)}
       />
+    </div>
+  );
+}
+
+
+type EvidenceItem = { kind: string; id: string; label?: string; status?: string };
+
+function capturedAtOf(exp: ResearchExport): string {
+  const evidence = (exp.payload as { evidence?: { captured_at?: string } }).evidence;
+  return (evidence?.captured_at ?? "").slice(0, 19).replace("T", " ");
+}
+
+function EvidencePanel({
+  noteId,
+  items,
+  loading,
+  exporting,
+  exports,
+  onExport,
+}: {
+  noteId: string;
+  items: EvidenceItem[];
+  loading: boolean;
+  exporting: boolean;
+  exports: ResearchExport[];
+  onExport: () => void;
+}) {
+  return (
+    <div className="space-y-4 border-t border-as-border p-5 pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-xs font-medium">证据清单</div>
+        <Button variant="secondary" size="sm" onClick={onExport} disabled={exporting}>
+          {exporting ? "冻结中…" : "导出（冻结当前证据）"}
+        </Button>
+      </div>
+      {loading ? (
+        <p className="text-xs text-as-muted">正在解析证据…</p>
+      ) : items.length === 0 ? (
+        <p className="text-xs leading-relaxed text-as-muted">
+          尚未关联版本/回测/验证。绑定后，第三人可凭此清单找到输入结果。
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.map((item) => (
+            <li key={`${item.kind}-${item.id}`} className="flex items-center gap-2 text-xs">
+              <Badge tone={item.kind === "version" ? "blue" : item.kind === "backtest" ? "green" : "amber"}>
+                {item.kind === "version" ? "版本" : item.kind === "backtest" ? "回测" : "验证"}
+              </Badge>
+              <span className="truncate text-as-text">{item.label ?? item.id}</span>
+              {item.status ? <span className="text-as-muted">{item.status}</span> : null}
+              <span className="ml-auto tabular text-[10px] text-as-muted">{item.id.slice(0, 8)}…</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="text-[11px] text-as-muted">
+        每次「导出」都会把当时的证据清单与时间固化为不可变快照；之后的编辑不会改写旧导出（笔记 {noteId.slice(0, 8)}…）。
+      </div>
+      {exports.length > 0 ? (
+        <ul className="space-y-1">
+          {exports.map((exp) => (
+            <li key={exp.id} className="flex items-center gap-2 text-[11px] text-as-muted">
+              <Badge tone="neutral">冻结导出 #{exports.length > 1 ? String(exports.indexOf(exp) + 1) : "1"}</Badge>
+              <span>{formatRelative(exp.created_at)}</span>
+              <span className="ml-auto tabular">{capturedAtOf(exp)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

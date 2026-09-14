@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from services.api.db import get_db
 from services.api.schemas import (
+    ResearchExportOut,
     ResearchNoteCreate,
     ResearchNoteOut,
     ResearchNotePage,
@@ -56,3 +57,37 @@ def update_note(
 def delete_note(note_id: UUID, db: Session = Depends(get_db)) -> Response:
     research_service.delete_note(db, note_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{note_id}/evidence")
+def note_evidence(note_id: UUID, db: Session = Depends(get_db)) -> dict:
+    """P2.4 证据清单：第三人可凭此回溯版本/回测/验证的输入结果。"""
+    note = research_service.get_note(db, note_id)
+    return research_service.resolve_note_evidence(db, note)
+
+
+@router.post(
+    "/{note_id}/export", response_model=ResearchExportOut, status_code=status.HTTP_201_CREATED
+)
+def export_note(note_id: UUID, db: Session = Depends(get_db)) -> ResearchExportOut:
+    """P2.4 冻结导出：导出时刻的证据清单与时间固定，之后的编辑不改写旧导出。"""
+    export = research_service.export_note(db, note_id)
+    return ResearchExportOut(
+        id=export.id,
+        note_id=export.note_id,
+        created_at=export.created_at,
+        payload=export.payload,
+    )
+
+
+@router.get("/{note_id}/exports", response_model=list[ResearchExportOut])
+def list_exports(note_id: UUID, db: Session = Depends(get_db)) -> list[ResearchExportOut]:
+    return [
+        ResearchExportOut(
+            id=export.id,
+            note_id=export.note_id,
+            created_at=export.created_at,
+            payload=export.payload,
+        )
+        for export in research_service.list_exports(db, note_id)
+    ]

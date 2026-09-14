@@ -497,12 +497,32 @@ class ResearchNote(Base):
     method: Mapped[str] = mapped_column(Text, default="", nullable=False)
     conclusion: Mapped[str] = mapped_column(Text, default="", nullable=False)
     failure_modes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # P2.4 研究报告：证据清单（服务端从版本/回测/验证解析）、段落起草来源
+    # （human/ai）与关联的验证运行，供第三人回溯输入结果。
+    validation_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("validation_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    evidence: Mapped[dict] = mapped_column(JSON, default=dict)
+    drafted_by: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     strategy: Mapped[Strategy] = relationship(back_populates="notes")
+
+
+class ResearchExport(Base):
+    """P2.4 冻结导出：导出时的证据清单与时间不可被后续编辑改写。"""
+
+    __tablename__ = "research_exports"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    note_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("research_notes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class CopilotInsightStatus(str, enum.Enum):

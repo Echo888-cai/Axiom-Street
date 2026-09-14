@@ -904,6 +904,63 @@ export interface paths {
         patch: operations["update_note_api_v1_research_notes__note_id__patch"];
         trace?: never;
     };
+    "/api/v1/research-notes/{note_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Note Evidence
+         * @description P2.4 证据清单：第三人可凭此回溯版本/回测/验证的输入结果。
+         */
+        get: operations["note_evidence_api_v1_research_notes__note_id__evidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research-notes/{note_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Note
+         * @description P2.4 冻结导出：导出时刻的证据清单与时间固定，之后的编辑不改写旧导出。
+         */
+        post: operations["export_note_api_v1_research_notes__note_id__export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research-notes/{note_id}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Exports */
+        get: operations["list_exports_api_v1_research_notes__note_id__exports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/code/syntax": {
         parameters: {
             query?: never;
@@ -2496,6 +2553,31 @@ export interface components {
             /** Benchmark Return */
             benchmark_return: number;
         };
+        /**
+         * ResearchExportOut
+         * @description P2.4 冻结导出：payload 是导出时刻的快照，之后编辑不会改写旧导出。
+         */
+        ResearchExportOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Note Id
+             * Format: uuid
+             */
+            note_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+        };
         /** ResearchNoteCreate */
         ResearchNoteCreate: {
             /**
@@ -2507,6 +2589,8 @@ export interface components {
             strategy_version_id?: string | null;
             /** Backtest Id */
             backtest_id?: string | null;
+            /** Validation Run Id */
+            validation_run_id?: string | null;
             /** Title */
             title?: string | null;
             /** Hypothesis */
@@ -2517,6 +2601,14 @@ export interface components {
             conclusion?: string | null;
             /** Failure Modes */
             failure_modes?: string | null;
+            /** Evidence */
+            evidence?: {
+                [key: string]: unknown;
+            };
+            /** Drafted By */
+            drafted_by?: {
+                [key: string]: unknown;
+            };
         };
         /** ResearchNoteOut */
         ResearchNoteOut: {
@@ -2534,6 +2626,8 @@ export interface components {
             strategy_version_id?: string | null;
             /** Backtest Id */
             backtest_id?: string | null;
+            /** Validation Run Id */
+            validation_run_id?: string | null;
             /** Title */
             title: string;
             /** Hypothesis */
@@ -2544,6 +2638,14 @@ export interface components {
             conclusion: string;
             /** Failure Modes */
             failure_modes: string;
+            /** Evidence */
+            evidence?: {
+                [key: string]: unknown;
+            };
+            /** Drafted By */
+            drafted_by?: {
+                [key: string]: unknown;
+            };
             /**
              * Created At
              * Format: date-time
@@ -2572,6 +2674,8 @@ export interface components {
             strategy_version_id?: string | null;
             /** Backtest Id */
             backtest_id?: string | null;
+            /** Validation Run Id */
+            validation_run_id?: string | null;
             /** Title */
             title?: string | null;
             /** Hypothesis */
@@ -2582,6 +2686,14 @@ export interface components {
             conclusion?: string | null;
             /** Failure Modes */
             failure_modes?: string | null;
+            /** Evidence */
+            evidence?: {
+                [key: string]: unknown;
+            } | null;
+            /** Drafted By */
+            drafted_by?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** RiskSummaryOut */
         RiskSummaryOut: {
@@ -5172,6 +5284,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResearchNoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    note_evidence_api_v1_research_notes__note_id__evidence_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_note_api_v1_research_notes__note_id__export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchExportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_exports_api_v1_research_notes__note_id__exports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchExportOut"][];
                 };
             };
             /** @description Validation Error */

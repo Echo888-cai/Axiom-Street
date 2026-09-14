@@ -1,5 +1,5 @@
 import { request } from "./http";
-import type { ResearchNote, Page } from "./types";
+import type { ResearchExport, ResearchNote, Page } from "./types";
 
 export const researchApi = {
   listResearchNotes: (params?: { strategy_id?: string }) => {
@@ -16,11 +16,14 @@ export const researchApi = {
     strategy_id: string;
     strategy_version_id?: string;
     backtest_id?: string;
+    validation_run_id?: string;
     title?: string;
     hypothesis?: string;
     method?: string;
     conclusion?: string;
     failure_modes?: string;
+    evidence?: Record<string, unknown>;
+    drafted_by?: Record<string, unknown>;
   }) =>
     request<ResearchNote>("/api/v1/research-notes", {
       method: "POST",
@@ -36,6 +39,9 @@ export const researchApi = {
       failure_modes?: string;
       strategy_version_id?: string | null;
       backtest_id?: string | null;
+      validation_run_id?: string | null;
+      evidence?: Record<string, unknown>;
+      drafted_by?: Record<string, unknown>;
     },
   ) =>
     request<ResearchNote>(`/api/v1/research-notes/${id}`, {
@@ -44,4 +50,15 @@ export const researchApi = {
     }),
   deleteResearchNote: (id: string) =>
     request<void>(`/api/v1/research-notes/${id}`, { method: "DELETE" }),
+  // P2.4 证据清单与冻结导出
+  getResearchEvidence: (id: string) =>
+    request<{ items: Record<string, unknown>[]; captured_at: string }>(
+      `/api/v1/research-notes/${id}/evidence`,
+    ),
+  exportResearchNote: (id: string) =>
+    request<ResearchExport>(`/api/v1/research-notes/${id}/export`, {
+      method: "POST",
+    }),
+  listResearchExports: (id: string) =>
+    request<ResearchExport[]>(`/api/v1/research-notes/${id}/exports`),
 };

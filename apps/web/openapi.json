@@ -3024,6 +3024,143 @@
         }
       }
     },
+    "/api/v1/research-notes/{note_id}/evidence": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Note Evidence",
+        "description": "P2.4 证据清单：第三人可凭此回溯版本/回测/验证的输入结果。",
+        "operationId": "note_evidence_api_v1_research_notes__note_id__evidence_get",
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Note Evidence Api V1 Research Notes  Note Id  Evidence Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research-notes/{note_id}/export": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Export Note",
+        "description": "P2.4 冻结导出：导出时刻的证据清单与时间固定，之后的编辑不改写旧导出。",
+        "operationId": "export_note_api_v1_research_notes__note_id__export_post",
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchExportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research-notes/{note_id}/exports": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "List Exports",
+        "operationId": "list_exports_api_v1_research_notes__note_id__exports_get",
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResearchExportOut"
+                  },
+                  "title": "Response List Exports Api V1 Research Notes  Note Id  Exports Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/code/syntax": {
       "post": {
         "tags": [
@@ -7425,6 +7562,39 @@
         ],
         "title": "PortfolioReturnIn"
       },
+      "ResearchExportOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "note_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Note Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "note_id",
+          "created_at",
+          "payload"
+        ],
+        "title": "ResearchExportOut",
+        "description": "P2.4 冻结导出：payload 是导出时刻的快照，之后编辑不会改写旧导出。"
+      },
       "ResearchNoteCreate": {
         "properties": {
           "strategy_id": {
@@ -7455,6 +7625,18 @@
               }
             ],
             "title": "Backtest Id"
+          },
+          "validation_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Run Id"
           },
           "title": {
             "anyOf": [
@@ -7510,6 +7692,16 @@
               }
             ],
             "title": "Failure Modes"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evidence"
+          },
+          "drafted_by": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Drafted By"
           }
         },
         "type": "object",
@@ -7554,6 +7746,18 @@
             ],
             "title": "Backtest Id"
           },
+          "validation_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Run Id"
+          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -7573,6 +7777,16 @@
           "failure_modes": {
             "type": "string",
             "title": "Failure Modes"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evidence"
+          },
+          "drafted_by": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Drafted By"
           },
           "created_at": {
             "type": "string",
@@ -7656,6 +7870,18 @@
             ],
             "title": "Backtest Id"
           },
+          "validation_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Run Id"
+          },
           "title": {
             "anyOf": [
               {
@@ -7710,6 +7936,30 @@
               }
             ],
             "title": "Failure Modes"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "drafted_by": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drafted By"
           }
         },
         "type": "object",
