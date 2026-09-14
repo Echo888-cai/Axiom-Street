@@ -10,6 +10,7 @@ import type {
   Page,
   MaeMfePoint,
   CompareEquityResponse,
+  CompareEligibilityOut,
 } from "./types";
 
 // Query params are wired to the spec operation so contract changes
@@ -78,6 +79,13 @@ export const backtestsApi = {
     if (normalized) search.set("normalized", "true");
     return request<CompareEquityResponse>(
       `/api/v1/backtests/compare/equity?${search.toString()}`,
+    );
+  },
+  compareEligibility: (ids: string[]) => {
+    const search = new URLSearchParams();
+    for (const id of ids) search.append("ids", id);
+    return request<CompareEligibilityOut>(
+      `/api/v1/backtests/compare/eligibility?${search.toString()}`,
     );
   },
   getMaeMfe: (id: string) => request<MaeMfePoint[]>(`/api/v1/backtests/${id}/mae-mfe`),

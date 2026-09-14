@@ -76,6 +76,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/backtests/compare/eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Eligibility
+         * @description P2.3 比较资格：返回每个比较者的版本/日期/基准/快照/成本口径，
+         *     并给出同口径结论——不同基准、区间、快照、本金或成本不冒充同一排名。
+         */
+        get: operations["compare_eligibility_api_v1_backtests_compare_eligibility_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/backtests/compare/equity": {
         parameters: {
             query?: never;
@@ -1272,6 +1293,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tasks
+         * @description Newest-first unified task list (backtests, validation, ingest, copilot).
+         */
+        get: operations["list_tasks_api_v1_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Task */
+        get: operations["get_task_api_v1_tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{task_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Task */
+        post: operations["cancel_task_api_v1_tasks__task_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1599,6 +1674,58 @@ export interface components {
          * @enum {string}
          */
         BacktestStatus: "QUEUED" | "STARTING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+        /** CompareEligibilityOut */
+        CompareEligibilityOut: {
+            /** Rows */
+            rows: components["schemas"]["CompareEligibilityRowOut"][];
+            /** Same Benchmark */
+            same_benchmark: boolean;
+            /** Same Window */
+            same_window: boolean;
+            /** Same Snapshot */
+            same_snapshot: boolean;
+            /** Same Capital */
+            same_capital: boolean;
+            /** Same Cost */
+            same_cost: boolean;
+            /** Comparable */
+            comparable: boolean;
+            /** Warnings */
+            warnings: string[];
+        };
+        /**
+         * CompareEligibilityRowOut
+         * @description One comparator's caliber so rankings never mix incomparable runs (P2.3).
+         */
+        CompareEligibilityRowOut: {
+            /**
+             * Backtest Id
+             * Format: uuid
+             */
+            backtest_id: string;
+            /** Label */
+            label: string;
+            /** Version */
+            version: number;
+            /** Benchmark */
+            benchmark: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Initial Capital */
+            initial_capital: number;
+            /** Data Version */
+            data_version?: string | null;
+            /** Slippage Bps */
+            slippage_bps?: number | null;
+        };
         /** CopilotBacktestFacts */
         CopilotBacktestFacts: {
             /**
@@ -2603,6 +2730,10 @@ export interface components {
             };
             /** Commit Message */
             commit_message?: string | null;
+            /** Source Version Id */
+            source_version_id?: string | null;
+            /** Source Code Hash */
+            source_code_hash?: string | null;
         };
         /** StrategyVersionOut */
         StrategyVersionOut: {
@@ -2649,6 +2780,42 @@ export interface components {
             line?: number | null;
             /** Column */
             column?: number | null;
+        };
+        /**
+         * TaskOut
+         * @description Unified task read-model entry (P2.2). Kind is one of
+         *     backtest | validation | ingest | copilot.
+         */
+        TaskOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /** Progress Step */
+            progress_step?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Ref */
+            ref?: string | null;
+            /** Strategy Name */
+            strategy_name?: string | null;
+            /**
+             * Cancelable
+             * @default false
+             */
+            cancelable: boolean;
         };
         /** TimeSeriesPointOut */
         TimeSeriesPointOut: {
@@ -3256,6 +3423,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StrategyVersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_eligibility_api_v1_backtests_compare_eligibility_get: {
+        parameters: {
+            query: {
+                ids: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareEligibilityOut"];
                 };
             };
             /** @description Validation Error */
@@ -5813,6 +6011,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverviewOut"];
+                };
+            };
+        };
+    };
+    list_tasks_api_v1_tasks_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_api_v1_tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_task_api_v1_tasks__task_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

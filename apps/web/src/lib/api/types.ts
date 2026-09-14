@@ -205,6 +205,10 @@ export type CompareEquityResponse = {
   series: CompareSeries[];
 };
 
+// P2.3 比较资格（契约来自 openapi.json 再生成）。
+export type CompareEligibilityRow = S["CompareEligibilityRowOut"];
+export type CompareEligibilityOut = S["CompareEligibilityOut"];
+
 export type IngestJob = {
   id: string;
   status: string;

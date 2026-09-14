@@ -18,6 +18,7 @@ from services.api.schemas import (
     BacktestMetricsOut,
     BacktestOut,
     BacktestPage,
+    CompareEligibilityOut,
     EquityPage,
     EquityPoint,
     MaeMfePoint,
@@ -30,6 +31,69 @@ from services.api.schemas import (
 from services.api.services import backtests as backtest_service
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
+
+
+@router.get("/compare/eligibility", response_model=CompareEligibilityOut)
+def compare_eligibility(
+    ids: list[UUID] = Query(..., min_length=1, max_length=6),
+    db: Session = Depends(get_db),
+) -> dict:
+    """P2.3 比较资格：返回每个比较者的版本/日期/基准/快照/成本口径，
+    并给出同口径结论——不同基准、区间、快照、本金或成本不冒充同一排名。"""
+    rows: list[dict] = []
+    for bid in ids:
+        bt = backtest_service.get_backtest(db, bid)
+        version = bt.strategy_version
+        config = (version.config or {}) if version else {}
+        execution = config.get("execution") or {}
+        rows.append(
+            {
+                "backtest_id": str(bid),
+                "label": (f"{version.strategy.name} v{version.version}" if version else str(bid)),
+                "version": version.version if version else 0,
+                "benchmark": bt.benchmark,
+                "start_date": bt.start_date.isoformat(),
+                "end_date": bt.end_date.isoformat(),
+                "initial_capital": bt.initial_capital,
+                "data_version": bt.data_version,
+                "slippage_bps": execution.get("slippage_bps"),
+            }
+        )
+
+    def same(field: str) -> bool:
+        values = {row[field] for row in rows}
+        return len(values) <= 1
+
+    same_benchmark = same("benchmark")
+    same_window = same("start_date") and same("end_date")
+    same_data_version = same("data_version")
+    same_capital = same("initial_capital")
+    same_cost = same("slippage_bps")
+
+    warnings: list[str] = []
+    if not same_benchmark:
+        warnings.append("基准不一致：" + " vs ".join(sorted({r["benchmark"] for r in rows})))
+    if not same_window:
+        warnings.append("时间范围不一致，收益/回撤不可直接对比。")
+    if not same_data_version:
+        warnings.append("数据快照不一致，行情口径可能不同。")
+    if not same_capital:
+        warnings.append("初始本金不一致。")
+    if not same_cost:
+        warnings.append("成本参数（滑点/费用）不一致。")
+
+    return {
+        "rows": rows,
+        "same_benchmark": same_benchmark,
+        "same_window": same_window,
+        "same_snapshot": same_data_version,
+        "same_capital": same_capital,
+        "same_cost": same_cost,
+        "comparable": all(
+            [same_benchmark, same_window, same_data_version, same_capital, same_cost]
+        ),
+        "warnings": warnings,
+    }
 
 
 @router.get("/compare/equity")

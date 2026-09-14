@@ -30,6 +30,13 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
     enabled: selectedIds.length >= 2,
   });
 
+  // P2.3 比较资格：不同基准/时间范围/快照/本金/成本不得冒充同口径排名。
+  const { data: eligibility } = useQuery({
+    queryKey: ["compare", "eligibility", [...selectedIds].sort().join(",")],
+    queryFn: () => api.compareEligibility(selectedIds),
+    enabled: selectedIds.length >= 2,
+  });
+
   const availableBacktests = allBacktests?.filter((b) => b.status === "COMPLETED") || [];
 
   const handleToggle = (id: string) => {
@@ -88,12 +95,40 @@ export function ComparePanel({ currentBacktestId }: ComparePanelProps) {
                 type="checkbox"
                 checked={normalized}
                 onChange={(e) => setNormalized(e.target.checked)}
+                disabled={Boolean(eligibility && !eligibility.same_window)}
                 className="accent-as-primary"
               />
               <span className="text-muted-foreground">{t("backtest.compare.normalized")}</span>
             </label>
           </div>
         </div>
+
+        {eligibility && (
+          <div
+            className={
+              "rounded-xl border p-3 text-xs " +
+              (eligibility.comparable
+                ? "border-as-positive/30 bg-as-positive/5 text-as-positive"
+                : "border-amber-300 bg-amber-50 text-amber-700")
+            }
+          >
+            {eligibility.comparable ? (
+              <p className="font-medium">同口径：基准、时间范围、数据快照、本金与成本一致，可直接比较排名。</p>
+            ) : (
+              <>
+                <p className="font-medium">非同口径比较：以下差异让收益/回撤不可直接排名</p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                  {eligibility.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+                <p className="mt-1">
+                  图表仅用于观察形态；排名与「归一化到 100」只在同口径下才成立。
+                </p>
+              </>
+            )}
+          </div>
+        )}
 
         {selectedIds.length >= 2 && compareData?.series?.length && (
           <div className="space-y-4">

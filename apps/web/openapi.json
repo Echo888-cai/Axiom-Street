@@ -402,6 +402,55 @@
         }
       }
     },
+    "/api/v1/backtests/compare/eligibility": {
+      "get": {
+        "tags": [
+          "backtests"
+        ],
+        "summary": "Compare Eligibility",
+        "description": "P2.3 比较资格：返回每个比较者的版本/日期/基准/快照/成本口径，\n并给出同口径结论——不同基准、区间、快照、本金或成本不冒充同一排名。",
+        "operationId": "compare_eligibility_api_v1_backtests_compare_eligibility_get",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "title": "Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareEligibilityOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/backtests/compare/equity": {
       "get": {
         "tags": [
@@ -3230,10 +3279,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "\u7b56\u7565\u6216\u56de\u6d4b UUID",
+              "description": "策略或回测 UUID",
               "title": "Id"
             },
-            "description": "\u7b56\u7565\u6216\u56de\u6d4b UUID"
+            "description": "策略或回测 UUID"
           }
         ],
         "responses": {
@@ -3466,7 +3515,7 @@
           "copilot"
         ],
         "summary": "Suggestions",
-        "description": "Deterministic actionable cards for a strategy (P5-3).\n\nStateless derivation on every call \u2014 the executable source of truth for\nwhat the copilot can recommend. The model (when enabled) only picks within\nthese cards.",
+        "description": "Deterministic actionable cards for a strategy (P5-3).\n\nStateless derivation on every call — the executable source of truth for\nwhat the copilot can recommend. The model (when enabled) only picks within\nthese cards.",
         "operationId": "suggestions_api_v1_copilot_suggestions_get",
         "parameters": [
           {
@@ -4220,6 +4269,142 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OverviewOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "List Tasks",
+        "description": "Newest-first unified task list (backtests, validation, ingest, copilot).",
+        "operationId": "list_tasks_api_v1_tasks_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskOut"
+                  },
+                  "title": "Response List Tasks Api V1 Tasks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{task_id}": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Get Task",
+        "operationId": "get_task_api_v1_tasks__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{task_id}/cancel": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Cancel Task",
+        "operationId": "cancel_task_api_v1_tasks__task_id__cancel_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -5271,6 +5456,129 @@
           "CANCELLED"
         ],
         "title": "BacktestStatus"
+      },
+      "CompareEligibilityOut": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CompareEligibilityRowOut"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "same_benchmark": {
+            "type": "boolean",
+            "title": "Same Benchmark"
+          },
+          "same_window": {
+            "type": "boolean",
+            "title": "Same Window"
+          },
+          "same_snapshot": {
+            "type": "boolean",
+            "title": "Same Snapshot"
+          },
+          "same_capital": {
+            "type": "boolean",
+            "title": "Same Capital"
+          },
+          "same_cost": {
+            "type": "boolean",
+            "title": "Same Cost"
+          },
+          "comparable": {
+            "type": "boolean",
+            "title": "Comparable"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "same_benchmark",
+          "same_window",
+          "same_snapshot",
+          "same_capital",
+          "same_cost",
+          "comparable",
+          "warnings"
+        ],
+        "title": "CompareEligibilityOut"
+      },
+      "CompareEligibilityRowOut": {
+        "properties": {
+          "backtest_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Backtest Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "benchmark": {
+            "type": "string",
+            "title": "Benchmark"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "initial_capital": {
+            "type": "number",
+            "title": "Initial Capital"
+          },
+          "data_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Version"
+          },
+          "slippage_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slippage Bps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "backtest_id",
+          "label",
+          "version",
+          "benchmark",
+          "start_date",
+          "end_date",
+          "initial_capital"
+        ],
+        "title": "CompareEligibilityRowOut",
+        "description": "One comparator's caliber so rankings never mix incomparable runs (P2.3)."
       },
       "CopilotBacktestFacts": {
         "properties": {
@@ -7864,6 +8172,29 @@
               }
             ],
             "title": "Commit Message"
+          },
+          "source_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Version Id"
+          },
+          "source_code_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Code Hash"
           }
         },
         "type": "object",
@@ -7989,6 +8320,92 @@
           "ok"
         ],
         "title": "SyntaxCheckOut"
+      },
+      "TaskOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress_step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress Step"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "strategy_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Name"
+          },
+          "cancelable": {
+            "type": "boolean",
+            "title": "Cancelable",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "status",
+          "created_at"
+        ],
+        "title": "TaskOut",
+        "description": "Unified task read-model entry (P2.2). Kind is one of\nbacktest | validation | ingest | copilot."
       },
       "TimeSeriesPointOut": {
         "properties": {
@@ -8631,7 +9048,7 @@
           "strategy_version_id"
         ],
         "title": "ValidationCreate",
-        "description": "Unified validation creation \u2014 params validated against spec registry."
+        "description": "Unified validation creation — params validated against spec registry."
       },
       "ValidationError": {
         "properties": {

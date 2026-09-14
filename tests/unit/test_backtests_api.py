@@ -347,3 +347,54 @@ def test_compare_equity_normalized_and_arity_guard(client, monkeypatch):
     assert abs(data[-1]["value"] - 102) < 1e-9
     single = client.get(f"/api/v1/backtests/compare/equity?ids={a}")
     assert single.status_code == 422
+
+
+def _post_backtest(client, strategy: dict, *, start: str, end: str, benchmark: str) -> dict:
+    res = client.post(
+        "/api/v1/backtests",
+        json={
+            "strategy_version_id": strategy["latest_version"]["id"],
+            "start_date": start,
+            "end_date": end,
+            "benchmark": benchmark,
+            "initial_capital": 100000,
+        },
+    )
+    assert res.status_code in (200, 201), res.text
+    return res.json()
+
+
+def test_compare_eligibility_detects_mismatched_benchmark_and_window(client, monkeypatch):
+    """P2.3 验收：不同基准/时间范围不得冒充同口径排名。"""
+    _ready(monkeypatch)
+    a = _strategy(client)
+    b = _strategy(client)
+    bt_a = _post_backtest(client, a, start="2020-01-01", end="2020-12-31", benchmark="SPY")
+    bt_b = _post_backtest(client, b, start="2019-01-01", end="2019-12-31", benchmark="QQQ")
+
+    res = client.get(f"/api/v1/backtests/compare/eligibility?ids={bt_a['id']}&ids={bt_b['id']}")
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["same_benchmark"] is False
+    assert body["same_window"] is False
+    assert body["comparable"] is False
+    joined = " ".join(body["warnings"])
+    assert "基准不一致" in joined
+    assert "时间范围不一致" in joined
+
+
+def test_compare_eligibility_consistent_caliber_is_comparable(client, monkeypatch):
+    _ready(monkeypatch)
+    a = _strategy(client)
+    b = _strategy(client)
+    bt_a = _post_backtest(client, a, start="2020-01-01", end="2020-12-31", benchmark="SPY")
+    bt_b = _post_backtest(client, b, start="2020-01-01", end="2020-12-31", benchmark="SPY")
+
+    res = client.get(f"/api/v1/backtests/compare/eligibility?ids={bt_a['id']}&ids={bt_b['id']}")
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["comparable"] is True
+    assert body["warnings"] == []
+    assert body["rows"][0]["benchmark"] == "SPY"
+    assert body["rows"][0]["version"] == 1
+    assert body["rows"][0]["start_date"] == "2020-01-01"

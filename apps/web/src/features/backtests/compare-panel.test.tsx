@@ -13,6 +13,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
     api: {
       listBacktests: vi.fn(),
       compareEquity: vi.fn(),
+      compareEligibility: vi.fn(),
     },
   };
 });
@@ -55,6 +56,16 @@ describe("ComparePanel", () => {
   beforeEach(() => {
     vi.mocked(api.listBacktests).mockResolvedValue([btA, btB] as Backtest[]);
     vi.mocked(api.compareEquity).mockReset().mockResolvedValue({ series: [] });
+    vi.mocked(api.compareEligibility).mockReset().mockResolvedValue({
+      rows: [],
+      same_benchmark: true,
+      same_window: true,
+      same_snapshot: true,
+      same_capital: true,
+      same_cost: true,
+      comparable: true,
+      warnings: [],
+    });
   });
 
   it("renders the metrics table from backend series values (RC-W4)", async () => {
@@ -128,5 +139,56 @@ describe("ComparePanel", () => {
 
     await selectSecondBacktest();
     await vi.waitFor(() => expect(api.compareEquity).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("ComparePanel 比较资格（P2.3）", () => {
+  beforeEach(() => {
+    vi.mocked(api.listBacktests).mockResolvedValue([btA, btB] as Backtest[]);
+    vi.mocked(api.compareEquity).mockReset().mockResolvedValue({ series: [] });
+  });
+
+  it("warns when calibers differ instead of pretending an equal-caliber ranking", async () => {
+    vi.mocked(api.compareEligibility).mockResolvedValue({
+      rows: [],
+      same_benchmark: false,
+      same_window: false,
+      same_snapshot: true,
+      same_capital: true,
+      same_cost: true,
+      comparable: false,
+      warnings: ["基准不一致：QQQ vs SPY", "时间范围不一致，收益/回撤不可直接对比。"],
+    });
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <ComparePanel currentBacktestId="bt-a" />
+      </QueryClientProvider>,
+    );
+    await selectSecondBacktest();
+    expect(await screen.findByText(/非同口径比较/)).toBeInTheDocument();
+    expect(screen.getByText(/基准不一致：QQQ vs SPY/)).toBeInTheDocument();
+    expect(screen.getByText(/时间范围不一致/)).toBeInTheDocument();
+    // 时间范围不一致时归一化被禁用，避免造成可直接比较的错觉
+    expect(screen.getByRole("checkbox")).toBeDisabled();
+  });
+
+  it("confirms equal caliber when benchmark, window, snapshot and cost agree", async () => {
+    vi.mocked(api.compareEligibility).mockResolvedValue({
+      rows: [],
+      same_benchmark: true,
+      same_window: true,
+      same_snapshot: true,
+      same_capital: true,
+      same_cost: true,
+      comparable: true,
+      warnings: [],
+    });
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <ComparePanel currentBacktestId="bt-a" />
+      </QueryClientProvider>,
+    );
+    await selectSecondBacktest();
+    expect(await screen.findByText(/同口径：/)).toBeInTheDocument();
   });
 });

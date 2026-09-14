@@ -840,3 +840,28 @@ class TaskOut(BaseModel):
     ref: Optional[str] = None
     strategy_name: Optional[str] = None
     cancelable: bool = False
+
+
+class CompareEligibilityRowOut(BaseModel):
+    """One comparator's caliber so rankings never mix incomparable runs (P2.3)."""
+
+    backtest_id: UUID
+    label: str
+    version: int
+    benchmark: str
+    start_date: date
+    end_date: date
+    initial_capital: float
+    data_version: Optional[str] = None
+    slippage_bps: Optional[float] = None
+
+
+class CompareEligibilityOut(BaseModel):
+    rows: list[CompareEligibilityRowOut]
+    same_benchmark: bool
+    same_window: bool
+    same_snapshot: bool
+    same_capital: bool
+    same_cost: bool
+    comparable: bool
+    warnings: list[str]
