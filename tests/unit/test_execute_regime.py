@@ -76,6 +76,110 @@ def _session(monkeypatch):
 
 
 def _add_gate(db, *, strategy_id, version_id, backtest_id, kind: ValidationKind) -> None:
+    # P1.3b: stubbed gates carry scope-checked execution evidence.
+    anchor = db.get(Backtest, backtest_id)
+    assert anchor is not None
+    snap = anchor.data_snapshot_id
+    uni = anchor.universe_snapshot or []
+    bench = anchor.benchmark or "SPY"
+    cap = float(anchor.initial_capital or 100_000.0)
+    base_params = dict(anchor.parameters or {})
+
+    def _sub(params):
+        row = Backtest(
+            id=uuid4(),
+            strategy_version_id=version_id,
+            start_date=anchor.start_date,
+            end_date=anchor.end_date,
+            benchmark=bench,
+            initial_capital=cap,
+            status=BacktestStatus.COMPLETED,
+            parameters=params,
+            data_snapshot_id=snap,
+            universe_snapshot=uni,
+            engine_version=anchor.engine_version,
+            data_version=anchor.data_version,
+        )
+        db.add(row)
+        db.flush()
+        return row
+
+    params: dict = {}
+    result: dict = {"passed": True}
+    if kind == ValidationKind.PBO:
+        subs = [_sub({**base_params, "lookback": v}) for v in (100, 200)]
+        params = {
+            "parameter_key": "lookback",
+            "values": [100, 200],
+            "start_date": anchor.start_date.isoformat(),
+            "end_date": anchor.end_date.isoformat(),
+        }
+        result = {"backtest_ids": [str(r.id) for r in subs], "pbo": 0.2, "passed": True}
+    elif kind == ValidationKind.SENSITIVITY:
+        subs = [_sub({**base_params, "lookback": v}) for v in (100, 150, 200)]
+        params = {
+            "parameter_key": "lookback",
+            "values": [100, 150, 200],
+            "start_date": anchor.start_date.isoformat(),
+            "end_date": anchor.end_date.isoformat(),
+        }
+        result = {"backtest_ids": [str(r.id) for r in subs], "passed": True}
+    elif kind == ValidationKind.COST:
+        subs = [_sub({**base_params, "slippage_bps": c, "fee_usd": 0.0}) for c in (0.0, 5.0, 10.0)]
+        params = {
+            "costs_bps": [0.0, 5.0, 10.0],
+            "start_date": anchor.start_date.isoformat(),
+            "end_date": anchor.end_date.isoformat(),
+        }
+        result = {"backtest_ids": [str(r.id) for r in subs], "passed": True}
+    elif kind == ValidationKind.WALK_FORWARD:
+        folds = [
+            {
+                "index": 0,
+                "is_start": anchor.start_date.isoformat(),
+                "is_end": anchor.start_date.isoformat(),
+                "oos_start": anchor.start_date.isoformat(),
+                "oos_end": anchor.end_date.isoformat(),
+            },
+            {
+                "index": 1,
+                "is_start": anchor.start_date.isoformat(),
+                "is_end": anchor.start_date.isoformat(),
+                "oos_start": anchor.start_date.isoformat(),
+                "oos_end": anchor.end_date.isoformat(),
+            },
+        ]
+        params = {
+            "start_date": anchor.start_date.isoformat(),
+            "end_date": anchor.end_date.isoformat(),
+            "benchmark": bench,
+            "initial_capital": cap,
+            "folds": folds,
+        }
+        result = {
+            "folds": folds,
+            "execution": {
+                "engine_version": anchor.engine_version,
+                "data_version": anchor.data_version,
+                "data_snapshot_id": str(snap) if snap else None,
+                "benchmark": bench,
+                "initial_capital": cap,
+                "universe_snapshot": uni,
+                "parameters": base_params,
+                "folds": folds,
+            },
+            "passed": True,
+        }
+    elif kind == ValidationKind.SPA:
+        subs = [_sub({**base_params}) for _ in range(2)]
+        strategy = db.get(Strategy, strategy_id)
+        fam = str(strategy.family_id or strategy_id) if strategy else str(strategy_id)
+        params = {
+            "family_id": fam,
+            "data_snapshot_id": str(snap) if snap else None,
+            "n_models": 2,
+        }
+        result = {"models": [{"backtest_id": str(r.id)} for r in subs], "passed": True}
     db.add(
         ValidationRun(
             strategy_id=strategy_id,
@@ -84,8 +188,8 @@ def _add_gate(db, *, strategy_id, version_id, backtest_id, kind: ValidationKind)
             kind=kind,
             status=ValidationRunStatus.COMPLETED,
             progress_step="Completed",
-            params={},
-            result={"passed": True},
+            params=params,
+            result=result,
             passed=True,
             finished_at=datetime.now(timezone.utc),
         )

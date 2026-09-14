@@ -116,6 +116,8 @@ def execute_walk_forward(run_id: str) -> dict:
             return _fail_walk_forward(db, run, "risk_limits_invalid", str(exc))
 
         observations: list[FoldObservation] = []
+        engine_versions: list[str] = []
+        data_versions: list[str] = []
         for fold in folds:
             run.progress_step = (
                 f"Fold {fold.index + 1}/{len(folds)}: {fold.is_start.isoformat()} → "
@@ -158,13 +160,30 @@ def execute_walk_forward(run_id: str) -> dict:
                     oos_equity=slice_equity(result.equity, fold.oos_start, fold.oos_end),
                 )
             )
+            engine_versions.append(str(result.engine_version))
+            data_versions.append(str(result.data_version))
 
         try:
             score = score_walk_forward(observations)
         except WalkForwardError as exc:
             return _fail_walk_forward(db, run, "walk_forward_failed", str(exc))
 
-        run.result = score.to_dict()
+        payload = score.to_dict()
+        # P1.3b: persist per-fold execution evidence so promotion can verify the
+        # folds actually ran with the anchored engine / snapshot / scope.
+        payload["execution"] = {
+            "engine_version": engine_versions[0] if engine_versions else None,
+            "engine_versions": engine_versions,
+            "data_version": data_versions[0] if data_versions else None,
+            "data_versions": data_versions,
+            "data_snapshot_id": params.get("data_snapshot_id"),
+            "benchmark": str(params.get("benchmark") or "SPY"),
+            "initial_capital": float(params.get("initial_capital") or 100_000.0),
+            "universe_snapshot": params.get("universe_snapshot") or [],
+            "parameters": dict(params.get("parameters") or {}),
+            "folds": [fold.to_dict() for fold in folds],
+        }
+        run.result = payload
         run.passed = score.passed
         run.error = None
         run.status = ValidationRunStatus.COMPLETED

@@ -96,6 +96,86 @@ def _session(monkeypatch):
     return Session
 
 
+def _add_scan_gate(db, *, strategy, version, backtest, kind, passed: bool) -> None:
+    """P1.3b: stubbed scan gates carry scope-checked sub-backtest evidence."""
+    bench = backtest.benchmark or "SPY"
+    cap = float(backtest.initial_capital or 100_000.0)
+    uni = backtest.universe_snapshot or []
+    base_params = dict(backtest.parameters or {})
+
+    def _sub(params):
+        row = Backtest(
+            id=uuid4(),
+            strategy_version_id=version.id,
+            start_date=backtest.start_date,
+            end_date=backtest.end_date,
+            benchmark=bench,
+            initial_capital=cap,
+            status=BacktestStatus.COMPLETED,
+            parameters=params,
+            data_snapshot_id=backtest.data_snapshot_id,
+            universe_snapshot=uni,
+            engine_version=backtest.engine_version,
+            data_version=backtest.data_version,
+        )
+        db.add(row)
+        db.flush()
+        return row
+
+    params: dict = {}
+    result: dict = {"passed": passed}
+    if kind == ValidationKind.PBO:
+        subs = [_sub({**base_params, "lookback": v}) for v in (100, 200)]
+        params = {
+            "parameter_key": "lookback",
+            "values": [100, 200],
+            "start_date": backtest.start_date.isoformat(),
+            "end_date": backtest.end_date.isoformat(),
+        }
+        result = {"backtest_ids": [str(r.id) for r in subs], "pbo": 0.2, "passed": passed}
+    elif kind == ValidationKind.SENSITIVITY:
+        subs = [_sub({**base_params, "lookback": v}) for v in (100, 150, 200)]
+        params = {
+            "parameter_key": "lookback",
+            "values": [100, 150, 200],
+            "start_date": backtest.start_date.isoformat(),
+            "end_date": backtest.end_date.isoformat(),
+        }
+        result = {"backtest_ids": [str(r.id) for r in subs], "passed": passed}
+    elif kind == ValidationKind.COST:
+        subs = [_sub({**base_params, "slippage_bps": c, "fee_usd": 0.0}) for c in (0.0, 5.0, 10.0)]
+        params = {
+            "costs_bps": [0.0, 5.0, 10.0],
+            "start_date": backtest.start_date.isoformat(),
+            "end_date": backtest.end_date.isoformat(),
+        }
+        result = {"backtest_ids": [str(r.id) for r in subs], "passed": passed}
+    elif kind == ValidationKind.SPA:
+        subs = [_sub({**base_params}) for _ in range(2)]
+        params = {
+            "family_id": str(strategy.family_id or strategy.id),
+            "data_snapshot_id": str(backtest.data_snapshot_id)
+            if backtest.data_snapshot_id
+            else None,
+            "n_models": 2,
+        }
+        result = {"models": [{"backtest_id": str(r.id)} for r in subs], "passed": passed}
+    db.add(
+        ValidationRun(
+            strategy_id=strategy.id,
+            strategy_version_id=version.id,
+            backtest_id=backtest.id,
+            kind=kind,
+            status=ValidationRunStatus.COMPLETED,
+            progress_step="Completed",
+            params=params,
+            result=result,
+            passed=passed,
+            finished_at=datetime.now(timezone.utc),
+        )
+    )
+
+
 def _seed(
     Session,
     *,
@@ -157,6 +237,7 @@ def _seed(
             "end_date": "2020-12-31",
             "benchmark": "SPY",
             "initial_capital": 100_000.0,
+            "data_snapshot_id": str(snapshot.id),
             "universe_snapshot": backtest.universe_snapshot,
             "parameters": {},
             "folds": [fold.to_dict() for fold in folds],
@@ -180,49 +261,31 @@ def _seed(
         )
     )
     if pbo_passed is not None:
-        db.add(
-            ValidationRun(
-                strategy_id=strategy.id,
-                strategy_version_id=version.id,
-                backtest_id=backtest.id,
-                kind=ValidationKind.PBO,
-                status=ValidationRunStatus.COMPLETED,
-                progress_step="Completed",
-                params={"values": [100, 200]},
-                result={"pbo": 0.2 if pbo_passed else 0.8, "passed": pbo_passed},
-                passed=pbo_passed,
-                finished_at=datetime.now(timezone.utc),
-            )
+        _add_scan_gate(
+            db,
+            strategy=strategy,
+            version=version,
+            backtest=backtest,
+            kind=ValidationKind.PBO,
+            passed=pbo_passed,
         )
     if sensitivity_passed is not None:
-        db.add(
-            ValidationRun(
-                strategy_id=strategy.id,
-                strategy_version_id=version.id,
-                backtest_id=backtest.id,
-                kind=ValidationKind.SENSITIVITY,
-                status=ValidationRunStatus.COMPLETED,
-                progress_step="Completed",
-                params={"values": [100, 150, 200]},
-                result={"shape": "plateau", "passed": sensitivity_passed},
-                passed=sensitivity_passed,
-                finished_at=datetime.now(timezone.utc),
-            )
+        _add_scan_gate(
+            db,
+            strategy=strategy,
+            version=version,
+            backtest=backtest,
+            kind=ValidationKind.SENSITIVITY,
+            passed=sensitivity_passed,
         )
     if cost_passed is not None:
-        db.add(
-            ValidationRun(
-                strategy_id=strategy.id,
-                strategy_version_id=version.id,
-                backtest_id=backtest.id,
-                kind=ValidationKind.COST,
-                status=ValidationRunStatus.COMPLETED,
-                progress_step="Completed",
-                params={"costs_bps": [0, 5, 10]},
-                result={"breakeven_bps": 20 if cost_passed else 2, "passed": cost_passed},
-                passed=cost_passed,
-                finished_at=datetime.now(timezone.utc),
-            )
+        _add_scan_gate(
+            db,
+            strategy=strategy,
+            version=version,
+            backtest=backtest,
+            kind=ValidationKind.COST,
+            passed=cost_passed,
         )
     if bootstrap_passed is not None:
         db.add(
@@ -255,19 +318,13 @@ def _seed(
             )
         )
     if spa_passed is not None:
-        db.add(
-            ValidationRun(
-                strategy_id=strategy.id,
-                strategy_version_id=version.id,
-                backtest_id=backtest.id,
-                kind=ValidationKind.SPA,
-                status=ValidationRunStatus.COMPLETED,
-                progress_step="Completed",
-                params={},
-                result={"passed": spa_passed},
-                passed=spa_passed,
-                finished_at=datetime.now(timezone.utc),
-            )
+        _add_scan_gate(
+            db,
+            strategy=strategy,
+            version=version,
+            backtest=backtest,
+            kind=ValidationKind.SPA,
+            passed=spa_passed,
         )
     db.commit()
     ids = (str(run.id), strategy.id)

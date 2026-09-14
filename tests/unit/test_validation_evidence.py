@@ -20,17 +20,39 @@ from services.api.models import (
 from services.api.services.validation import maybe_apply_validated
 
 
+def _mk_sub(db, *, vid, snapshot_id, anchor, params):
+    row = Backtest(
+        id=uuid4(),
+        strategy_version_id=vid,
+        start_date=anchor.start_date,
+        end_date=anchor.end_date,
+        benchmark=anchor.benchmark,
+        initial_capital=anchor.initial_capital,
+        status=BacktestStatus.COMPLETED,
+        parameters=params,
+        data_snapshot_id=snapshot_id,
+        universe_snapshot=anchor.universe_snapshot,
+        engine_version=anchor.engine_version,
+        data_version=anchor.data_version,
+    )
+    db.add(row)
+    db.flush()
+    return row
+
+
 def seed(client):
     result = client.post("/api/v1/strategies", json={"name": "Evidence"}).json()
     sid, vid = UUID(result["id"]), UUID(result["latest_version"]["id"])
     with db_module.SessionLocal() as db:
         strategy = db.get(Strategy, sid)
         strategy.status = StrategyStatus.BACKTESTED
+        strategy.family_id = strategy.id
         snapshot = DataSnapshot(
             id=uuid4(), snapshot_key="evidence", provider="fixture", content_sha256="a" * 64
         )
         db.add(snapshot)
         db.flush()
+        universe = [{"symbol": "SPY", "effective_from": "2020-01-01", "effective_to": None}]
         backtest = Backtest(
             data_snapshot_id=snapshot.id,
             id=uuid4(),
@@ -39,11 +61,112 @@ def seed(client):
             end_date=date(2024, 1, 1),
             status=BacktestStatus.COMPLETED,
             parameters={"lookback": 200},
+            benchmark="SPY",
+            initial_capital=100_000.0,
+            universe_snapshot=universe,
+            engine_version="quantconnect/lean:16355",
+            data_version="abc",
         )
         db.add(backtest)
         db.flush()
         bid = backtest.id
+        # Scan sub-backtests share the anchored scope; only the declared axis varies.
+        pbo_subs = [
+            _mk_sub(db, vid=vid, snapshot_id=snapshot.id, anchor=backtest, params={"lookback": v})
+            for v in (100, 200)
+        ]
+        sens_subs = [
+            _mk_sub(db, vid=vid, snapshot_id=snapshot.id, anchor=backtest, params={"lookback": v})
+            for v in (100, 150, 200)
+        ]
+        cost_subs = [
+            _mk_sub(
+                db,
+                vid=vid,
+                snapshot_id=snapshot.id,
+                anchor=backtest,
+                params={"lookback": 200, "slippage_bps": c, "fee_usd": 0.0},
+            )
+            for c in (0.0, 5.0, 10.0)
+        ]
+        spa_subs = pbo_subs
+        wf_folds = [
+            {
+                "index": 0,
+                "is_start": "2020-01-01",
+                "is_end": "2021-12-31",
+                "oos_start": "2022-01-01",
+                "oos_end": "2022-12-31",
+            },
+            {
+                "index": 1,
+                "is_start": "2020-01-01",
+                "is_end": "2022-12-31",
+                "oos_start": "2023-01-01",
+                "oos_end": "2023-12-31",
+            },
+        ]
+        wf_execution = {
+            "engine_version": backtest.engine_version,
+            "data_version": backtest.data_version,
+            "data_snapshot_id": str(snapshot.id),
+            "benchmark": backtest.benchmark,
+            "initial_capital": backtest.initial_capital,
+            "universe_snapshot": universe,
+            "parameters": {"lookback": 200},
+            "folds": wf_folds,
+        }
+        per_kind: dict[ValidationKind, tuple[dict, dict]] = {
+            ValidationKind.WALK_FORWARD: (
+                {
+                    "start_date": "2020-01-01",
+                    "end_date": "2024-01-01",
+                    "benchmark": "SPY",
+                    "initial_capital": 100_000.0,
+                    "folds": wf_folds,
+                },
+                {"folds": wf_folds, "execution": wf_execution, "passed": True},
+            ),
+            ValidationKind.PBO: (
+                {
+                    "parameter_key": "lookback",
+                    "values": [100, 200],
+                    "start_date": "2020-01-01",
+                    "end_date": "2024-01-01",
+                },
+                {"backtest_ids": [str(r.id) for r in pbo_subs], "pbo": 0.2, "passed": True},
+            ),
+            ValidationKind.SENSITIVITY: (
+                {
+                    "parameter_key": "lookback",
+                    "values": [100, 150, 200],
+                    "start_date": "2020-01-01",
+                    "end_date": "2024-01-01",
+                },
+                {"backtest_ids": [str(r.id) for r in sens_subs], "passed": True},
+            ),
+            ValidationKind.COST: (
+                {
+                    "costs_bps": [0.0, 5.0, 10.0],
+                    "start_date": "2020-01-01",
+                    "end_date": "2024-01-01",
+                },
+                {"backtest_ids": [str(r.id) for r in cost_subs], "passed": True},
+            ),
+            ValidationKind.SPA: (
+                {
+                    "family_id": str(strategy.id),
+                    "data_snapshot_id": str(snapshot.id),
+                    "n_models": len(spa_subs),
+                },
+                {
+                    "models": [{"backtest_id": str(r.id)} for r in spa_subs],
+                    "passed": True,
+                },
+            ),
+        }
         for kind in ValidationKind:
+            params, run_result = per_kind.get(kind, ({}, {"passed": True}))
             db.add(
                 ValidationRun(
                     strategy_id=sid,
@@ -52,6 +175,8 @@ def seed(client):
                     kind=kind,
                     passed=True,
                     status=ValidationRunStatus.COMPLETED,
+                    params=params,
+                    result=run_result,
                     created_at=datetime.now(timezone.utc) - timedelta(days=1),
                 )
             )
@@ -234,3 +359,142 @@ def test_scan_preparation_inherits_reference_research_scope(client, kind):
         assert params["benchmark"] == "QQQ"
         assert params["initial_capital"] == 12345
         assert params["universe_snapshot"] == [{"symbol": "QQQ"}]
+
+
+def _latest(db, sid, vid, kind):
+    from sqlalchemy import select
+
+    return db.scalars(
+        select(ValidationRun)
+        .where(
+            ValidationRun.strategy_id == sid,
+            ValidationRun.strategy_version_id == vid,
+            ValidationRun.kind == kind,
+        )
+        .order_by(ValidationRun.created_at.desc())
+    ).first()
+
+
+def test_scan_sub_backtest_with_different_engine_is_rejected(client):
+    sid, vid, bid = seed(client)
+    assert apply(sid, vid) == StrategyStatus.VALIDATED
+    with db_module.SessionLocal() as db:
+        pbo = _latest(db, sid, vid, ValidationKind.PBO)
+        sub = db.get(Backtest, UUID(pbo.result["backtest_ids"][0]))
+        sub.engine_version = "quantconnect/lean:other-image"
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+    body = client.get(f"/api/v1/live/readiness?strategy_id={sid}").json()
+    assert "PBO" in body["evidence"]["missing_validation"]
+    assert body["evidence"]["validation_reasons"]["PBO"] == "scan_execution_mismatch"
+
+
+def test_scan_sub_backtest_with_different_snapshot_is_rejected(client):
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        pbo = _latest(db, sid, vid, ValidationKind.PBO)
+        sub = db.get(Backtest, UUID(pbo.result["backtest_ids"][0]))
+        sub.data_snapshot_id = uuid4()
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+
+
+def test_scan_sub_backtest_with_off_axis_param_change_is_rejected(client):
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        sens = _latest(db, sid, vid, ValidationKind.SENSITIVITY)
+        sub = db.get(Backtest, UUID(sens.result["backtest_ids"][0]))
+        sub.parameters = {"lookback": 100, "extra_universe": "QQQ"}
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+    with db_module.SessionLocal() as db:
+        assert _latest(db, sid, vid, ValidationKind.PBO).passed is True
+
+
+def test_scan_with_missing_sub_record_is_rejected(client):
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        cost = _latest(db, sid, vid, ValidationKind.COST)
+        missing = uuid4()
+        result = dict(cost.result or {})
+        result["backtest_ids"] = [*result["backtest_ids"], str(missing)]
+        cost.result = result
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+
+
+def test_scan_with_empty_backtest_ids_needs_revalidation(client):
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        pbo = _latest(db, sid, vid, ValidationKind.PBO)
+        pbo.result = {"pbo": 0.2, "passed": True}
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+    body = client.get(f"/api/v1/live/readiness?strategy_id={sid}").json()
+    assert body["evidence"]["validation_reasons"]["PBO"] == "scan_execution_missing"
+
+
+def test_walk_forward_without_execution_evidence_needs_revalidation(client):
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        wf = _latest(db, sid, vid, ValidationKind.WALK_FORWARD)
+        result = dict(wf.result or {})
+        result.pop("execution", None)
+        wf.result = result
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+    body = client.get(f"/api/v1/live/readiness?strategy_id={sid}").json()
+    assert body["evidence"]["validation_reasons"]["WALK_FORWARD"] == (
+        "walk_forward_execution_missing"
+    )
+
+
+def test_walk_forward_with_swapped_snapshot_is_rejected(client):
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        wf = _latest(db, sid, vid, ValidationKind.WALK_FORWARD)
+        result = dict(wf.result or {})
+        execution = dict(result["execution"])
+        execution["data_snapshot_id"] = str(uuid4())
+        result["execution"] = execution
+        wf.result = result
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+
+
+def test_spa_with_missing_trial_is_rejected(client):
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        spa = _latest(db, sid, vid, ValidationKind.SPA)
+        result = dict(spa.result or {})
+        result["models"] = [*result["models"], {"backtest_id": str(uuid4())}]
+        params = dict(spa.params or {})
+        params["n_models"] = len(result["models"])
+        spa.result = result
+        spa.params = params
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+
+
+def test_spa_with_cross_snapshot_trial_is_rejected(client):
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        spa = _latest(db, sid, vid, ValidationKind.SPA)
+        other = Backtest(
+            id=uuid4(),
+            strategy_version_id=vid,
+            start_date=date(2020, 1, 1),
+            end_date=date(2024, 1, 1),
+            status=BacktestStatus.COMPLETED,
+            parameters={},
+            data_snapshot_id=uuid4(),
+        )
+        db.add(other)
+        db.flush()
+        result = dict(spa.result or {})
+        models = [dict(item) for item in result["models"]]
+        models[0] = {"backtest_id": str(other.id)}
+        result["models"] = models
+        spa.result = result
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED

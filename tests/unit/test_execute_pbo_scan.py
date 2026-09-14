@@ -106,6 +106,117 @@ def _session(monkeypatch):
     return Session
 
 
+def _add_evidence_gate(db, *, strategy, version, backtest, kind) -> None:
+    """P1.3b: stubbed gates carry scope-checked execution evidence."""
+    bench = backtest.benchmark or "SPY"
+    cap = float(backtest.initial_capital or 100_000.0)
+    uni = backtest.universe_snapshot or []
+    base_params = dict(backtest.parameters or {})
+
+    def _sub(params):
+        row = Backtest(
+            id=uuid4(),
+            strategy_version_id=version.id,
+            start_date=backtest.start_date,
+            end_date=backtest.end_date,
+            benchmark=bench,
+            initial_capital=cap,
+            status=BacktestStatus.COMPLETED,
+            parameters=params,
+            data_snapshot_id=backtest.data_snapshot_id,
+            universe_snapshot=uni,
+            engine_version=backtest.engine_version,
+            data_version=backtest.data_version,
+        )
+        db.add(row)
+        db.flush()
+        return row
+
+    params: dict = {}
+    result: dict = {"passed": True}
+    if kind == ValidationKind.WALK_FORWARD:
+        folds = [
+            {
+                "index": 0,
+                "is_start": backtest.start_date.isoformat(),
+                "is_end": backtest.start_date.isoformat(),
+                "oos_start": backtest.start_date.isoformat(),
+                "oos_end": backtest.end_date.isoformat(),
+            },
+            {
+                "index": 1,
+                "is_start": backtest.start_date.isoformat(),
+                "is_end": backtest.start_date.isoformat(),
+                "oos_start": backtest.start_date.isoformat(),
+                "oos_end": backtest.end_date.isoformat(),
+            },
+        ]
+        params = {
+            "start_date": backtest.start_date.isoformat(),
+            "end_date": backtest.end_date.isoformat(),
+            "benchmark": bench,
+            "initial_capital": cap,
+            "folds": folds,
+        }
+        result = {
+            "folds": folds,
+            "execution": {
+                "engine_version": backtest.engine_version,
+                "data_version": backtest.data_version,
+                "data_snapshot_id": str(backtest.data_snapshot_id)
+                if backtest.data_snapshot_id
+                else None,
+                "benchmark": bench,
+                "initial_capital": cap,
+                "universe_snapshot": uni,
+                "parameters": base_params,
+                "folds": folds,
+            },
+            "passed": True,
+        }
+    elif kind == ValidationKind.SENSITIVITY:
+        subs = [_sub({**base_params, "lookback": v}) for v in (100, 150, 200)]
+        params = {
+            "parameter_key": "lookback",
+            "values": [100, 150, 200],
+            "start_date": backtest.start_date.isoformat(),
+            "end_date": backtest.end_date.isoformat(),
+        }
+        result = {"backtest_ids": [str(r.id) for r in subs], "passed": True}
+    elif kind == ValidationKind.COST:
+        subs = [_sub({**base_params, "slippage_bps": c, "fee_usd": 0.0}) for c in (0.0, 5.0, 10.0)]
+        params = {
+            "costs_bps": [0, 5, 10],
+            "start_date": backtest.start_date.isoformat(),
+            "end_date": backtest.end_date.isoformat(),
+        }
+        result = {"backtest_ids": [str(r.id) for r in subs], "passed": True}
+    elif kind == ValidationKind.SPA:
+        subs = [_sub({**base_params}) for _ in range(2)]
+        params = {
+            "family_id": str(strategy.family_id or strategy.id),
+            "data_snapshot_id": str(backtest.data_snapshot_id)
+            if backtest.data_snapshot_id
+            else None,
+            "n_models": 2,
+        }
+        result = {"models": [{"backtest_id": str(r.id)} for r in subs], "passed": True}
+    db.add(
+        ValidationRun(
+            strategy_id=strategy.id,
+            strategy_version_id=version.id,
+            backtest_id=backtest.id,
+            kind=kind,
+            status=ValidationRunStatus.COMPLETED,
+            progress_step="Completed",
+            params=params,
+            result=result,
+            passed=True,
+            finished_at=datetime.now(timezone.utc),
+        )
+    )
+
+
 def _seed(Session, *, values: list[int] | None = None):
     values = values or [100, 200]
     db = Session()
@@ -151,6 +262,7 @@ def _seed(Session, *, values: list[int] | None = None):
             "end_date": "2018-06-01",
             "benchmark": "SPY",
             "initial_capital": 100_000.0,
+            "data_snapshot_id": str(snapshot.id),
             "universe_snapshot": backtest.universe_snapshot,
             "base_parameters": {},
         },
@@ -158,20 +270,13 @@ def _seed(Session, *, values: list[int] | None = None):
         passed=False,
     )
     db.add(run)
-    db.add(
-        ValidationRun(
-            strategy_id=strategy.id,
-            strategy_version_id=version.id,
-            backtest_id=backtest.id,
-            kind=ValidationKind.WALK_FORWARD,
-            status=ValidationRunStatus.COMPLETED,
-            progress_step="Completed",
-            params={},
-            result={"passed": True},
-            passed=True,
-            finished_at=datetime.now(timezone.utc),
-        )
-    )
+    for _kind in (
+        ValidationKind.WALK_FORWARD,
+        ValidationKind.SENSITIVITY,
+        ValidationKind.COST,
+        ValidationKind.SPA,
+    ):
+        _add_evidence_gate(db, strategy=strategy, version=version, backtest=backtest, kind=_kind)
     db.add(
         ValidationRun(
             strategy_id=strategy.id,
@@ -182,34 +287,6 @@ def _seed(Session, *, values: list[int] | None = None):
             progress_step="Completed",
             params={},
             result={"dsr": 0.99, "passed": True},
-            passed=True,
-            finished_at=datetime.now(timezone.utc),
-        )
-    )
-    db.add(
-        ValidationRun(
-            strategy_id=strategy.id,
-            strategy_version_id=version.id,
-            backtest_id=backtest.id,
-            kind=ValidationKind.SENSITIVITY,
-            status=ValidationRunStatus.COMPLETED,
-            progress_step="Completed",
-            params={"values": [100, 150, 200]},
-            result={"shape": "plateau", "passed": True},
-            passed=True,
-            finished_at=datetime.now(timezone.utc),
-        )
-    )
-    db.add(
-        ValidationRun(
-            strategy_id=strategy.id,
-            strategy_version_id=version.id,
-            backtest_id=backtest.id,
-            kind=ValidationKind.COST,
-            status=ValidationRunStatus.COMPLETED,
-            progress_step="Completed",
-            params={"costs_bps": [0, 5, 10]},
-            result={"breakeven_bps": 20, "passed": True},
             passed=True,
             finished_at=datetime.now(timezone.utc),
         )
@@ -234,20 +311,6 @@ def _seed(Session, *, values: list[int] | None = None):
             strategy_version_id=version.id,
             backtest_id=backtest.id,
             kind=ValidationKind.REGIME,
-            status=ValidationRunStatus.COMPLETED,
-            progress_step="Completed",
-            params={},
-            result={"passed": True},
-            passed=True,
-            finished_at=datetime.now(timezone.utc),
-        )
-    )
-    db.add(
-        ValidationRun(
-            strategy_id=strategy.id,
-            strategy_version_id=version.id,
-            backtest_id=backtest.id,
-            kind=ValidationKind.SPA,
             status=ValidationRunStatus.COMPLETED,
             progress_step="Completed",
             params={},
@@ -284,7 +347,7 @@ def test_pbo_scan_writes_trials_and_promotes(monkeypatch):
     n_trials = db.scalar(select(func.count()).select_from(ExperimentTrial))
     assert n_trials == 2
     n_backtests = db.scalar(select(func.count()).select_from(Backtest))
-    assert n_backtests == 3  # template + two scan configs
+    assert n_backtests == 11  # template + two scan configs + 8 evidence stubs
     strategy = db.get(Strategy, strategy_id)
     assert strategy is not None
     assert strategy.status == StrategyStatus.VALIDATED
