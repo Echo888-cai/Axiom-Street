@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from services.api.db import get_db
+from services.api.models import StrategyStatus
 from services.api.schemas import (
     StrategyCreate,
     StrategyOut,
@@ -41,8 +42,12 @@ def list_strategies(
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    q: str | None = Query(None, max_length=120),
+    status_filter: StrategyStatus | None = Query(None, alias="status"),
 ) -> StrategyPage:
-    rows, total = strategy_service.list_strategies(db, limit=limit, offset=offset)
+    rows, total = strategy_service.list_strategies(
+        db, limit=limit, offset=offset, q=q, status_filter=status_filter
+    )
     return StrategyPage(
         items=[_to_out(db, s) for s in rows], total=total, limit=limit, offset=offset
     )

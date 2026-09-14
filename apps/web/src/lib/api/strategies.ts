@@ -2,8 +2,24 @@ import { request, unwrapList } from "./http";
 import type { Strategy, StrategyVersion, Page } from "./types";
 
 export const strategiesApi = {
+  listStrategyPage: (params?: {
+    q?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const search = new URLSearchParams();
+    if (params?.q?.trim()) search.set("q", params.q.trim());
+    if (params?.status && params.status !== "ALL") search.set("status", params.status);
+    if (params?.limit !== undefined) search.set("limit", String(params.limit));
+    if (params?.offset !== undefined) search.set("offset", String(params.offset));
+    const q = search.toString();
+    return request<Page<Strategy>>(`/api/v1/strategies${q ? `?${q}` : ""}`);
+  },
   listStrategies: () =>
-    request<Page<Strategy> | Strategy[]>("/api/v1/strategies").then(unwrapList),
+    strategiesApi
+      .listStrategyPage({})
+      .then((page) => unwrapList<Strategy>(page)),
   getStrategy: (id: string) => request<Strategy>(`/api/v1/strategies/${id}`),
   updateStrategy: (id: string, body: { name?: string; description?: string }) =>
     request<Strategy>(`/api/v1/strategies/${id}`, {

@@ -7,6 +7,50 @@ def test_health(client):
     assert "checks" in body
 
 
+def test_strategy_list_pagination_search_and_status_filter(client):
+    for i in range(5):
+        res = client.post(
+            "/api/v1/strategies",
+            json={"name": f"Trend {i}", "description": "momentum"},
+        )
+        assert res.status_code == 201, res.text
+    res = client.post(
+        "/api/v1/strategies",
+        json={"name": "Value fund", "description": "mean reversion"},
+    )
+    assert res.status_code == 201, res.text
+
+    page1 = client.get("/api/v1/strategies?limit=2&offset=0").json()
+    assert page1["total"] == 6
+    assert page1["limit"] == 2
+    assert page1["offset"] == 0
+    assert len(page1["items"]) == 2
+    page3 = client.get("/api/v1/strategies?limit=2&offset=4").json()
+    assert page3["total"] == 6
+    assert len(page3["items"]) == 2
+    assert {item["id"] for item in page1["items"]}.isdisjoint(
+        {item["id"] for item in page3["items"]}
+    )
+    beyond = client.get("/api/v1/strategies?limit=2&offset=6").json()
+    assert beyond["total"] == 6
+    assert beyond["items"] == []
+
+    search = client.get("/api/v1/strategies?q=trend").json()
+    assert search["total"] == 5
+    assert all("Trend" in item["name"] for item in search["items"])
+    desc_search = client.get("/api/v1/strategies?q=MEAN").json()
+    assert desc_search["total"] == 1
+    assert desc_search["items"][0]["name"] == "Value fund"
+
+    drafts = client.get("/api/v1/strategies?status=DRAFT").json()
+    assert drafts["total"] == 6
+    validated = client.get("/api/v1/strategies?status=VALIDATED").json()
+    assert validated["total"] == 0
+    assert validated["items"] == []
+    bad = client.get("/api/v1/strategies?status=NOPE")
+    assert bad.status_code == 422
+
+
 def test_strategy_crud_and_version(client):
     create = client.post(
         "/api/v1/strategies",

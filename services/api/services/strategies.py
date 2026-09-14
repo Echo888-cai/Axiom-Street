@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from statistics import mean, pvariance
+from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -45,14 +46,27 @@ def _audit(
 
 
 def list_strategies(
-    db: Session, *, limit: int = 100, offset: int = 0
+    db: Session,
+    *,
+    limit: int = 100,
+    offset: int = 0,
+    q: str | None = None,
+    status_filter: StrategyStatus | None = None,
 ) -> tuple[list[Strategy], int]:
-    total = int(db.scalar(select(func.count()).select_from(Strategy)) or 0)
-    rows = list(
-        db.scalars(
-            select(Strategy).order_by(Strategy.updated_at.desc()).offset(offset).limit(limit)
-        ).all()
-    )
+    filters: list[Any] = []
+    keyword = (q or "").strip()
+    if keyword:
+        like = f"%{keyword}%"
+        filters.append((Strategy.name.ilike(like)) | (Strategy.description.ilike(like)))
+    if status_filter is not None:
+        filters.append(Strategy.status == status_filter)
+    total_stmt = select(func.count()).select_from(Strategy)
+    rows_stmt = select(Strategy).order_by(Strategy.updated_at.desc())
+    for cond in filters:
+        total_stmt = total_stmt.where(cond)
+        rows_stmt = rows_stmt.where(cond)
+    total = int(db.scalar(total_stmt) or 0)
+    rows = list(db.scalars(rows_stmt.offset(offset).limit(limit)).all())
     return rows, total
 
 
