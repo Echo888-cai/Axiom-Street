@@ -60,7 +60,12 @@ def _on_worker_ready(**_kwargs) -> None:
     from services.worker.tasks import reconcile_orphan_backtests
 
     publish_worker_health()
-    reconcile_orphan_backtests(worker_restart=True)
+    # Timeout-based reconciliation only. Passing worker_restart=True here
+    # would fail every RUNNING row on *any* worker boot, killing healthy
+    # tasks owned by live workers during scale-out or rolling restarts.
+    # Truly dead rows age out via started_at/created_at cutoffs on the
+    # 5-minute beat; explicit restarts can still pass the flag manually.
+    reconcile_orphan_backtests()
     try:
         from quant.engine.pool import get_pool
 

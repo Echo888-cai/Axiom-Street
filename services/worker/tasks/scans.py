@@ -27,6 +27,44 @@ from services.worker import tasks as _tasks
 from ._common import log
 
 
+def claim_validation_run(db, run_id: str) -> tuple[ValidationRun | None, dict | None]:
+    """Atomic QUEUED -> RUNNING ownership claim for validation executors.
+
+    Returns ``(run, None)`` when this worker owns the run, otherwise
+    ``(run_or_none, response)``: finished runs are reported as-is (never
+    re-executed, so redelivery cannot duplicate trials or gates), and rows
+    owned by another worker are reported with ``deduplicated=True``.
+    """
+    run = db.get(ValidationRun, UUID(run_id))
+    if run is None:
+        return None, {"error": "not_found"}
+    if run.status in (ValidationRunStatus.COMPLETED, ValidationRunStatus.FAILED):
+        return run, {"status": run.status.value, "run_id": str(run.id)}
+    claimed = (
+        db.query(ValidationRun)
+        .filter(
+            ValidationRun.id == run.id,
+            ValidationRun.status == ValidationRunStatus.QUEUED,
+        )
+        .update(
+            {
+                ValidationRun.status: ValidationRunStatus.RUNNING,
+                ValidationRun.progress_step: "Claimed",
+            },
+            synchronize_session=False,
+        )
+    )
+    db.commit()
+    db.refresh(run)
+    if not claimed:
+        return run, {
+            "status": run.status.value,
+            "deduplicated": True,
+            "run_id": str(run.id),
+        }
+    return run, None
+
+
 def _fail_walk_forward(db, run: ValidationRun, code: str, message: str) -> dict:
     run.status = ValidationRunStatus.FAILED
     run.passed = False
@@ -150,6 +188,8 @@ def _run_scan_backtest(
     )
     db.commit()
     executed = _tasks.execute_backtest(str(backtest.id), record_gates=False)
+    if executed.get("status") == "CANCELLED":
+        raise _ScanFailed("cancelled", "扫描子回测被取消，验证以取消终态结束")
     if executed.get("status") != "COMPLETED":
         message = executed.get("error") or executed.get("message") or "参数扫描回测失败"
         raise _ScanFailed("scan_backtest_failed", str(message))

@@ -129,6 +129,11 @@ def reconcile_orphan_backtests(*, worker_restart: bool = False) -> int:
     return count
 
 
+_TERMINAL_DELIVERY = frozenset(
+    {BacktestStatus.COMPLETED, BacktestStatus.FAILED, BacktestStatus.CANCELLED}
+)
+
+
 def execute_backtest(backtest_id: str, *, record_gates: bool = True) -> dict:
     settings = get_settings()
     structlog.contextvars.bind_contextvars(backtest_id=backtest_id)
@@ -137,8 +142,31 @@ def execute_backtest(backtest_id: str, *, record_gates: bool = True) -> dict:
         backtest = db.get(Backtest, UUID(backtest_id))
         if not backtest:
             return {"error": "not_found"}
-        if backtest.status == BacktestStatus.CANCELLED:
-            return {"status": "CANCELLED"}
+        if backtest.status in _TERMINAL_DELIVERY:
+            # At-least-once redelivery of finished work is a no-op: never
+            # re-run the engine, rewrite equity, or record duplicate gates.
+            return {"status": backtest.status.value}
+        claimed = (
+            db.query(Backtest)
+            .filter(
+                Backtest.id == backtest.id,
+                Backtest.status == BacktestStatus.QUEUED,
+            )
+            .update(
+                {
+                    Backtest.status: BacktestStatus.STARTING,
+                    Backtest.started_at: datetime.now(timezone.utc),
+                    Backtest.progress_step: "Preparing environment",
+                },
+                synchronize_session=False,
+            )
+        )
+        db.commit()
+        db.refresh(backtest)
+        if not claimed:
+            # Another worker owns this row (RUNNING/STARTING duplicate
+            # pickup). Report, don't execute.
+            return {"status": backtest.status.value, "deduplicated": True}
 
         version = db.get(StrategyVersion, backtest.strategy_version_id)
         if not version:
@@ -146,9 +174,6 @@ def execute_backtest(backtest_id: str, *, record_gates: bool = True) -> dict:
             backtest.error = {"code": "version_missing", "message": "策略版本不存在"}
             db.commit()
             return {"error": "version_missing"}
-
-        backtest.started_at = datetime.now(timezone.utc)
-        _set_progress(db, backtest, BacktestStatus.STARTING, "Preparing environment")
 
         data_root = Path(settings.data_root)
         snap = None

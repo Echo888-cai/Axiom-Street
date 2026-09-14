@@ -15,13 +15,11 @@ from services.api.models import (
     BacktestStatus,
     Strategy,
     StrategyVersion,
-    ValidationRun,
-    ValidationRunStatus,
 )
 from services.worker import tasks as _tasks
 from services.worker.celery_app import celery_app
 
-from .scans import _fail_walk_forward, _finish_validation
+from .scans import _fail_walk_forward, _finish_validation, claim_validation_run
 
 
 def execute_bootstrap(run_id: str) -> dict:
@@ -32,10 +30,10 @@ def execute_bootstrap(run_id: str) -> dict:
     structlog.contextvars.bind_contextvars(validation_run_id=run_id)
     db = _tasks.SessionLocal()
     try:
-        run = db.get(ValidationRun, UUID(run_id))
-        if not run:
-            return {"error": "not_found"}
-        run.status = ValidationRunStatus.RUNNING
+        run, duplicate = claim_validation_run(db, run_id)
+        if duplicate is not None:
+            return duplicate
+        assert run is not None
         run.progress_step = "Resampling returns"
         db.commit()
         if run.backtest_id is None:
@@ -98,10 +96,10 @@ def execute_regime(run_id: str) -> dict:
     structlog.contextvars.bind_contextvars(validation_run_id=run_id)
     db = _tasks.SessionLocal()
     try:
-        run = db.get(ValidationRun, UUID(run_id))
-        if not run:
-            return {"error": "not_found"}
-        run.status = ValidationRunStatus.RUNNING
+        run, duplicate = claim_validation_run(db, run_id)
+        if duplicate is not None:
+            return duplicate
+        assert run is not None
         run.progress_step = "Slicing regimes"
         db.commit()
         if run.backtest_id is None:
@@ -147,10 +145,10 @@ def execute_spa(run_id: str) -> dict:
     structlog.contextvars.bind_contextvars(validation_run_id=run_id)
     db = _tasks.SessionLocal()
     try:
-        run = db.get(ValidationRun, UUID(run_id))
-        if not run:
-            return {"error": "not_found"}
-        run.status = ValidationRunStatus.RUNNING
+        run, duplicate = claim_validation_run(db, run_id)
+        if duplicate is not None:
+            return duplicate
+        assert run is not None
         run.progress_step = "Reality Check"
         db.commit()
         if run.backtest_id is None:

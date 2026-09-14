@@ -21,7 +21,6 @@ from services.api.models import (
     BacktestMetrics,
     DataSnapshot,
     StrategyVersion,
-    ValidationRun,
     ValidationRunStatus,
 )
 from services.api.settings import get_settings
@@ -35,6 +34,7 @@ from .scans import (
     _finish_validation,
     _run_scan_configs,
     _ScanFailed,
+    claim_validation_run,
 )
 
 
@@ -52,10 +52,10 @@ def execute_walk_forward(run_id: str) -> dict:
     structlog.contextvars.bind_contextvars(validation_run_id=run_id)
     db = _tasks.SessionLocal()
     try:
-        run = db.get(ValidationRun, UUID(run_id))
-        if not run:
-            return {"error": "not_found"}
-        run.status = ValidationRunStatus.RUNNING
+        run, duplicate = claim_validation_run(db, run_id)
+        if duplicate is not None:
+            return duplicate
+        assert run is not None
         run.progress_step = "Preparing environment"
         db.commit()
 
@@ -223,10 +223,10 @@ def execute_pbo_scan(run_id: str) -> dict:
     structlog.contextvars.bind_contextvars(validation_run_id=run_id)
     db = _tasks.SessionLocal()
     try:
-        run = db.get(ValidationRun, UUID(run_id))
-        if not run:
-            return {"error": "not_found"}
-        run.status = ValidationRunStatus.RUNNING
+        run, duplicate = claim_validation_run(db, run_id)
+        if duplicate is not None:
+            return duplicate
+        assert run is not None
         run.progress_step = "Preparing parameter scan"
         db.commit()
 
@@ -322,10 +322,10 @@ def execute_sensitivity_scan(run_id: str) -> dict:
     structlog.contextvars.bind_contextvars(validation_run_id=run_id)
     db = _tasks.SessionLocal()
     try:
-        run = db.get(ValidationRun, UUID(run_id))
-        if not run:
-            return {"error": "not_found"}
-        run.status = ValidationRunStatus.RUNNING
+        run, duplicate = claim_validation_run(db, run_id)
+        if duplicate is not None:
+            return duplicate
+        assert run is not None
         run.progress_step = "Preparing sensitivity scan"
         db.commit()
 
@@ -418,10 +418,10 @@ def execute_cost_scan(run_id: str) -> dict:
     structlog.contextvars.bind_contextvars(validation_run_id=run_id)
     db = _tasks.SessionLocal()
     try:
-        run = db.get(ValidationRun, UUID(run_id))
-        if not run:
-            return {"error": "not_found"}
-        run.status = ValidationRunStatus.RUNNING
+        run, duplicate = claim_validation_run(db, run_id)
+        if duplicate is not None:
+            return duplicate
+        assert run is not None
         run.progress_step = "Preparing cost scan"
         db.commit()
 
