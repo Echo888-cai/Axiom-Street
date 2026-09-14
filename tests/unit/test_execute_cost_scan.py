@@ -209,12 +209,27 @@ def _add_gate(db, *, strategy_id, version_id, backtest_id, kind: ValidationKind)
         subs = [_sub({**base_params}) for _ in range(2)]
         strategy = db.get(Strategy, strategy_id)
         fam = str(strategy.family_id or strategy_id) if strategy else str(strategy_id)
+        for i, sub in enumerate(subs):
+            db.add(
+                ExperimentTrial(
+                    backtest_id=sub.id,
+                    data_snapshot_id=snap,
+                    strategy_id=strategy_id,
+                    strategy_family=strategy.family_id if strategy else strategy_id,
+                    parameters=dict(sub.parameters or {}),
+                    parameter_hash=f"stub-spa-{sub.id}",
+                    observed_sharpe=0.2 + 0.1 * i,
+                )
+            )
+        db.flush()
+        model_ids = sorted(str(r.id) for r in subs)
         params = {
             "family_id": fam,
             "data_snapshot_id": str(snap) if snap else None,
             "n_models": 2,
+            "trial_candidate_ids": model_ids,
         }
-        result = {"models": [{"backtest_id": str(r.id)} for r in subs], "passed": True}
+        result = {"models": [{"backtest_id": mid} for mid in model_ids], "passed": True}
     db.add(
         ValidationRun(
             strategy_id=strategy_id,
@@ -302,6 +317,73 @@ def _seed(Session, *, costs: list[float] | None = None):
     return ids
 
 
+def _refresh_family_gates(db, *, strategy_id, backtest_id) -> None:
+    """Recompute family-bound DSR/SPA on the post-scan ledger (P1.3c workflow:
+    searching expires seed-time conclusions; fresh ones re-validate)."""
+    from services.api.services.validation import (
+        dsr_trial_rows,
+        dsr_trial_set_hash,
+        maybe_apply_validated,
+        spa_candidate_ids,
+    )
+
+    strategy = db.get(Strategy, strategy_id)
+    anchor = db.get(Backtest, backtest_id)
+    assert strategy is not None and anchor is not None
+    family = strategy.family_id or strategy.id
+    version_id = anchor.strategy_version_id
+    trials = dsr_trial_rows(db, family_id=family, snapshot_id=anchor.data_snapshot_id)
+    db.add(
+        ValidationRun(
+            strategy_id=strategy_id,
+            strategy_version_id=version_id,
+            backtest_id=anchor.id,
+            kind=ValidationKind.DSR,
+            status=ValidationRunStatus.COMPLETED,
+            progress_step="Completed",
+            params={
+                "n_trials": max(sum(1 for t in trials if t.observed_sharpe is not None), 1),
+                "family_id": str(family),
+                "data_snapshot_id": str(anchor.data_snapshot_id)
+                if anchor.data_snapshot_id
+                else None,
+                "trial_set_hash": dsr_trial_set_hash(trials),
+            },
+            result={"dsr": 0.99, "passed": True},
+            passed=True,
+            finished_at=datetime.now(timezone.utc),
+        )
+    )
+    candidates = spa_candidate_ids(db, family_id=family, snapshot_id=anchor.data_snapshot_id)
+    db.add(
+        ValidationRun(
+            strategy_id=strategy_id,
+            strategy_version_id=version_id,
+            backtest_id=anchor.id,
+            kind=ValidationKind.SPA,
+            status=ValidationRunStatus.COMPLETED,
+            progress_step="Completed",
+            params={
+                "family_id": str(family),
+                "data_snapshot_id": str(anchor.data_snapshot_id)
+                if anchor.data_snapshot_id
+                else None,
+                "n_models": len(candidates),
+                "trial_candidate_ids": candidates,
+            },
+            result={
+                "models": [{"backtest_id": item} for item in candidates],
+                "passed": True,
+            },
+            passed=True,
+            finished_at=datetime.now(timezone.utc),
+        )
+    )
+    db.commit()
+    maybe_apply_validated(db, strategy_id=strategy_id, strategy_version_id=version_id)
+    db.commit()
+
+
 def test_cost_above_realistic_promotes(monkeypatch):
     Session = _session(monkeypatch)
     fake = _CostEngine()
@@ -320,9 +402,13 @@ def test_cost_above_realistic_promotes(monkeypatch):
     assert fake.requests[0].parameters["slippage_bps"] == 0.0
     assert fake.requests[0].parameters["fee_usd"] == 0.0
     n_trials = db.scalar(select(func.count()).select_from(ExperimentTrial))
-    assert n_trials == 4
+    assert n_trials == 6  # 2 stub SPA trials + four scan configs
     strategy = db.get(Strategy, strategy_id)
     assert strategy is not None
+    # The scan added family trials, so seed-time SPA conclusions are expired.
+    assert strategy.status == StrategyStatus.BACKTESTED
+    _refresh_family_gates(db, strategy_id=strategy_id, backtest_id=run.backtest_id)
+    db.refresh(strategy)
     assert strategy.status == StrategyStatus.VALIDATED
     db.close()
 

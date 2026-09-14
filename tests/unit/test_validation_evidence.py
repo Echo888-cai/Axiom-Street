@@ -10,6 +10,7 @@ from services.api.models import (
     Backtest,
     BacktestStatus,
     DataSnapshot,
+    ExperimentTrial,
     Strategy,
     StrategyStatus,
     StrategyVersion,
@@ -17,7 +18,10 @@ from services.api.models import (
     ValidationRun,
     ValidationRunStatus,
 )
-from services.api.services.validation import maybe_apply_validated
+from services.api.services.validation import (
+    dsr_trial_set_hash,
+    maybe_apply_validated,
+)
 
 
 def _mk_sub(db, *, vid, snapshot_id, anchor, params):
@@ -90,6 +94,25 @@ def seed(client):
             for c in (0.0, 5.0, 10.0)
         ]
         spa_subs = pbo_subs
+        # P1.3c: the family ledger these conclusions were computed from.
+        ledger = [(backtest, 0.5), (spa_subs[0], 0.3), (spa_subs[1], 0.8)]
+        for trial_backtest, sharpe in ledger:
+            db.add(
+                ExperimentTrial(
+                    backtest_id=trial_backtest.id,
+                    data_snapshot_id=snapshot.id,
+                    strategy_id=sid,
+                    strategy_family=strategy.id,
+                    parameters=dict(trial_backtest.parameters or {}),
+                    parameter_hash=f"evidence-{trial_backtest.id}",
+                    observed_sharpe=sharpe,
+                )
+            )
+        db.flush()
+        trial_hash = dsr_trial_set_hash(
+            [t for t in db.query(ExperimentTrial).all() if t.observed_sharpe is not None]
+        )
+        trial_ids = sorted(str(b.id) for b, _ in ledger)
         wf_folds = [
             {
                 "index": 0,
@@ -127,6 +150,16 @@ def seed(client):
                 },
                 {"folds": wf_folds, "execution": wf_execution, "passed": True},
             ),
+            ValidationKind.DSR: (
+                {
+                    "n_obs": 500,
+                    "n_trials": len(ledger),
+                    "family_id": str(strategy.id),
+                    "data_snapshot_id": str(snapshot.id),
+                    "trial_set_hash": trial_hash,
+                },
+                {"dsr": 0.99, "passed": True},
+            ),
             ValidationKind.PBO: (
                 {
                     "parameter_key": "lookback",
@@ -158,6 +191,7 @@ def seed(client):
                     "family_id": str(strategy.id),
                     "data_snapshot_id": str(snapshot.id),
                     "n_models": len(spa_subs),
+                    "trial_candidate_ids": trial_ids,
                 },
                 {
                     "models": [{"backtest_id": str(r.id)} for r in spa_subs],
@@ -498,3 +532,170 @@ def test_spa_with_cross_snapshot_trial_is_rejected(client):
         spa.result = result
         db.commit()
     assert apply(sid, vid) == StrategyStatus.BACKTESTED
+
+
+def _add_trial(db, *, sid, vid, snapshot_id, sharpe: float) -> None:
+    from services.api.models import Strategy as _Strategy
+
+    strategy = db.get(_Strategy, sid)
+    row = Backtest(
+        id=uuid4(),
+        strategy_version_id=vid,
+        start_date=date(2020, 1, 1),
+        end_date=date(2024, 1, 1),
+        status=BacktestStatus.COMPLETED,
+        parameters={"lookback": 300},
+        data_snapshot_id=snapshot_id,
+        engine_version="quantconnect/lean:16355",
+        data_version="abc",
+    )
+    db.add(row)
+    db.flush()
+    db.add(
+        ExperimentTrial(
+            backtest_id=row.id,
+            data_snapshot_id=snapshot_id,
+            strategy_id=sid,
+            strategy_family=strategy.family_id,
+            parameters={"lookback": 300},
+            parameter_hash=f"extra-{row.id}",
+            observed_sharpe=sharpe,
+        )
+    )
+    db.commit()
+
+
+def test_new_trial_expires_dsr_and_spa_until_recomputed(client):
+    sid, vid, bid = seed(client)
+    assert apply(sid, vid) == StrategyStatus.VALIDATED
+    with db_module.SessionLocal() as db:
+        anchor = db.get(Backtest, bid)
+        assert anchor is not None
+        _add_trial(db, sid=sid, vid=vid, snapshot_id=anchor.data_snapshot_id, sharpe=1.5)
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+    body = client.get(f"/api/v1/live/readiness?strategy_id={sid}").json()
+    missing = body["evidence"]["missing_validation"]
+    assert "DSR" in missing
+    assert "SPA" in missing
+    assert body["evidence"]["validation_reasons"]["DSR"] == "dsr_trial_set_changed"
+    assert body["evidence"]["validation_reasons"]["SPA"] == "spa_trial_set_changed"
+
+
+def test_sharpe_update_without_new_row_expires_dsr_only(client):
+    """Trial sharpe lands at backtest completion; a value change with the same
+    row count must still expire DSR (hash covers values, not just counts)."""
+    sid, vid, bid = seed(client)
+    assert apply(sid, vid) == StrategyStatus.VALIDATED
+    with db_module.SessionLocal() as db:
+        trial = db.query(ExperimentTrial).filter(ExperimentTrial.backtest_id == bid).one()
+        trial.observed_sharpe = 2.5
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+    with db_module.SessionLocal() as db:
+        from services.api.services.validation_evidence import collect_validation_evidence
+
+        evidence = collect_validation_evidence(db, strategy_id=sid, strategy_version_id=vid)
+        assert evidence.reasons["DSR"] == "dsr_trial_set_changed"
+        assert "SPA" not in evidence.reasons
+
+
+def test_recomputed_dsr_and_spa_revalidate_on_new_generation(client):
+    from services.api.services.validation import (
+        dsr_trial_rows,
+        dsr_trial_set_hash,
+        spa_candidate_ids,
+    )
+
+    sid, vid, bid = seed(client)
+    with db_module.SessionLocal() as db:
+        anchor = db.get(Backtest, bid)
+        assert anchor is not None
+        snapshot_id = anchor.data_snapshot_id
+        assert snapshot_id is not None
+        strategy = db.get(Strategy, sid)
+        assert strategy is not None
+        _add_trial(db, sid=sid, vid=vid, snapshot_id=snapshot_id, sharpe=1.5)
+        trials = dsr_trial_rows(db, family_id=strategy.family_id, snapshot_id=snapshot_id)
+        candidates = spa_candidate_ids(db, family_id=strategy.family_id, snapshot_id=snapshot_id)
+        dsr = _latest(db, sid, vid, ValidationKind.DSR)
+        dsr.params = {
+            **(dsr.params or {}),
+            "n_trials": max(sum(1 for t in trials if t.observed_sharpe is not None), 1),
+            "trial_set_hash": dsr_trial_set_hash(trials),
+        }
+        spa = _latest(db, sid, vid, ValidationKind.SPA)
+        spa.params = {
+            **(spa.params or {}),
+            "n_models": len(candidates),
+            "trial_candidate_ids": candidates,
+        }
+        spa.result = {"models": [{"backtest_id": c} for c in candidates], "passed": True}
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.VALIDATED
+
+
+def test_dsr_count_fallback_catches_added_trials_without_hash(client):
+    sid, vid, bid = seed(client)
+    with db_module.SessionLocal() as db:
+        dsr = _latest(db, sid, vid, ValidationKind.DSR)
+        params = dict(dsr.params or {})
+        params.pop("trial_set_hash", None)
+        params["n_trials"] = 3
+        dsr.params = params
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.VALIDATED
+    with db_module.SessionLocal() as db:
+        anchor = db.get(Backtest, bid)
+        assert anchor is not None
+        _add_trial(db, sid=sid, vid=vid, snapshot_id=anchor.data_snapshot_id, sharpe=0.1)
+    assert apply(sid, vid) == StrategyStatus.BACKTESTED
+
+
+def test_spa_without_baseline_is_left_to_scope_checks(client):
+    """Pre-generation SPA rows carry no candidate list and cannot be
+    generation-checked; scope and model-existence checks still apply.
+    Re-run SPA to gain binding."""
+    sid, vid, _ = seed(client)
+    with db_module.SessionLocal() as db:
+        spa = _latest(db, sid, vid, ValidationKind.SPA)
+        params = dict(spa.params or {})
+        params.pop("trial_candidate_ids", None)
+        spa.params = params
+        db.commit()
+    assert apply(sid, vid) == StrategyStatus.VALIDATED
+
+
+def test_other_snapshot_trials_do_not_expire_current_evidence(client):
+    sid, vid, bid = seed(client)
+    assert apply(sid, vid) == StrategyStatus.VALIDATED
+    with db_module.SessionLocal() as db:
+        _add_trial(db, sid=sid, vid=vid, snapshot_id=uuid4(), sharpe=3.0)
+    assert apply(sid, vid) == StrategyStatus.VALIDATED
+
+
+def test_evidence_endpoint_reports_per_kind_status_and_reference(client):
+    sid, vid, bid = seed(client)
+    res = client.get(f"/api/v1/validation/evidence?strategy_id={sid}&strategy_version_id={vid}")
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["strategy_id"] == str(sid)
+    assert body["strategy_version_id"] == str(vid)
+    assert body["backtest_id"] == str(bid)
+    assert body["reasons"] == {}
+    assert len(body["passed"]) == len(ValidationKind)
+    assert all(body["passed"].values())
+
+
+def test_evidence_endpoint_shows_expiry_reason_after_new_trial(client):
+    sid, vid, bid = seed(client)
+    with db_module.SessionLocal() as db:
+        anchor = db.get(Backtest, bid)
+        assert anchor is not None
+        _add_trial(db, sid=sid, vid=vid, snapshot_id=anchor.data_snapshot_id, sharpe=1.5)
+    res = client.get(f"/api/v1/validation/evidence?strategy_id={sid}&strategy_version_id={vid}")
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["passed"]["DSR"] is False
+    assert body["reasons"]["DSR"] == "dsr_trial_set_changed"
+    assert body["passed"]["SPA"] is False
+    assert body["reasons"]["SPA"] == "spa_trial_set_changed"

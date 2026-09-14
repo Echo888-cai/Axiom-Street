@@ -2,6 +2,7 @@ import { request } from "./http";
 import type {
   Page,
   TrialStats,
+  ValidationEvidence,
   ValidationGates,
   ValidationRun,
   ValidationSpec,
@@ -23,6 +24,15 @@ export const validationApi = {
   },
   getValidationRun: (id: string) =>
     request<ValidationRun>(`/api/v1/validation/${id}`),
+  getEvidence: (params: { strategy_id: string; strategy_version_id: string }) => {
+    const search = new URLSearchParams({
+      strategy_id: params.strategy_id,
+      strategy_version_id: params.strategy_version_id,
+    });
+    return request<ValidationEvidence>(
+      `/api/v1/validation/evidence?${search.toString()}`,
+    );
+  },
   createWalkForward: (body: {
     strategy_version_id: string;
     backtest_id?: string;

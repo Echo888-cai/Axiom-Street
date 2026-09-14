@@ -32,6 +32,7 @@ from quant.validation.regime import (
 )
 from quant.validation.spa import SpaError
 from quant.validation.walk_forward import WalkForwardError
+from services.api.hashing import canonical_hash
 from services.api.models import (
     AuditLog,
     Backtest,
@@ -68,6 +69,42 @@ _LIVE_STATUSES = {
 }
 
 
+def dsr_trial_rows(
+    db: Session, *, family_id: UUID, snapshot_id: UUID | None
+) -> list[ExperimentTrial]:
+    """In-sample family ledger rows for one snapshot. OOS fold rows excluded."""
+    query = select(ExperimentTrial).where(ExperimentTrial.strategy_family == family_id)
+    query = query.where(or_(ExperimentTrial.is_oos.is_(False), ExperimentTrial.is_oos.is_(None)))
+    if snapshot_id is not None:
+        query = query.where(ExperimentTrial.data_snapshot_id == snapshot_id)
+    return list(db.scalars(query).all())
+
+
+def dsr_trial_set_hash(trials: list[ExperimentTrial]) -> str:
+    """Generation signature over the (trial, sharpe) pairs DSR actually used."""
+    pairs = sorted(
+        (str(t.backtest_id), float(t.observed_sharpe))
+        for t in trials
+        if t.observed_sharpe is not None
+    )
+    return canonical_hash([{"backtest_id": bid, "sharpe": sharpe} for bid, sharpe in pairs])
+
+
+def spa_candidate_ids(db: Session, *, family_id: UUID, snapshot_id: UUID | None) -> list[str]:
+    """Trial backtests that could enter an SPA panel: non-OOS family rows on
+    this snapshot whose backtest is still completed. No equity is loaded, so
+    this is cheap enough to run on every promotion check."""
+    trials = dsr_trial_rows(db, family_id=family_id, snapshot_id=snapshot_id)
+    out: set[str] = set()
+    for trial in trials:
+        if trial.backtest_id is None:
+            continue
+        backtest = db.get(Backtest, trial.backtest_id)
+        if backtest is not None and backtest.status == BacktestStatus.COMPLETED:
+            out.add(str(backtest.id))
+    return sorted(out)
+
+
 def record_dsr_for_backtest(
     db: Session,
     backtest: Backtest,
@@ -92,13 +129,7 @@ def record_dsr_for_backtest(
 
     trials = []
     if family_id is not None:
-        query = select(ExperimentTrial).where(ExperimentTrial.strategy_family == family_id)
-        query = query.where(
-            or_(ExperimentTrial.is_oos.is_(False), ExperimentTrial.is_oos.is_(None))
-        )
-        if backtest.data_snapshot_id is not None:
-            query = query.where(ExperimentTrial.data_snapshot_id == backtest.data_snapshot_id)
-        trials = list(db.scalars(query).all())
+        trials = dsr_trial_rows(db, family_id=family_id, snapshot_id=backtest.data_snapshot_id)
     sharpes = [t.observed_sharpe for t in trials if t.observed_sharpe is not None]
     n_trials = max(len(sharpes), 1)
 
@@ -109,6 +140,10 @@ def record_dsr_for_backtest(
         "pass_threshold": DSR_PASS_THRESHOLD,
         "family_id": str(family_id) if family_id else None,
         "data_snapshot_id": str(backtest.data_snapshot_id) if backtest.data_snapshot_id else None,
+        # P1.3c: bind this conclusion to the exact trial generation it was
+        # computed from. New trials (or sharpe updates) change the hash and
+        # expire the old conclusion instead of silently inheriting it.
+        "trial_set_hash": dsr_trial_set_hash(trials),
     }
     run = ValidationRun(
         strategy_id=strategy_id,

@@ -2151,6 +2151,60 @@
         }
       }
     },
+    "/api/v1/validation/evidence": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Get Validation Evidence",
+        "description": "Per-kind evidence status: does the latest run of each kind still count?\n\nNew trials, snapshot switches, or scope drift expire old conclusions\ninstead of letting them pass silently. Same selection as promotion and\nLive readiness.",
+        "operationId": "get_validation_evidence_api_v1_validation_evidence_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "name": "strategy_version_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Strategy Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationEvidenceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/validation": {
       "get": {
         "tags": [
@@ -8563,6 +8617,53 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ValidationEvidenceOut": {
+        "properties": {
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "strategy_version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Version Id"
+          },
+          "backtest_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backtest Id"
+          },
+          "passed": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Passed"
+          },
+          "reasons": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_id",
+          "strategy_version_id"
+        ],
+        "title": "ValidationEvidenceOut",
+        "description": "Per-kind evidence status for one strategy version.\n\n`passed` tells whether the latest run of each kind currently counts as\nresearch evidence; `reasons` explains every non-counting kind with a\nmachine-readable code; `backtest_id` is the anchored reference backtest."
       },
       "ValidationPage": {
         "properties": {

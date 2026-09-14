@@ -13,6 +13,7 @@ from services.api.models import (
     BacktestEquity,
     BacktestStatus,
     DataSnapshot,
+    ExperimentTrial,
     Strategy,
     StrategyStatus,
     StrategyVersion,
@@ -155,12 +156,27 @@ def _add_gate(db, *, strategy_id, version_id, backtest_id, kind: ValidationKind)
         subs = [_sub({**base_params}) for _ in range(2)]
         strategy = db.get(Strategy, strategy_id)
         fam = str(strategy.family_id or strategy_id) if strategy else str(strategy_id)
+        for i, sub in enumerate(subs):
+            db.add(
+                ExperimentTrial(
+                    backtest_id=sub.id,
+                    data_snapshot_id=snap,
+                    strategy_id=strategy_id,
+                    strategy_family=strategy.family_id if strategy else strategy_id,
+                    parameters=dict(sub.parameters or {}),
+                    parameter_hash=f"stub-spa-{sub.id}",
+                    observed_sharpe=0.2 + 0.1 * i,
+                )
+            )
+        db.flush()
+        model_ids = sorted(str(r.id) for r in subs)
         params = {
             "family_id": fam,
             "data_snapshot_id": str(snap) if snap else None,
             "n_models": 2,
+            "trial_candidate_ids": model_ids,
         }
-        result = {"models": [{"backtest_id": str(r.id)} for r in subs], "passed": True}
+        result = {"models": [{"backtest_id": mid} for mid in model_ids], "passed": True}
     db.add(
         ValidationRun(
             strategy_id=strategy_id,

@@ -24,7 +24,15 @@ const MANUAL_KINDS: ValidationKind[] = [
   "spa",
 ];
 
-export function ValidationLaunch({ kinds = MANUAL_KINDS }: { kinds?: ValidationKind[] }) {
+export function ValidationLaunch({
+  kinds = MANUAL_KINDS,
+  strategyId,
+  onStrategyChange,
+}: {
+  kinds?: ValidationKind[];
+  strategyId?: string;
+  onStrategyChange?: (id: string) => void;
+}) {
   const t = useT();
   const qc = useQueryClient();
 
@@ -42,11 +50,13 @@ export function ValidationLaunch({ kinds = MANUAL_KINDS }: { kinds?: ValidationK
   );
   const strategies = strategiesQuery.data ?? [];
 
-  const [strategyId, setStrategyId] = useState("");
+  const [internalStrategyId, setInternalStrategyId] = useState("");
+  const strategyIdValue = strategyId ?? internalStrategyId;
+  const setStrategyId = onStrategyChange ?? setInternalStrategyId;
   const [kind, setKind] = useState<ValidationKind | "">("");
   const [backtestId, setBacktestId] = useState("");
 
-  const selected = strategies.find((s) => s.id === strategyId) ?? strategies[0];
+  const selected = strategies.find((s) => s.id === strategyIdValue) ?? strategies[0];
   const strategyKey = selected?.id;
   const versionId = selected?.latest_version?.id;
 

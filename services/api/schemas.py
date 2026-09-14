@@ -728,6 +728,21 @@ class ValidationPage(BaseModel):
     gates: Dict[str, Any] = Field(default_factory=dict)
 
 
+class ValidationEvidenceOut(BaseModel):
+    """Per-kind evidence status for one strategy version.
+
+    `passed` tells whether the latest run of each kind currently counts as
+    research evidence; `reasons` explains every non-counting kind with a
+    machine-readable code; `backtest_id` is the anchored reference backtest.
+    """
+
+    strategy_id: UUID
+    strategy_version_id: UUID
+    backtest_id: Optional[UUID] = None
+    passed: Dict[str, bool] = Field(default_factory=dict)
+    reasons: Dict[str, str] = Field(default_factory=dict)
+
+
 class SyntaxCheckIn(BaseModel):
     code: str
 

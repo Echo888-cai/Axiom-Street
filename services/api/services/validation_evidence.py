@@ -218,6 +218,65 @@ _SCAN_AXES: dict[ValidationKind, set[str]] = {
 }
 
 
+def _verify_trial_generation(db: Session, run: ValidationRun, anchor: Backtest) -> str:
+    """Expire DSR/SPA conclusions when the family trial ledger moved on.
+
+    New trials (or sharpe updates on existing trials) change what DSR/SPA
+    should conclude. Runs recorded by current code carry a generation
+    baseline and are compared against the live ledger; a mismatch revokes
+    the pass until the validation is recomputed. DSR rows that predate the
+    hash fall back to the recorded trial count (production DSR rows always
+    recorded n_trials). Rows with no baseline at all are fixtures, not
+    production evidence, and are left to the other checks.
+    """
+    # Deferred import: validation.py lazily imports this module.
+    from services.api.services.validation import (
+        dsr_trial_rows,
+        dsr_trial_set_hash,
+        spa_candidate_ids,
+    )
+
+    params = run.params or {}
+    if run.kind == ValidationKind.DSR:
+        raw_family = params.get("family_id")
+        if not raw_family:
+            return ""
+        try:
+            family_id = UUID(str(raw_family))
+        except (TypeError, ValueError):
+            return "dsr_trial_set_changed"
+        trials = dsr_trial_rows(db, family_id=family_id, snapshot_id=anchor.data_snapshot_id)
+        recorded_hash = params.get("trial_set_hash")
+        if isinstance(recorded_hash, str) and recorded_hash:
+            current = dsr_trial_set_hash(trials)
+            return "" if current == recorded_hash else "dsr_trial_set_changed"
+        recorded_n = params.get("n_trials")
+        if isinstance(recorded_n, int) and recorded_n:
+            current_n = max(sum(1 for t in trials if t.observed_sharpe is not None), 1)
+            return "" if current_n == recorded_n else "dsr_trial_set_changed"
+        return ""
+    if run.kind == ValidationKind.SPA:
+        raw_family = params.get("family_id")
+        if not raw_family:
+            return ""
+        try:
+            family_id = UUID(str(raw_family))
+        except (TypeError, ValueError):
+            return "spa_trial_set_changed"
+        recorded_ids = params.get("trial_candidate_ids")
+        if not isinstance(recorded_ids, list) or not recorded_ids:
+            # Rows that predate generation binding carry no baseline; scope
+            # and model-existence checks still apply. Re-run SPA to bind.
+            return ""
+        current_ids = spa_candidate_ids(
+            db, family_id=family_id, snapshot_id=anchor.data_snapshot_id
+        )
+        return (
+            "" if sorted(str(v) for v in recorded_ids) == current_ids else "spa_trial_set_changed"
+        )
+    return ""
+
+
 def collect_validation_evidence(
     db: Session,
     *,
@@ -293,6 +352,8 @@ def collect_validation_evidence(
                         reason = _verify_walk_forward(db, row, anchor)
                     elif kind == ValidationKind.SPA:
                         reason = _verify_spa(db, row, anchor)
+                if not reason and kind in (ValidationKind.DSR, ValidationKind.SPA):
+                    reason = _verify_trial_generation(db, row, anchor)
         passed[kind] = not reason
         if reason:
             reasons[kind.value] = reason

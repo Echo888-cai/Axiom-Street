@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck } from "lucide-react";
@@ -11,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Disclosure } from "@/components/ui/disclosure";
 import { formatPct } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
+import { EvidenceStatus } from "./evidence-status";
 import { ValidationLaunch } from "./validation-launch";
 import { isInflight, conclusion } from "./validation-status";
 import { WalkForwardReport } from "./reports/walk-forward-report";
@@ -22,6 +24,7 @@ import { CostReport } from "./reports/cost-report";
 
 export function ValidationDesk() {
   const t = useT();
+  const [strategyId, setStrategyId] = useState("");
   const { data, isLoading, error } = useQuery({
     queryKey: ["validation-runs"],
     queryFn: () => api.listValidation(),
@@ -117,8 +120,10 @@ export function ValidationDesk() {
             </p>
           }
         />
-        <ValidationLaunch />
+        <ValidationLaunch strategyId={strategyId} onStrategyChange={setStrategyId} />
       </Card>
+
+      <EvidenceStatus strategyId={strategyId} />
 
       {latestWalk && (latestWalk.status === "COMPLETED" || latestWalk.error) ? (
         <WalkForwardReport run={latestWalk} />

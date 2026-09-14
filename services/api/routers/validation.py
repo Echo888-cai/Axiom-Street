@@ -9,6 +9,7 @@ from services.api.db import get_db
 from services.api.models import ValidationKind
 from services.api.schemas import (
     ValidationCreate,
+    ValidationEvidenceOut,
     ValidationPage,
     ValidationRunOut,
     ValidationSpecOut,
@@ -17,6 +18,32 @@ from services.api.services import validation as validation_service
 from services.api.services.validation_spec import all_specs, params_schema_for
 
 router = APIRouter(prefix="/validation", tags=["validation"])
+
+
+@router.get("/evidence", response_model=ValidationEvidenceOut)
+def get_validation_evidence(
+    strategy_id: UUID,
+    strategy_version_id: UUID,
+    db: Session = Depends(get_db),
+) -> ValidationEvidenceOut:
+    """Per-kind evidence status: does the latest run of each kind still count?
+
+    New trials, snapshot switches, or scope drift expire old conclusions
+    instead of letting them pass silently. Same selection as promotion and
+    Live readiness.
+    """
+    from services.api.services.validation_evidence import collect_validation_evidence
+
+    evidence = collect_validation_evidence(
+        db, strategy_id=strategy_id, strategy_version_id=strategy_version_id
+    )
+    return ValidationEvidenceOut(
+        strategy_id=strategy_id,
+        strategy_version_id=strategy_version_id,
+        backtest_id=evidence.backtest_id,
+        passed={kind.value: ok for kind, ok in evidence.passed.items()},
+        reasons=dict(evidence.reasons),
+    )
 
 
 @router.get("", response_model=ValidationPage)

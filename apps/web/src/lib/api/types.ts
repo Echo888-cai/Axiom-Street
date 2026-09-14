@@ -304,6 +304,18 @@ export type DataStatus = {
   }>;
 };
 
+// The evidence endpoint is modeled in OpenAPI; narrow the optional maps
+// into required read shapes, guarded by the endpoint pin below.
+// The evidence endpoint is modeled in OpenAPI; narrow the optional maps
+// into required read shapes, guarded by the endpoint pin below.
+export type ValidationEvidence = Omit<
+  S["ValidationEvidenceOut"],
+  "passed" | "reasons"
+> & {
+  passed: Record<string, boolean>;
+  reasons: Record<string, string>;
+};
+
 // ---------- structural checks: each read model must stay a subtype of its
 // contract counterpart (exported so lint/compilers treat them as used) ----------
 
@@ -390,5 +402,11 @@ export type _C_CompareEquity = Check<
   Extends<
     CompareEquityResponse,
     OpBody<"compare_equity_api_v1_backtests_compare_equity_get">
+  >
+>;
+export type _C_ValidationEvidence = Check<
+  Extends<
+    ValidationEvidence,
+    OpBody<"get_validation_evidence_api_v1_validation_evidence_get">
   >
 >;

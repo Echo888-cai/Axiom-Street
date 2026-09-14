@@ -651,6 +651,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/validation/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Validation Evidence
+         * @description Per-kind evidence status: does the latest run of each kind still count?
+         *
+         *     New trials, snapshot switches, or scope drift expire old conclusions
+         *     instead of letting them pass silently. Same selection as promotion and
+         *     Live readiness.
+         */
+        get: operations["get_validation_evidence_api_v1_validation_evidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/validation": {
         parameters: {
             query?: never;
@@ -2869,6 +2893,36 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /**
+         * ValidationEvidenceOut
+         * @description Per-kind evidence status for one strategy version.
+         *
+         *     `passed` tells whether the latest run of each kind currently counts as
+         *     research evidence; `reasons` explains every non-counting kind with a
+         *     machine-readable code; `backtest_id` is the anchored reference backtest.
+         */
+        ValidationEvidenceOut: {
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+            /**
+             * Strategy Version Id
+             * Format: uuid
+             */
+            strategy_version_id: string;
+            /** Backtest Id */
+            backtest_id?: string | null;
+            /** Passed */
+            passed?: {
+                [key: string]: boolean;
+            };
+            /** Reasons */
+            reasons?: {
+                [key: string]: string;
+            };
+        };
         /** ValidationPage */
         ValidationPage: {
             /** Items */
@@ -4358,6 +4412,38 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_validation_evidence_api_v1_validation_evidence_get: {
+        parameters: {
+            query: {
+                strategy_id: string;
+                strategy_version_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationEvidenceOut"];
                 };
             };
             /** @description Validation Error */

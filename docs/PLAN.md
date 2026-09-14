@@ -4,7 +4,7 @@
 >
 > 更新：2026-09-14。本文是项目定位、现状、路线图、前后端设计和工程规范的唯一主文档。历史方案由 Git 保存，不再维护多份交接稿。
 >
-> 当前交付：文档归并、可信概览，以及 P1 验证与运行状态的首批修复。下一执行包：**P1.3c 家族试验代次与并发失效**；P1 尚未整体验收。标为待做或未完成的任务不代表已经实现。
+> 当前交付：文档归并、可信概览，以及 P1 验证与运行状态的首批修复。下一执行包：**P1.2b 策略列表分页与服务端筛选**；P1 尚未整体验收。标为待做或未完成的任务不代表已经实现。
 
 **阅读顺序：** 了解产品看 1–3；安排开发看 4–7；准备账户与 Key 看 8；接手工程看 9–11。
 
@@ -111,20 +111,20 @@
 
 ### 3.2 本轮验证证据
 
-2026-09-14，在当前工作区执行 `make test-all` 通过；P1.3b 扫描执行证据交付后再次执行后端完整检查，最终结果：
+2026-09-14，在当前工作区执行 `make test-all` 通过；P1.3c 家族试验代次交付后再次执行完整检查，最终结果：
 
-- 后端：**559 项单元测试通过**；Ruff 检查和格式检查通过；mypy 检查 119 个源文件通过。
-- 前端：**125 项测试通过**；TypeScript 检查通过；ESLint 无错误；生产构建通过。
+- 后端：**567 项单元测试通过**；Ruff 检查和格式检查通过；mypy 检查 119 个源文件通过。
+- 前端：**128 项测试通过**；TypeScript 检查通过；ESLint 无错误；生产构建通过。
 - 仍有一个既有 LSP effect 清理告警，保留为 P1.4b；未通过屏蔽规则消除告警。
-- 新增验收覆盖：137 条策略的全库计数、空库、列表外最新回测、零收益保留、新建/删除刷新、研究证据防误删、摘要失败隐藏缓存、最新失败/排队/运行覆盖旧成功、参考范围不一致、缺少快照/来源、缩短验证窗口、旧版本迟到回调、扫描参数继承、过期与未来心跳，以及 P1.3b 的扫描子回测执行核验（换镜像/换快照/非扰动轴改参/缺失子产物均拒绝）、Walk-Forward fold 执行证据缺失判过期、SPA 试验集合固定与跨快照拒绝。
+- 新增验收覆盖：137 条策略的全库计数、空库、列表外最新回测、零收益保留、新建/删除刷新、研究证据防误删、摘要失败隐藏缓存、最新失败/排队/运行覆盖旧成功、参考范围不一致、缺少快照/来源、缩短验证窗口、旧版本迟到回调、扫描参数继承、过期与未来心跳，以及 P1.3b 的扫描子回测执行核验（换镜像/换快照/非扰动轴改参/缺失子产物均拒绝）、Walk-Forward fold 执行证据缺失判过期、SPA 试验集合固定与跨快照拒绝，以及 P1.3c 的家族试验代次绑定（新增试验撤销 DSR/SPA 旧结论、Sharpe 更新同样过期 DSR、重算后恢复晋级、验证证据接口与前端证据状态卡）。
 - `docker-compose --env-file .env.example config --format json` 解析通过，8 个发布端口均绑定 `127.0.0.1`。本机未安装 `docker compose` 子命令，独立 `docker-compose` 可用；Docker daemon 探测不可用。
 - 本地现有 `.venv` 是 Python 3.9，测试通过不代表 Python 3.11 运行基线已验收。未改写现有环境或重启用户服务。
 - 未执行真实 LEAN Golden、浏览器端到端、行情摄取、模型付费请求、Paper 下单或部署。真实研究链路仍须独立环境验收。
 
 ### 3.3 优先解决的差距
 
-1. **扫描实际执行证据已落地，家族试验代次仍待绑定。** P1.3b 已交付：PBO/敏感性/成本从 `result.backtest_ids` 核对每个子回测的版本、快照、引擎、数据、窗口、基准、资金、标的池，非声明扰动轴变化一律拒绝，缺失子记录判 `scan_execution_missing`；Walk-Forward 每次 fold 留存 `result.execution`（引擎/数据版本、快照、范围、fold 列表），历史缺失判 `walk_forward_execution_missing` 不伪造元数据；SPA 固定 `params.family_id/data_snapshot_id/n_models` 与 `result.models` 试验集合，缺失或跨快照拒绝。`collect_validation_evidence` 与 Live readiness 共用同一核验，晋级与 readiness 一致。剩余：新增家族试验后的 DSR/SPA 旧结论失效与并发汇总竞态（P1.3c）。当前 `VALIDATED` 不代表这一层已经严密；Live 真实券商开关继续关闭。
-2. **家族试验代次尚未绑定。** 新增试验后的 DSR/SPA 等旧结论失效、并发汇总竞态尚未关闭。见 P1.3c：固定家族/快照试验集合签名，新增试验、并发更新撤销过期证据，前端显示原因和来源。
+1. **扫描实际执行证据与家族试验代次已落地。** P1.3b 已交付：PBO/敏感性/成本从 `result.backtest_ids` 核对每个子回测的版本、快照、引擎、数据、窗口、基准、资金、标的池，非声明扰动轴变化一律拒绝，缺失子记录判 `scan_execution_missing`；Walk-Forward 每次 fold 留存 `result.execution`（引擎/数据版本、快照、范围、fold 列表），历史缺失判 `walk_forward_execution_missing` 不伪造元数据；SPA 固定 `params.family_id/data_snapshot_id/n_models` 与 `result.models` 试验集合，缺失或跨快照拒绝。P1.3c 已交付试验代次绑定（见下条）。`collect_validation_evidence` 与 Live readiness 共用同一核验，晋级与 readiness 一致。
+2. **家族试验代次已绑定。** P1.3c 已交付：DSR 记录 `trial_set_hash`（试验、Sharpe 对的规范哈希），SPA 记录 `trial_set_hash` 与 `trial_candidate_ids`；证据核验在每次晋级与 readiness 时重算当前台账，不一致判 `dsr_trial_set_changed` / `spa_trial_set_changed` 并撤销 `VALIDATED`，重算后恢复。并发写入的竞争结果同样 fail-closed：后提交的旧代次在下一次核验时被拒绝。DSR 另有 `n_trials` 计数回退（生产行必有该字段）；无任何基线的历史行仅走范围核验，重跑即获得绑定。Live 真实券商开关继续关闭。
 3. **运行版本与环境仍需验收。** Compose 地址、过期/未来心跳及 E2E Node 22 已修复；构建提交、迁移版本、Python 3.11、运行进程/源码一致性及真实 Golden 尚未验收。
 4. **列表操作仍受分页限制。** 全库摘要已独立统计，首页最新完成回测也不再从前 50 条推算；策略列表仍加载前 100 条并在当前结果中搜索，需保留分页元数据并提供翻页和服务端筛选。
 5. **恢复机制需要故障演练。** 已修复验证失败回调撤销晋级和旧版本回调串扰；多 Worker、重复投递、中断、取消以及数据库并发写入仍待集成验收。
@@ -381,7 +381,7 @@ Schema 演进附迁移、既有数据回填政策与回滚方式。不删除试�
 
 晋级与 Live readiness 共用 `validation_evidence.py`：只评估当前策略版本，各类取最新记录（包含失败、排队、运行），检查已完成、`passed` 且无错误；以 DSR 引用的完整回测为参考，核对版本、快照存在性、日期、基准、资金、参数、标的池、引擎和数据版本，以及显式验证窗口。缺失或不一致则拒绝采用旧成功。全部满足才设 `VALIDATED`；新验证排队或失败重新汇总后可降回 `BACKTESTED`。旧版本回调不改变当前版本状态，客户端不可直接晋级。
 
-**已实现的是参考回测一致性，不是扫描执行链的完整证明。** PBO/敏感性/成本新任务继承参考快照、参数、标的池、基准和资金；实际子回测、Walk-Forward folds、SPA 试验集合和新增家族试验代次仍按 P1.3b/P1.3c 验收。后端 readiness 的 `evidence.validation_reasons` 和 `validation_backtest_id` 已提供拒绝原因与参考 ID；前端解释卡尚未接入。
+**已实现参考回测一致性、扫描执行链证明与试验代次绑定。** PBO/敏感性/成本新任务继承参考快照、参数、标的池、基准和资金；实际子回测、Walk-Forward folds、SPA 试验集合按 P1.3b 验收，新增家族试验代次按 P1.3c 验收。后端 readiness 的 `evidence.validation_reasons` 和 `validation_backtest_id` 提供拒绝原因与参考 ID；验证台的证据状态卡已接入同一口径（`GET /api/v1/validation/evidence`）。
 
 Golden 的 SPY 200DMA 基线沿用收盘产生信号、下一 bar 成交、5bps 滑点、1 美元固定手续费。指标由 Axiom 基于真实序列计算，LEAN 统计作对账；不为过测试放宽容差。
 
@@ -522,15 +522,15 @@ Web 默认 3000，API 默认 8000；健康 `/health`、API 契约 `/docs` 均为
 | 文档与入口 | 完成 | 历史说明归并、README、工程职责与 Key 边界 |
 | P1.1 局部修复 | 已交付，未关闭 | Compose 本机地址、心跳时效、E2E Node 22；待构建/迁移身份、Python 3.11、API/Worker 独立环境与真实 Golden |
 | P1.2a 可信概览 | 已交付 | 全库总数与分布、最近完成回测、空/错分离；新建/删除/发起验证使摘要失效，5 秒轮询覆盖 Worker 终态，重新聚焦刷新 |
-| P1.2b 完整列表 | 待做 | API facade 保留 `items/total/limit/offset`，策略页翻页、服务端筛选、超过 100 条可访问；补自动刷新与浏览器操作验收 |
+| P1.2b 完整列表 | **下一包** | API facade 保留 `items/total/limit/offset`，策略页翻页、服务端筛选、超过 100 条可访问；补自动刷新与浏览器操作验收 |
 | P1.3a 最新记录与参考范围 | 已交付 | 共享证据选择、缺失/异范围拒绝、旧失败遮盖修复、旧版本回调隔离、扫描继承输入；已有研究/执行引用的策略不能删除 |
 | P1.3b 实际执行证据 | 已交付 | PBO/敏感性/成本核对全部子回测执行范围（只允许声明扰动轴变化），Walk-Forward 留存 fold 执行证据并拒收历史缺失记录，SPA 固定参试集合；`validation_evidence.py`、`validation.py`（WF execution）、9 个测试文件；`make test-all` 通过（后端 559 / 前端 125，Ruff/mypy/tsc/ESLint/构建全过，保留既有 LSP 告警为 P1.4b） |
-| P1.3c 试验代次 | **下一包，最高优先级** | 固定家族/快照试验集合签名；新增试验、并发更新撤销过期证据；前端显示原因和来源 |
+| P1.3c 试验代次 | 已交付 | DSR/SPA 记录试验集合签名，重算台账不一致即撤销证据并在重算后恢复；新增 `GET /api/v1/validation/evidence`（`ValidationEvidenceOut` + 生成类型与收窄断言），验证台新增证据状态卡（八项通过/过期、原因中文解释、参考回测链接）；`make test-all` 通过（后端 567 / 前端 128，Ruff/mypy/tsc/ESLint/构建全过，保留既有 LSP 告警为 P1.4b） |
 | P1.4a 恢复 | 待做 | 重复投递、中断、取消、多 Worker 活跃任务保护及幂等故障演练 |
 | P1.4b 编辑器 | 待做 | 验证语言服务替换/挂载/卸载的释放行为，修复既有 LSP cleanup 告警 |
 | P1 关闭 | 未完成 | 上述缺口、全回归、真实研究链路、浏览器证据均验收后再进入 P2 |
 
-**第一包的具体落点与验收（P1.3b 已按此完成，P1.3c/故障演练见上表）：**
+**第一包的具体落点与验收（P1.3b/P1.3c 已按此完成，故障演练见上表）：**
 
 1. 阅读 `services/api/services/validation_evidence.py`、`validation_spec.py`、`services/worker/tasks/validation.py`、`scans.py`、`validation_post.py`。先写“引用同一参考回测，但子任务使用不同引擎/快照/参数”的失败测试。
 2. PBO/敏感性/成本从 `result.backtest_ids` 核对实际完成记录，检查版本、快照、引擎、数据、窗口、基准、资金和标的池；参数只允许该扫描声明的扰动轴发生变化。缺少子记录或来源元数据必须明确拒绝，不能靠模板 ID 推断通过。

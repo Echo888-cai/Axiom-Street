@@ -14,6 +14,7 @@ from services.api.models import (
     Backtest,
     BacktestStatus,
     DataSnapshot,
+    ExperimentTrial,
     Strategy,
     StrategyStatus,
     StrategyVersion,
@@ -152,14 +153,29 @@ def _add_scan_gate(db, *, strategy, version, backtest, kind, passed: bool) -> No
         result = {"backtest_ids": [str(r.id) for r in subs], "passed": passed}
     elif kind == ValidationKind.SPA:
         subs = [_sub({**base_params}) for _ in range(2)]
+        for i, sub in enumerate(subs):
+            db.add(
+                ExperimentTrial(
+                    backtest_id=sub.id,
+                    data_snapshot_id=backtest.data_snapshot_id,
+                    strategy_id=strategy.id,
+                    strategy_family=strategy.family_id or strategy.id,
+                    parameters=dict(sub.parameters or {}),
+                    parameter_hash=f"stub-spa-{sub.id}",
+                    observed_sharpe=0.2 + 0.1 * i,
+                )
+            )
+        db.flush()
+        model_ids = sorted(str(r.id) for r in subs)
         params = {
             "family_id": str(strategy.family_id or strategy.id),
             "data_snapshot_id": str(backtest.data_snapshot_id)
             if backtest.data_snapshot_id
             else None,
             "n_models": 2,
+            "trial_candidate_ids": model_ids,
         }
-        result = {"models": [{"backtest_id": str(r.id)} for r in subs], "passed": passed}
+        result = {"models": [{"backtest_id": mid} for mid in model_ids], "passed": passed}
     db.add(
         ValidationRun(
             strategy_id=strategy.id,

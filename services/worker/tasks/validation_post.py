@@ -200,6 +200,9 @@ def execute_spa(run_id: str) -> dict:
         except SpaError as exc:
             return _fail_walk_forward(db, run, "spa_failed", str(exc))
         payload = result.to_dict()
+        from services.api.hashing import canonical_hash
+        from services.api.services.validation import spa_candidate_ids
+
         run.params = {
             **params,
             "seed": resolved_seed,
@@ -207,6 +210,12 @@ def execute_spa(run_id: str) -> dict:
             "n_models": result.n_models,
             "family_id": str(family_id),
             "data_snapshot_id": str(snapshot_id) if snapshot_id else None,
+            # P1.3c: bind this conclusion to the exact trial generation it
+            # was computed from. Trials added later expire the old run.
+            "trial_set_hash": canonical_hash(sorted(ids)),
+            "trial_candidate_ids": spa_candidate_ids(
+                db, family_id=family_id, snapshot_id=snapshot_id
+            ),
         }
         return _finish_validation(
             db,
