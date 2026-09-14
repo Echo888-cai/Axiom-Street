@@ -8,6 +8,8 @@ Fill convention (documented for Golden Backtest):
 
 from __future__ import annotations
 
+from quant.strategy_sdk.schema import BUILDER_SCHEMA_VERSION
+
 DEFAULT_STRATEGY_CLASS = "Spy200DmaAlgorithm"
 
 DEFAULT_STRATEGY_CODE = '''from AlgorithmImports import *
@@ -79,6 +81,7 @@ class Spy200DmaAlgorithm(QCAlgorithm):
 
 def default_builder_config() -> dict:
     return {
+        "schema_version": BUILDER_SCHEMA_VERSION,
         "class_name": DEFAULT_STRATEGY_CLASS,
         "hypothesis": "SPY 站上 200 日均线代表风险偏好，持有；跌破则空仓。",
         "universe": {

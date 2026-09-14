@@ -42,6 +42,10 @@ export const strategiesApi = {
       code: string;
       config?: Record<string, unknown>;
       commit_message?: string;
+      // P2.1 stale-draft conflict detection: the loaded source version and the
+      // digest of the code it was based on.
+      source_version_id?: string;
+      source_code_hash?: string;
     },
   ) =>
     request<StrategyVersion>(`/api/v1/strategies/${strategyId}/versions`, {

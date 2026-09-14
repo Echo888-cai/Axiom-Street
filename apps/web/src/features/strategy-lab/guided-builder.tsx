@@ -5,7 +5,66 @@ import { ArrowRight, Check, SlidersHorizontal, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Disclosure } from "@/components/ui/disclosure";
+import { Modal } from "@/components/ui/modal";
+import { diffLines } from "@/lib/diff";
 import { compileTrend, type TrendRules } from "./guided-strategy";
+
+type CompiledTrend = ReturnType<typeof compileTrend>;
+
+/** P2.1 覆盖前差异预览：把现有编辑器代码与规则生成代码逐行对比。 */
+function OverwritePreview({
+  before,
+  after,
+  onConfirm,
+  onCancel,
+}: {
+  before: string;
+  after: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const summary = diffLines(before, after);
+  return (
+    <Modal open onClose={onCancel} label="覆盖自定义代码前确认">
+      <div className="flex max-h-[80vh] w-[min(56rem,92vw)] flex-col p-6">
+        <h2 className="text-lg font-semibold tracking-tight">
+          覆盖自定义代码？
+        </h2>
+        <p className="mt-2 text-xs leading-6 text-as-muted">
+          应用规则会替换编辑器中的当前代码。自定义逻辑不会保留；已保存版本可从版本历史恢复。
+        </p>
+        <p className="mt-4 text-[11px] tabular text-as-muted">
+          +{summary.added} / −{summary.removed} 行
+        </p>
+        <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-xl border border-as-border bg-as-bg">
+          <pre className="p-3 text-[12px] leading-5">
+            {summary.lines.map((line, index) => (
+              <div
+                key={`${line.kind}-${index}`}
+                className={
+                  line.kind === "add"
+                    ? "bg-as-positive/10 text-as-positive"
+                    : line.kind === "del"
+                      ? "bg-as-negative/10 text-as-negative"
+                      : "text-as-muted"
+                }
+              >
+                {line.kind === "add" ? "+ " : line.kind === "del" ? "− " : "  "}
+                {line.text}
+              </div>
+            ))}
+          </pre>
+        </div>
+        <div className="mt-5 flex justify-end gap-3">
+          <Button variant="secondary" onClick={onCancel}>
+            保留当前代码
+          </Button>
+          <Button onClick={onConfirm}>确认覆盖并应用规则</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 function rulesFromConfig(config: Record<string, unknown>): TrendRules {
   const signal = config.signal as Record<string, unknown> | undefined;
@@ -49,6 +108,8 @@ export function GuidedBuilder({
   }, [config, edited]);
   const [error, setError] = useState("");
   const [replace, setReplace] = useState(false);
+  // P2.1: 需要覆盖自定义代码时先展示差异，确认后才应用。
+  const [pendingApply, setPendingApply] = useState<CompiledTrend | null>(null);
   function patch(next: Partial<TrendRules>) {
     setRules((prev) => ({ ...prev, ...next }));
     setEdited(true);
@@ -56,8 +117,28 @@ export function GuidedBuilder({
     setError("");
     onPending(true);
   }
+  function applyResult(result: CompiledTrend) {
+    onApply(result);
+    setAppliedSnapshot({
+      code: result.code,
+      rules: JSON.stringify(rules),
+    });
+    setEdited(false);
+    onPending(false);
+    setReplace(false);
+    setPendingApply(null);
+    setError("");
+  }
   return (
     <section className="overflow-hidden rounded-as border border-as-border bg-as-bg shadow-as">
+      {pendingApply ? (
+        <OverwritePreview
+          before={code}
+          after={pendingApply.code}
+          onCancel={() => setPendingApply(null)}
+          onConfirm={() => applyResult(pendingApply)}
+        />
+      ) : null}
       <div className="flex items-start justify-between gap-4 border-b border-as-primary/10 bg-[var(--as-brief-bg)] p-6 text-as-text">
         <div>
           <div className="as-brief-muted mb-2 text-[11px] font-medium tracking-widest">
@@ -76,15 +157,12 @@ export function GuidedBuilder({
           event.preventDefault();
           try {
             const result = compileTrend(rules);
-            onApply(result);
-            setAppliedSnapshot({
-              code: result.code,
-              rules: JSON.stringify(rules),
-            });
-            setEdited(false);
-            onPending(false);
-            setReplace(false);
-            setError("");
+            // 编辑器代码与规则生成代码不一致（自定义逻辑）时，先看差异再覆盖。
+            if (code !== result.code) {
+              setPendingApply(result);
+              return;
+            }
+            applyResult(result);
           } catch (err) {
             setError((err as Error).message);
           }

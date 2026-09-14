@@ -12,6 +12,7 @@ import { portfoliosApi } from "./api/portfolios";
 import { paperApi } from "./api/paper";
 import { riskApi } from "./api/risk";
 import { healthApi } from "./api/health";
+import { tasksApi } from "./api/tasks";
 
 import { overviewApi } from "./api/overview";
 
@@ -28,4 +29,5 @@ export const api = {
   ...paperApi,
   ...riskApi,
   ...healthApi,
+  ...tasksApi,
 };

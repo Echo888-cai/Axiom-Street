@@ -7,6 +7,7 @@ Fill convention matches SPY 200DMA: signal on this bar, fill next bar,
 from __future__ import annotations
 
 from quant.data.symbols import normalize_symbols
+from quant.strategy_sdk.schema import BUILDER_SCHEMA_VERSION
 
 DEFAULT_EQUAL_WEIGHT_CLASS = "EqualWeightUniverseAlgorithm"
 
@@ -42,6 +43,7 @@ def equal_weight_targets(symbols: list[str] | str) -> dict[str, float]:
 def equal_weight_builder_config(symbols: list[str] | None = None) -> dict:
     tickers = list(symbols or DEFAULT_EQUAL_WEIGHT_UNIVERSE)
     return {
+        "schema_version": BUILDER_SCHEMA_VERSION,
         "class_name": DEFAULT_EQUAL_WEIGHT_CLASS,
         "hypothesis": "等权 1/N 是任何主动叠加必须在成本后击败的横截面基线。",
         "universe": {

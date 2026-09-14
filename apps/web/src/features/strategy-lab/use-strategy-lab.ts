@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { toast } from "@/components/ui/toast";
 import { useT } from "@/lib/i18n";
 import { formatTemplate } from "@/lib/utils";
+import { sha256Hex } from "@/lib/hash";
 import { validateExperiment } from "./guided-strategy";
 import type { VersionPair } from "./editor-pane";
 import type { RestoreKind } from "./strategy-dialogs";
@@ -65,6 +66,8 @@ export function useStrategyLab(strategyId: string) {
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [pane, setPane] = useState<"code" | "diff">("code");
   const [runId, setRunId] = useState<string | null>(null);
+  // P2.1: 编辑器载入的源版本与代码摘要，用于保存时的过期草稿冲突检测。
+  const [baseCodeHash, setBaseCodeHash] = useState<string | undefined>(undefined);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
 
@@ -79,6 +82,22 @@ export function useStrategyLab(strategyId: string) {
     strategy?.latest_version?.config,
     strategy?.name,
   ]);
+
+  const baseVersionId = strategy?.latest_version?.id;
+  useEffect(() => {
+    const source = strategy?.latest_version?.code;
+    if (!source || !baseVersionId) {
+      setBaseCodeHash(undefined);
+      return;
+    }
+    let active = true;
+    void sha256Hex(source).then((digest) => {
+      if (active) setBaseCodeHash(digest);
+    });
+    return () => {
+      active = false;
+    };
+  }, [baseVersionId, strategy?.latest_version?.code]);
 
   const dirty = useMemo(() => {
     const latest = strategy?.latest_version;
@@ -140,7 +159,14 @@ export function useStrategyLab(strategyId: string) {
 
   const save = useMutation({
     mutationFn: () =>
-      api.createVersion(strategyId, { code, config, commit_message: message }),
+      api.createVersion(strategyId, {
+        code,
+        config,
+        commit_message: message,
+        // P2.1：带上载入的源版本与代码摘要，服务端据此拒绝过期草稿覆盖。
+        source_version_id: baseVersionId,
+        source_code_hash: baseCodeHash,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["strategy", strategyId] });
       qc.invalidateQueries({ queryKey: ["versions", strategyId] });
@@ -190,6 +216,8 @@ export function useStrategyLab(strategyId: string) {
           code,
           config,
           commit_message: message || t("strategy.saveBeforeRun"),
+          source_version_id: baseVersionId,
+          source_code_hash: baseCodeHash,
         });
         versionId = version.id;
         await qc.invalidateQueries({ queryKey: ["strategy", strategyId] });

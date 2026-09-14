@@ -193,14 +193,54 @@ def list_versions(db: Session, strategy_id: UUID) -> list[StrategyVersion]:
 def create_version(
     db: Session, strategy_id: UUID, payload: StrategyVersionCreate
 ) -> StrategyVersion:
+    from quant.strategy_sdk import normalize_builder_config, strategy_code_hash
+
     strategy = get_strategy(db, strategy_id)
+
+    # P2.1 versioned rules schema: refuse invalid/out-of-range builder configs
+    # and configs claiming a future schema version at the contract boundary.
+    try:
+        config = normalize_builder_config(payload.config)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "builder_config_invalid", "message": str(exc)},
+        ) from exc
+
     latest = latest_version(db, strategy_id)
+
+    # P2.1 stale-draft conflict detection: a save based on anything but the
+    # latest version would silently overwrite newer work.
+    if payload.source_version_id is not None:
+        source = db.get(StrategyVersion, payload.source_version_id)
+        if (
+            source is None
+            or source.strategy_id != strategy.id
+            or latest is None
+            or source.id != latest.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "draft_stale",
+                    "message": "草稿已过期：该版本之后已有新版本保存。请重新载入最新版本后再保存，避免覆盖他处的改动。",
+                },
+            )
+        if payload.source_code_hash and payload.source_code_hash != strategy_code_hash(source.code):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "draft_stale_code",
+                    "message": "草稿基于的代码已变化，请重新载入最新版本后再保存。",
+                },
+            )
+
     next_version = 1 if latest is None else latest.version + 1
     version = StrategyVersion(
         strategy_id=strategy.id,
         version=next_version,
         code=payload.code,
-        config=payload.config,
+        config=config,
         commit_message=payload.commit_message or f"v{next_version}",
         created_by="local",
     )

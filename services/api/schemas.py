@@ -35,6 +35,10 @@ class StrategyVersionCreate(BaseModel):
     code: str
     config: Dict[str, Any] = Field(default_factory=dict)
     commit_message: Optional[str] = None
+    # P2.1 stale-draft conflict detection: the version the editor loaded, and
+    # (optional) the digest of the code it was based on.
+    source_version_id: Optional[UUID] = None
+    source_code_hash: Optional[str] = None
 
 
 class StrategyVersionOut(ORMModel):
@@ -820,3 +824,19 @@ class ResearchNotePage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class TaskOut(BaseModel):
+    """Unified task read-model entry (P2.2). Kind is one of
+    backtest | validation | ingest | copilot."""
+
+    id: UUID
+    kind: str
+    title: str
+    status: str
+    progress_step: Optional[str] = None
+    created_at: datetime
+    finished_at: Optional[datetime] = None
+    ref: Optional[str] = None
+    strategy_name: Optional[str] = None
+    cancelable: bool = False

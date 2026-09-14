@@ -6,10 +6,8 @@ import { Bell, Search, Menu, ChevronRight, MessageSquare, Settings2 } from "luci
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
-import { BACKTEST_TONE, labelStatus } from "@/lib/labels";
-import { Badge } from "@/components/ui/badge";
 import { CommandPalette } from "@/components/ui/command-palette";
-import { formatRelative } from "@/lib/utils";
+import { TaskDrawer } from "@/features/tasks/task-drawer";
 import { NAV_ITEMS } from "./nav";
 import { useT } from "@/lib/i18n";
 
@@ -20,25 +18,26 @@ export function TopBar({ onMenu, onAssistant }: { onMenu: () => void; onAssistan
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
   );
   const [searchOpen, setSearchOpen] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
-  const backtests = useQuery({
-    queryKey: ["backtests"],
-    queryFn: () => api.listBacktests(),
+  const [tasksOpen, setTasksOpen] = useState(false);
+  // P2.2：任务中心（回测/验证/摄取/助手）统一状态，失败时铃铛亮红点。
+  const tasks = useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => api.listTasks(),
     refetchInterval: 15_000,
   });
+  const hasFailure = (tasks.data ?? []).some((task) => task.status === "FAILED");
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setNotesOpen(false);
+        setTasksOpen(false);
         setSearchOpen(true);
       }
-      if (event.key === "Escape") setNotesOpen(false);
+      if (event.key === "Escape") setTasksOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const recent = (backtests.data || []).slice(0, 6);
   return (
     <header className="as-glass sticky top-0 z-20 flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-as-border/60 px-5 sm:px-8 lg:px-10 xl:px-12">
       <div className="flex min-w-0 items-center gap-3">
@@ -76,68 +75,16 @@ export function TopBar({ onMenu, onAssistant }: { onMenu: () => void; onAssistan
           <button
             type="button"
             aria-label={t("layout.notesAria")}
-            aria-expanded={notesOpen}
-            onClick={() => setNotesOpen(!notesOpen)}
+            aria-expanded={tasksOpen}
+            onClick={() => setTasksOpen(!tasksOpen)}
             className="as-action-icon relative inline-flex"
           >
             <Bell className="h-4 w-4" strokeWidth={1.6} />
-            {recent.some((b) => b.status === "FAILED") && (
+            {hasFailure && (
               <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-as-negative" />
             )}
           </button>
-          {notesOpen && (
-            <>
-              <button
-                type="button"
-                aria-label={t("layout.closeNotesAria")}
-                onClick={() => setNotesOpen(false)}
-                className="fixed inset-0 z-20 cursor-default"
-              />
-              <section
-                aria-label={t("layout.notesSectionAria")}
-                className="as-glass absolute -right-10 top-12 z-30 w-80 max-w-[calc(100vw-40px)] overflow-hidden rounded-2xl border border-as-border shadow-as-lg as-scale-in"
-              >
-                <div className="border-b border-as-border p-4 text-xs font-semibold">
-                  {t("layout.recentActivity")}
-                </div>
-                {backtests.isError ? (
-                  <p className="p-6 text-xs leading-relaxed text-as-muted">
-                    {t("layout.notesError")}
-                  </p>
-                ) : backtests.isLoading ? (
-                  <p className="p-6 text-xs text-as-muted">{t("layout.notesLoading")}</p>
-                ) : !recent.length ? (
-                  <p className="p-6 text-xs leading-relaxed text-as-muted">
-                    {t("layout.notesEmpty")}
-                  </p>                ) : (
-                  <ul className="max-h-80 overflow-auto p-2">
-                    {recent.map((b) => (
-                      <li key={b.id}>
-                        <Link
-                          href={`/backtests/${b.id}`}
-                          onClick={() => setNotesOpen(false)}
-                          className="block rounded-xl px-3 py-3 hover:bg-white"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-xs">
-                              {b.strategy_name ||
-                                `${b.start_date} → ${b.end_date}`}
-                            </span>
-                            <Badge tone={BACKTEST_TONE[b.status] || "neutral"}>
-                              {labelStatus(b.status)}
-                            </Badge>
-                          </div>
-                          <p className="mt-1.5 text-[10px] text-as-muted">
-                            {formatRelative(b.finished_at || b.created_at)}
-                          </p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </>
-          )}
+          <TaskDrawer open={tasksOpen} onClose={() => setTasksOpen(false)} />
         </div>
         <Link
           href="/settings"
