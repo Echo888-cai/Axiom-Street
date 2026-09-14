@@ -888,3 +888,108 @@ class ResearchStep(Base):
     output: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class PaperSessionStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    ACTIVE = "ACTIVE"
+    HALTED = "HALTED"
+    CLOSED = "CLOSED"
+
+
+class PaperSignalStatus(str, enum.Enum):
+    RECORDED = "RECORDED"
+    DUPLICATE_BAR = "DUPLICATE_BAR"
+    REVISION_BLOCKED = "REVISION_BLOCKED"
+    RISK_BLOCKED = "RISK_BLOCKED"
+    EXECUTED = "EXECUTED"
+
+
+class PaperSession(Base):
+    """P5.1 持续模拟会话：冻结部署版本、行情时点、限仓与观察天数。"""
+
+    __tablename__ = "paper_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    strategy_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("strategy_versions.id", ondelete="SET NULL"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(255), default="模拟会话", nullable=False)
+    status: Mapped[PaperSessionStatus] = mapped_column(
+        _enum(PaperSessionStatus, "paper_session_status"),
+        default=PaperSessionStatus.PENDING,
+        nullable=False,
+    )
+    current_bar_ts: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_processed_bar_ts: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    limits: Mapped[dict] = mapped_column(JSON, default=dict)
+    account: Mapped[dict] = mapped_column(JSON, default=dict)
+    observation_days: Mapped[int] = mapped_column(Integer, default=0)
+    kill_switch: Mapped[bool] = mapped_column(Boolean, default=False)
+    deviation: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PaperSessionSignal(Base):
+    __tablename__ = "paper_session_signals"
+    __table_args__ = (
+        UniqueConstraint("session_id", "bar_date", "symbol", name="uq_paper_signal_bar"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("paper_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    bar_date: Mapped[date] = mapped_column(Date, nullable=False)
+    symbol: Mapped[str] = mapped_column(String(16), nullable=False)
+    signal: Mapped[str] = mapped_column(String(16), nullable=False)  # BUY | SELL | HOLD
+    quantity: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    status: Mapped[PaperSignalStatus] = mapped_column(
+        _enum(PaperSignalStatus, "paper_signal_status"),
+        default=PaperSignalStatus.RECORDED,
+        nullable=False,
+    )
+    reason: Mapped[Optional[str]] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PaperSessionOrder(Base):
+    __tablename__ = "paper_session_orders"
+    __table_args__ = (UniqueConstraint("idempotency_key", name="uq_paper_order_idempotency"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("paper_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(16), nullable=False)
+    side: Mapped[str] = mapped_column(String(8), nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="ACCEPTED", nullable=False)
+    fee_slippage: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class PaperDayObservation(Base):
+    __tablename__ = "paper_day_observations"
+    __table_args__ = (UniqueConstraint("session_id", "day", name="uq_paper_observation_day"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("paper_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    signals: Mapped[dict] = mapped_column(JSON, default=dict)
+    orders: Mapped[dict] = mapped_column(JSON, default=dict)
+    fills: Mapped[dict] = mapped_column(JSON, default=dict)
+    fee_slippage: Mapped[dict] = mapped_column(JSON, default=dict)
+    deviation: Mapped[dict] = mapped_column(JSON, default=dict)
+    notes: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

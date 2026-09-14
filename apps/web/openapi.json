@@ -5316,6 +5316,394 @@
         }
       }
     },
+    "/api/v1/paper-sessions": {
+      "post": {
+        "tags": [
+          "paper-sessions"
+        ],
+        "summary": "Create Session",
+        "operationId": "create_session_api_v1_paper_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Session Api V1 Paper Sessions Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper-sessions/{session_id}/bars": {
+      "post": {
+        "tags": [
+          "paper-sessions"
+        ],
+        "summary": "Process Bar",
+        "operationId": "process_bar_api_v1_paper_sessions__session_id__bars_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BarIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Process Bar Api V1 Paper Sessions  Session Id  Bars Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper-sessions/{session_id}/halt": {
+      "post": {
+        "tags": [
+          "paper-sessions"
+        ],
+        "summary": "Halt",
+        "operationId": "halt_api_v1_paper_sessions__session_id__halt_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Halt Api V1 Paper Sessions  Session Id  Halt Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper-sessions/{session_id}/resume": {
+      "post": {
+        "tags": [
+          "paper-sessions"
+        ],
+        "summary": "Resume",
+        "operationId": "resume_api_v1_paper_sessions__session_id__resume_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Resume Api V1 Paper Sessions  Session Id  Resume Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper-sessions/{session_id}/kill-switch": {
+      "post": {
+        "tags": [
+          "paper-sessions"
+        ],
+        "summary": "Kill Switch",
+        "operationId": "kill_switch_api_v1_paper_sessions__session_id__kill_switch_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Enabled"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Kill Switch Api V1 Paper Sessions  Session Id  Kill Switch Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper-sessions/{session_id}/reconcile": {
+      "post": {
+        "tags": [
+          "paper-sessions"
+        ],
+        "summary": "Reconcile",
+        "operationId": "reconcile_api_v1_paper_sessions__session_id__reconcile_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reconcile Api V1 Paper Sessions  Session Id  Reconcile Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper-sessions/{session_id}/observations": {
+      "post": {
+        "tags": [
+          "paper-sessions"
+        ],
+        "summary": "Record Observation",
+        "operationId": "record_observation_api_v1_paper_sessions__session_id__observations_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Record Observation Api V1 Paper Sessions  Session Id  Observations Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper-sessions/{session_id}/observation-status": {
+      "get": {
+        "tags": [
+          "paper-sessions"
+        ],
+        "summary": "Status",
+        "operationId": "status_api_v1_paper_sessions__session_id__observation_status_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Status Api V1 Paper Sessions  Session Id  Observation Status Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -6372,6 +6760,36 @@
           "CANCELLED"
         ],
         "title": "BacktestStatus"
+      },
+      "BarIn": {
+        "properties": {
+          "bar_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Bar Date"
+          },
+          "signals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Signals"
+          },
+          "prices": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Prices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bar_date",
+          "signals"
+        ],
+        "title": "BarIn"
       },
       "CapabilityProbeRequest": {
         "properties": {
@@ -7891,6 +8309,52 @@
         ],
         "title": "MonthlyReturnOut"
       },
+      "ObservationIn": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "signals": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Signals"
+          },
+          "orders": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Orders"
+          },
+          "fills": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fills"
+          },
+          "fee_slippage": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fee Slippage"
+          },
+          "deviation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Deviation"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day"
+        ],
+        "title": "ObservationIn"
+      },
       "OverviewOut": {
         "properties": {
           "strategy_count": {
@@ -9244,6 +9708,35 @@
         },
         "type": "object",
         "title": "RuleReviewIn"
+      },
+      "SessionCreate": {
+        "properties": {
+          "strategy_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Strategy Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": "模拟会话"
+          },
+          "limits": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Limits"
+          },
+          "initial_cash": {
+            "type": "number",
+            "title": "Initial Cash",
+            "default": 100000.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_id"
+        ],
+        "title": "SessionCreate"
       },
       "StrategyCreate": {
         "properties": {

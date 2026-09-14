@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PaperSessionCard } from "./paper-session-card";
 import { CircleCheck, ClipboardList, Wallet } from "lucide-react";
 import { FormEvent, useState } from "react";
 import Link from "next/link";
@@ -269,6 +270,7 @@ export function PaperDesk() {
           <EmptyBlock icon={<ClipboardList className="h-5 w-5 text-as-muted" />} title={t("paper.noOrders")} />
         )}
       </Card>
+      <PaperSessionCard strategyId={strategyId} />
     </div>
   );
 }

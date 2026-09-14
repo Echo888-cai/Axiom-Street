@@ -15,6 +15,26 @@ export type PaperOrderInput = {
   client_order_id: string;
 };
 
+// P5 持续模拟会话
+export type PaperSession = {
+  id: string;
+  strategy_id: string;
+  name: string;
+  status: string;
+  limits: Record<string, number>;
+  account: Record<string, unknown>;
+  observation_days: number;
+  kill_switch: boolean;
+};
+export type ObservationStatus = {
+  session_id: string;
+  observation_days: number;
+  observation_target: number;
+  sufficient: boolean;
+  executed_signals: number;
+  note: string;
+};
+
 export const paperApi = {
   createOrder: (body: PaperOrderInput) =>
     request<PaperOrderAccepted>("/api/v1/paper/orders", {
@@ -33,4 +53,21 @@ export const paperApi = {
     request<PaperReconciliation | null>(
       `/api/v1/paper/reconciliation?strategy_id=${encodeURIComponent(strategyId)}`,
     ),
+
+  // P5 持续模拟会话（市场时钟/观察期）
+  createPaperSession: (body: { strategy_id: string; name?: string; initial_cash?: number }) =>
+    request<PaperSession>("/api/v1/paper-sessions", {
+      method: "POST",
+      body: JSON.stringify({ ...body, name: body.name ?? "模拟会话" }),
+    }),
+  haltPaperSession: (id: string) =>
+    request<PaperSession>(`/api/v1/paper-sessions/${id}/halt`, { method: "POST" }),
+  resumePaperSession: (id: string) =>
+    request<PaperSession>(`/api/v1/paper-sessions/${id}/resume`, { method: "POST" }),
+  toggleKillSwitch: (id: string, enabled: boolean) =>
+    request<PaperSession>(`/api/v1/paper-sessions/${id}/kill-switch?enabled=${enabled}`, {
+      method: "POST",
+    }),
+  observationStatus: (id: string) =>
+    request<ObservationStatus>(`/api/v1/paper-sessions/${id}/observation-status`),
 };
