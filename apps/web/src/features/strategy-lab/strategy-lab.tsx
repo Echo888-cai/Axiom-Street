@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
@@ -19,11 +20,14 @@ import { VersionHistoryCard } from "./version-history-card";
 import { LabBanners } from "./lab-banners";
 import { GuidedWorkspace, LabModeBar } from "./strategy-lab-flow";
 import { StrategyDialogs } from "./strategy-dialogs";
-import { registerPythonLanguageFeatures, applyEngineError } from "./python-lsp";
+import { replacePythonLanguageFeatures, disposePythonLanguageFeatures, applyEngineError } from "./python-lsp";
 import { useStrategyLab } from "./use-strategy-lab";
 
 export function StrategyLab({ strategyId }: { strategyId: string }) {
   const t = useT();
+  // The lab owns the single Python provider registration: replace on every
+  // editor mount, release on unmount. No ref is read in cleanup.
+  useEffect(() => disposePythonLanguageFeatures, []);
   const {
     strategy,
     isLoading,
@@ -68,7 +72,6 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
     setRunId,
     editorRef,
     monacoRef,
-    lspRef,
     dirty,
     comparePair,
     save,
@@ -186,8 +189,7 @@ export function StrategyLab({ strategyId }: { strategyId: string }) {
           onMountEditor={(editor, monacoApi) => {
             editorRef.current = editor;
             monacoRef.current = monacoApi;
-            lspRef.current?.dispose();
-            lspRef.current = registerPythonLanguageFeatures(monacoApi);
+            replacePythonLanguageFeatures(monacoApi);
           }}
         />
 

@@ -67,11 +67,6 @@ export function useStrategyLab(strategyId: string) {
   const [runId, setRunId] = useState<string | null>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
-  const lspRef = useRef<{ dispose: () => void } | null>(null);
-
-  useEffect(() => {
-    return () => lspRef.current?.dispose();
-  }, []);
 
   useEffect(() => {
     if (strategy?.latest_version?.code) setCode(strategy.latest_version.code);
@@ -281,7 +276,6 @@ export function useStrategyLab(strategyId: string) {
     setRunId,
     editorRef,
     monacoRef,
-    lspRef,
     dirty,
     comparePair,
     save,

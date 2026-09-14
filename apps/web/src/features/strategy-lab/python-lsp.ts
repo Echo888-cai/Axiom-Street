@@ -90,3 +90,22 @@ export function applyEngineError(
       : [],
   );
 }
+
+// Single ownership for the lab's Python providers (P1.4b): replace, mount
+// and unmount all funnel through one place, so remounts cannot leak the
+// previous registration and unmount cannot double-dispose it.
+type LspHandle = { dispose: () => void };
+
+let active: LspHandle | null = null;
+
+export function replacePythonLanguageFeatures(
+  monacoApi: typeof import("monaco-editor"),
+): void {
+  active?.dispose();
+  active = registerPythonLanguageFeatures(monacoApi);
+}
+
+export function disposePythonLanguageFeatures(): void {
+  active?.dispose();
+  active = null;
+}
