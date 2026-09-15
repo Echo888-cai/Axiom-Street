@@ -1,24 +1,22 @@
 {
   "corporate_actions": "corporate_actions/SPY.parquet",
   "corporate_actions_verified": true,
-  "created_at": "2026-09-08T02:17:01.314742+00:00",
-  "end": "2026-09-04 04:00:00+00:00",
+  "created_at": "2026-09-15T02:10:09.198528+00:00",
+  "end": "2026-09-11 00:00:00+00:00",
   "exchange_timezone": "America/New_York",
   "fetch_windows": {
     "SPY": {
-      "end": null,
-      "start": "2010-01-01"
+      "end": "2026-09-14",
+      "start": "2026-08-01"
     }
   },
-  "fundamentals": "fundamentals/SPY.parquet",
-  "fundamentals_symbols": [
-    "SPY"
-  ],
+  "fundamentals": null,
+  "fundamentals_symbols": [],
   "inferred_delistings": [],
   "ingest_mode": "full",
   "market": "US",
   "parquet": "market/equities/US/daily/SPY.parquet",
-  "prior_snapshot_key": "spy-daily-20260831-1209a3",
+  "prior_snapshot_key": "spy-daily-20260904-034e72",
   "provider_capabilities": {
     "dividends": true,
     "ohlcv": true,
@@ -26,8 +24,8 @@
     "splits": true
   },
   "providers": {
-    "active": "auto (yfinance \u2192 stooq)",
-    "as_of": "2026-09-08T02:17:01.314736+00:00",
+    "active": "polygon (reconcile_with=yfinance)",
+    "as_of": "2026-09-15T02:10:09.198522+00:00",
     "optional_providers": {
       "alpaca": {
         "env": [
@@ -44,7 +42,7 @@
         "wired": false
       },
       "polygon": {
-        "configured": false,
+        "configured": true,
         "env": [
           "POLYGON_API_KEY"
         ],
@@ -58,25 +56,58 @@
         "wired": false
       }
     },
-    "primary": "auto",
-    "reconcile_with": null,
-    "requires_api_key": false
+    "primary": "polygon",
+    "reconcile_with": "yfinance",
+    "requires_api_key": true
   },
   "quality_report": {
-    "end": "2026-09-04T04:00:00+00:00",
+    "end": "2026-09-11T00:00:00+00:00",
     "has_blocking_issues": false,
-    "issues": [],
-    "row_count": 4194,
-    "start": "2010-01-04T05:00:00+00:00"
+    "issues": [
+      {
+        "count": 0,
+        "examples": [],
+        "message": "No overlapping timestamps between polygon and yfinance; reconciliation skipped.",
+        "rule": "dual_source_no_overlap",
+        "severity": "warning"
+      },
+      {
+        "count": 1,
+        "examples": [],
+        "message": "SPY \u57fa\u672c\u9762\u4e0d\u53ef\u7528\uff0c\u5e02\u503c/\u884c\u4e1a\u89c4\u5219\u5c06\u65e0\u6cd5\u4f7f\u7528\u8be5\u6807\u7684\uff08\u4e0d\u4f1a\u7528\u5f53\u524d\u5e02\u503c\u56de\u586b\u5386\u53f2\uff09: SPY Polygon \u6ca1\u6709\u80a1\u672c\u6216\u884c\u4e1a\u5206\u7c7b",
+        "rule": "fundamentals_unavailable",
+        "severity": "warning"
+      }
+    ],
+    "row_count": 29,
+    "start": "2026-08-03T00:00:00+00:00"
   },
-  "reconcile_reports": [],
-  "reconcile_with": null,
+  "reconcile_reports": [
+    {
+      "compared_bars": 0,
+      "has_blocking_issues": false,
+      "issues": [
+        {
+          "count": 0,
+          "examples": [],
+          "message": "No overlapping timestamps between polygon and yfinance; reconciliation skipped.",
+          "rule": "dual_source_no_overlap",
+          "severity": "warning"
+        }
+      ],
+      "primary_source": "polygon",
+      "secondary_source": "yfinance",
+      "suspect_bars": 0,
+      "symbol": "SPY"
+    }
+  ],
+  "reconcile_with": "yfinance",
   "resolution": "daily",
-  "rows": 4194,
-  "sha256": "034e72fff6d3f0eda62bc7b3de13a91d78d82441630d7957ffedd5b2dc987aef",
-  "snapshot_key": "spy-daily-20260904-034e72",
-  "source": "yfinance",
-  "start": "2010-01-04 05:00:00+00:00",
+  "rows": 29,
+  "sha256": "4dfa28a5acbd9559e666c066dd826570d88bfedffaec80bb70c45770081e6dec",
+  "snapshot_key": "spy-daily-20260911-4dfa28",
+  "source": "polygon",
+  "start": "2026-08-03 00:00:00+00:00",
   "symbol": "SPY",
   "symbols": [
     "SPY"
